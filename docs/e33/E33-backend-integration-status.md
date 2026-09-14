@@ -1,5 +1,7 @@
 # E33 Backend Integration Status
 
+MED-1328 and MED-1329 are device UI concerns. MED-1330 caches only approved read-only summaries and never bypasses backend authority. MED-1331 preserves the backend authentication contract while hardening device token storage. No backend changes or fabricated endpoints are required.
+
 The high-risk batch uses only the real emergency-contact GET route. Symptom assessment, voice/STT, emergency dispatch, and caregiver SOS messaging remain explicitly pending.
 
 MED-1322 through MED-1324 have no current backend endpoints. Interaction checking, prescription OCR/upload, and inventory/refill therefore use explicit pending adapters. See `E33-clinical-feature-integration-status.md`.

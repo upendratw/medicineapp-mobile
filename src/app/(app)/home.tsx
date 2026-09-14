@@ -9,16 +9,18 @@ import {
 } from '@/components';
 import { useAsyncResource } from '@/hooks/useAsyncResource';
 import { dashboardService } from '@/services/registry';
+import { useTranslation } from '@/localization';
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const load = useCallback(() => dashboardService.load(), []);
   const state = useAsyncResource(load);
   return (
     <AppScreen>
       <AppHeader
-        title="Your dashboard"
-        subtitle="Medication routines at a glance."
+        title={t('dashboardTitle')}
+        subtitle={t('dashboardSubtitle')}
       />
       <PatientDashboard
         data={state.data}
@@ -29,42 +31,52 @@ export default function HomeScreen() {
       />
       <AppButton
         variant="secondary"
-        label="Symptom information"
+        label={t('accessibility')}
+        onPress={() => router.push('/accessibility-settings')}
+      />
+      <AppButton
+        variant="secondary"
+        label={t('language')}
+        onPress={() => router.push('/language-settings')}
+      />
+      <AppButton
+        variant="secondary"
+        label={t('symptomInformation')}
         onPress={() => router.push('/symptoms')}
       />
       <AppButton
         variant="secondary"
-        label="Emergency help options"
+        label={t('emergencyHelp')}
         onPress={() => router.push('/sos')}
       />
       <AppButton
         variant="secondary"
-        label="Voice controls"
+        label={t('voiceControls')}
         onPress={() => router.push('/voice')}
       />
       <AppButton
         variant="secondary"
-        label="Interaction information"
+        label={t('interactions')}
         onPress={() => router.push('/interactions')}
       />
       <AppButton
         variant="secondary"
-        label="Scan prescription"
+        label={t('scanPrescription')}
         onPress={() => router.push('/prescription-scan')}
       />
       <AppButton
         variant="secondary"
-        label="Inventory and refill"
+        label={t('inventoryRefill')}
         onPress={() => router.push('/inventory')}
       />
       <AppButton
         variant="secondary"
-        label="View medication history"
+        label={t('medicationHistory')}
         onPress={() => router.push('/medication-history')}
       />
       <AppButton
         variant="secondary"
-        label="Open caregiver dashboard"
+        label={t('caregiverDashboard')}
         onPress={() => router.push('/caregiver-dashboard')}
       />
     </AppScreen>

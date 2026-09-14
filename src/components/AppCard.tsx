@@ -1,14 +1,26 @@
 import type { PropsWithChildren } from 'react';
 import { StyleSheet, View, type ViewProps } from 'react-native';
 import { theme } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/useAppTheme';
 
 export function AppCard({
   children,
   style,
   ...props
 }: PropsWithChildren<ViewProps>) {
+  const activeTheme = useAppTheme();
   return (
-    <View style={[styles.card, style]} {...props}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: activeTheme.colors.surface,
+          borderColor: activeTheme.colors.border,
+        },
+        style,
+      ]}
+      {...props}
+    >
       {children}
     </View>
   );

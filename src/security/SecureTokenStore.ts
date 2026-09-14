@@ -7,24 +7,47 @@ export interface SecureTokenStore {
   clear(): Promise<void>;
 }
 
-const ACCESS_KEY = 'medicineapp.auth.access';
-const REFRESH_KEY = 'medicineapp.auth.refresh';
+export interface SecureSecretStore {
+  get(key: 'access-token' | 'refresh-token'): Promise<string | null>;
+  set(key: 'access-token' | 'refresh-token', value: string): Promise<void>;
+  delete(key: 'access-token' | 'refresh-token'): Promise<void>;
+  clearAllAppSecrets(): Promise<void>;
+}
+const ACCESS_KEY = 'medicineapp.secure.v1.auth.access';
+const REFRESH_KEY = 'medicineapp.secure.v1.auth.refresh';
+const LEGACY_KEYS = [
+  'medicineapp.auth.access',
+  'medicineapp.auth.refresh',
+] as const;
+const options = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+};
 
-export class ExpoSecureTokenStore implements SecureTokenStore {
+function validSecret(value: string | null): value is string {
+  return Boolean(value && value.trim() === value && value.length <= 16_384);
+}
+
+export class ExpoSecureTokenStore
+  implements SecureTokenStore, SecureSecretStore
+{
   async read(): Promise<TokenPair | null> {
     const [accessToken, refreshToken] = await Promise.all([
       SecureStore.getItemAsync(ACCESS_KEY),
       SecureStore.getItemAsync(REFRESH_KEY),
     ]);
-    return accessToken && refreshToken ? { accessToken, refreshToken } : null;
+    if (!validSecret(accessToken) || !validSecret(refreshToken)) {
+      await this.clear();
+      return null;
+    }
+    return { accessToken, refreshToken };
   }
 
   async write(tokens: TokenPair): Promise<void> {
     await this.clear();
     try {
       await Promise.all([
-        SecureStore.setItemAsync(ACCESS_KEY, tokens.accessToken),
-        SecureStore.setItemAsync(REFRESH_KEY, tokens.refreshToken),
+        this.set('access-token', tokens.accessToken),
+        this.set('refresh-token', tokens.refreshToken),
       ]);
     } catch (error) {
       await this.clear();
@@ -36,7 +59,39 @@ export class ExpoSecureTokenStore implements SecureTokenStore {
     await Promise.all([
       SecureStore.deleteItemAsync(ACCESS_KEY),
       SecureStore.deleteItemAsync(REFRESH_KEY),
+      ...LEGACY_KEYS.map((key) => SecureStore.deleteItemAsync(key)),
     ]);
+  }
+  async get(key: 'access-token' | 'refresh-token'): Promise<string | null> {
+    const value = await SecureStore.getItemAsync(
+      key === 'access-token' ? ACCESS_KEY : REFRESH_KEY,
+    );
+    if (!validSecret(value)) {
+      await this.delete(key);
+      return null;
+    }
+    return value;
+  }
+  async set(
+    key: 'access-token' | 'refresh-token',
+    value: string,
+  ): Promise<void> {
+    if (!validSecret(value)) throw new Error('Secure session value is invalid');
+    if (!(await SecureStore.isAvailableAsync()))
+      throw new Error('Secure session storage is unavailable');
+    await SecureStore.setItemAsync(
+      key === 'access-token' ? ACCESS_KEY : REFRESH_KEY,
+      value,
+      options,
+    );
+  }
+  async delete(key: 'access-token' | 'refresh-token'): Promise<void> {
+    await SecureStore.deleteItemAsync(
+      key === 'access-token' ? ACCESS_KEY : REFRESH_KEY,
+    );
+  }
+  async clearAllAppSecrets(): Promise<void> {
+    await this.clear();
   }
 }
 
