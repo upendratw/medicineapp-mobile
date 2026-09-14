@@ -9,5 +9,6 @@
 - Play/release: `play-store/`, privacy/Data Safety drafts, EAS/signing/release documents
 - Governance: requirements/acceptance review, acceptance status, traceability, change log, dependency review, code/configuration review
 - Operations: logging/audit, mobile telemetry, and draft alerts
+- Deployment validation: development/test deployment reports, smoke/regression evidence, defect register/retest, and environment promotion status
 
 Documents describe repository evidence, not production, clinical, legal, owner, or independent peer approval.
