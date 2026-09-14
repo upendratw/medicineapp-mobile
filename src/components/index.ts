@@ -14,4 +14,7 @@ export * from './ManualMedicationForm';
 export * from './OcrConfirmationForm';
 export * from './PatientDashboard';
 export * from './StatusCard';
+export * from './ReminderAlert';
+export * from './MedicationHistory';
+export * from './DrugInformationView';
 export * from './ScheduleForm';

@@ -1,28 +1,29 @@
 import { useState } from 'react';
 import {
-  AppAlert,
   AppButton,
   AppHeader,
   AppScreen,
   AppTextInput,
-  MedicationCard,
+  DrugInformationView,
 } from '@/components';
-import { medicationCatalogService } from '@/services/registry';
-import type { MedicationSummary } from '@/types/medication';
+import { drugInformationService } from '@/services/registry';
+import type {
+  DrugInformationResult,
+  DrugInformationSection,
+} from '@/types/drugInformation';
 export default function MedicationInformationScreen() {
   const [query, setQuery] = useState('');
-  const [items, setItems] = useState<readonly MedicationSummary[]>([]);
+  const [section, setSection] =
+    useState<DrugInformationSection>('side_effects');
+  const [result, setResult] = useState<DrugInformationResult | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
   const search = async () => {
-    if (query.trim().length < 2) {
-      setError(true);
-      return;
-    }
+    if (query.trim().length < 2 || loading) return;
     setLoading(true);
     setError(false);
     try {
-      setItems(await medicationCatalogService.search(query));
+      setResult(await drugInformationService.query(query, section));
     } catch {
       setError(true);
     } finally {
@@ -33,28 +34,31 @@ export default function MedicationInformationScreen() {
     <AppScreen>
       <AppHeader
         title="Medication information"
-        subtitle="Search reviewed backend catalog entries. Information is educational, not prescribing advice."
+        subtitle="Approved-source evidence from MedicineApp."
       />
       <AppTextInput
         label="Medication name"
         value={query}
         onChangeText={setQuery}
-        maxLength={100}
+        maxLength={200}
       />
       <AppButton
-        label="Search medication catalog"
+        variant={section === 'side_effects' ? 'primary' : 'secondary'}
+        label="Side effects and adverse reactions"
+        onPress={() => setSection('side_effects')}
+      />
+      <AppButton
+        variant={section === 'warnings' ? 'primary' : 'secondary'}
+        label="Warnings"
+        onPress={() => setSection('warnings')}
+      />
+      <AppButton
+        label="Search approved sources"
         loading={loading}
+        disabled={query.trim().length < 2}
         onPress={search}
       />
-      {error ? (
-        <AppAlert
-          tone="error"
-          message="Medication information is unavailable or the search is too short."
-        />
-      ) : null}
-      {items.map((item) => (
-        <MedicationCard key={item.id} medication={item} />
-      ))}
+      <DrugInformationView result={result} loading={loading} error={error} />
     </AppScreen>
   );
 }

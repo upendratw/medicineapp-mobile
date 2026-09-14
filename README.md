@@ -1,5 +1,7 @@
 # MedicineApp Mobile
 
+The E33 mobile foundation includes protected reminder actions, factual medication history, and approved-source side-effect/warning information. Production notification delivery remains pending.
+
 Android-first React Native application for MedicineApp, built with Expo SDK 57, TypeScript, and Expo Router. iOS compatibility is retained.
 
 ## Prerequisites

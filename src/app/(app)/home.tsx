@@ -29,6 +29,11 @@ export default function HomeScreen() {
       />
       <AppButton
         variant="secondary"
+        label="View medication history"
+        onPress={() => router.push('/medication-history')}
+      />
+      <AppButton
+        variant="secondary"
         label="Open caregiver dashboard"
         onPress={() => router.push('/caregiver-dashboard')}
       />

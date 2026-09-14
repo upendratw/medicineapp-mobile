@@ -8,6 +8,12 @@ import {
 } from '@/services/medicationService';
 import { buildOcrService } from '@/services/ocrService';
 import { ScheduleService } from '@/services/scheduleService';
+import { DrugInformationService } from '@/services/drugInformationService';
+import { MedicationHistoryService } from '@/services/historyService';
+import {
+  buildReminderContextService,
+  ReminderService,
+} from '@/services/reminderService';
 
 const api = new ApiClient(undefined, undefined, secureTokenStore);
 export const patientMedicationService = buildPatientMedicationService();
@@ -21,3 +27,7 @@ export const dashboardService = new DashboardService(
   scheduleService,
 );
 export const ocrService = buildOcrService();
+export const reminderService = new ReminderService(api);
+export const reminderContextService = buildReminderContextService();
+export const medicationHistoryService = new MedicationHistoryService(api);
+export const drugInformationService = new DrugInformationService(api);
