@@ -11,6 +11,7 @@ import {
 import { ApiClient } from '@/api/client';
 import { secureTokenStore } from '@/security/SecureTokenStore';
 import { AuthService, type OtpChallenge } from '@/services/authService';
+import { pushRegistrationCoordinator } from '@/services/pushRegistration';
 
 export type AuthStatus =
   'restoring' | 'unauthenticated' | 'authenticated' | 'error';
@@ -26,6 +27,7 @@ type AuthValue = {
 const service = new AuthService(
   new ApiClient(undefined, undefined, secureTokenStore),
   secureTokenStore,
+  () => pushRegistrationCoordinator.unregister(),
 );
 const AuthContext = createContext<AuthValue | null>(null);
 

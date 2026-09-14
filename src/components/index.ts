@@ -27,3 +27,4 @@ export * from './VoiceControls';
 export * from './ScheduleForm';
 export * from './AccessibilitySettings';
 export * from './LanguageSettings';
+export * from './PushRegistrationSettings';

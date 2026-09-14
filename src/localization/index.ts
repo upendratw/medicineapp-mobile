@@ -45,6 +45,17 @@ const en = {
   sendCode: 'Send verification code',
   verifyNumber: 'Verify your number',
   verifyContinue: 'Verify and continue',
+  notificationSettings: 'Notification settings',
+  notificationsHelp:
+    'Notifications can provide generic reminder alerts. They are optional and do not replace clinical care.',
+  enableNotifications: 'Enable notifications',
+  permissionDenied:
+    'Notification permission is off. You can enable it in device settings.',
+  registrationPending:
+    'Push registration is unavailable. The app remains usable.',
+  registrationComplete: 'This device is registered for notifications.',
+  registrationOffline: 'Connect to the internet to register notifications.',
+  openNotificationSettings: 'Open device notification settings',
 } as const;
 const hi: Partial<Record<keyof typeof en, string>> = {
   settings: 'सेटिंग्स',
@@ -91,6 +102,17 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   sendCode: 'सत्यापन कोड भेजें',
   verifyNumber: 'अपना नंबर सत्यापित करें',
   verifyContinue: 'सत्यापित करके आगे बढ़ें',
+  notificationSettings: 'सूचना सेटिंग्स',
+  notificationsHelp:
+    'सूचनाएँ सामान्य रिमाइंडर दे सकती हैं। वे वैकल्पिक हैं और चिकित्सकीय देखभाल का विकल्प नहीं हैं।',
+  enableNotifications: 'सूचनाएँ चालू करें',
+  permissionDenied:
+    'सूचना अनुमति बंद है। आप इसे डिवाइस सेटिंग्स में चालू कर सकते हैं।',
+  registrationPending:
+    'पुश पंजीकरण उपलब्ध नहीं है। ऐप का उपयोग जारी रखा जा सकता है।',
+  registrationComplete: 'यह डिवाइस सूचनाओं के लिए पंजीकृत है।',
+  registrationOffline: 'सूचनाएँ पंजीकृत करने के लिए इंटरनेट से जुड़ें।',
+  openNotificationSettings: 'डिवाइस सूचना सेटिंग्स खोलें',
 };
 export type TranslationKey = keyof typeof en;
 export function translate(language: AppLanguage, key: TranslationKey): string {

@@ -18,6 +18,7 @@ export class AuthService {
   constructor(
     private readonly client: ApiClient,
     private readonly tokenStore: SecureTokenStore,
+    private readonly sessionCleanup?: () => Promise<void>,
   ) {}
 
   async requestOtp(phone: string): Promise<OtpChallenge> {
@@ -50,10 +51,12 @@ export class AuthService {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
     };
+    await this.sessionCleanup?.().catch(() => undefined);
     await this.tokenStore.write(tokens);
   }
 
   async logout(): Promise<void> {
+    await this.sessionCleanup?.().catch(() => undefined);
     try {
       await this.client.request(
         '/api/v1/auth/logout',
