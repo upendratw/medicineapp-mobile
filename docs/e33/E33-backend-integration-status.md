@@ -1,5 +1,7 @@
 # E33 Backend Integration Status
 
+MED-1322 through MED-1324 have no current backend endpoints. Interaction checking, prescription OCR/upload, and inventory/refill therefore use explicit pending adapters. See `E33-clinical-feature-integration-status.md`.
+
 MED-1318 through MED-1321 add real reminder acknowledgement, snooze, intake-history, and E22 drug-information integrations. Production notification delivery/context remains pending E19. See `E33-E18-E19-E20-integration-status.md` for the dependency matrix.
 
 | Mobile capability                  | Backend status | Integration                                               |

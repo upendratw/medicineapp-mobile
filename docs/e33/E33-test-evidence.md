@@ -1,5 +1,7 @@
 # E33 Test Evidence
 
+MED-1322 through MED-1324 add tests for all display states, textual severity, prescription confirmation/correction/rejection, explicit processing, transient-image privacy, inventory validation, incomplete-estimate behavior, pending adapters, and prohibited clinical advice.
+
 MED-1318 through MED-1321 add component, action-state, backend-contract, evidence-status, translation, history, failure-sanitization, navigation, privacy, and clinical-language coverage. Final command results are reported at feature-branch handoff and do not establish clinical validation or production readiness.
 
 Scope: MED-1304 through MED-1310 mobile foundation. Automated tests cover environment rejection, protected route decisions, logout routing, component accessibility/loading/error states, Indian phone and OTP bounds, backend auth payloads, secure token persistence, sanitized auth errors, onboarding progression, and safety language.
