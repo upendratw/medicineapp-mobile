@@ -9,6 +9,13 @@ import {
 import { buildOcrService } from '@/services/ocrService';
 import { ScheduleService } from '@/services/scheduleService';
 import {
+  EmergencyAssistanceService,
+  LinkingDeviceCommunicationService,
+  PendingSymptomAssessmentService,
+  PendingVoiceInputService,
+  VoiceCommandResolver,
+} from '@/services/highRiskServices';
+import {
   PendingInteractionService,
   PendingInventoryService,
   PendingPrescriptionScanService,
@@ -39,3 +46,9 @@ export const drugInformationService = new DrugInformationService(api);
 export const interactionService = new PendingInteractionService();
 export const prescriptionScanService = new PendingPrescriptionScanService();
 export const inventoryService = new PendingInventoryService();
+export const symptomAssessmentService = new PendingSymptomAssessmentService();
+export const emergencyAssistanceService = new EmergencyAssistanceService(api);
+export const deviceCommunicationService =
+  new LinkingDeviceCommunicationService();
+export const voiceInputService = new PendingVoiceInputService();
+export const voiceCommandResolver = new VoiceCommandResolver();

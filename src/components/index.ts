@@ -20,4 +20,8 @@ export * from './DrugInformationView';
 export * from './InteractionWarnings';
 export * from './PrescriptionReview';
 export * from './InventoryRefill';
+export * from './SafetyConfirmation';
+export * from './SymptomAssessment';
+export * from './EmergencyHelp';
+export * from './VoiceControls';
 export * from './ScheduleForm';
