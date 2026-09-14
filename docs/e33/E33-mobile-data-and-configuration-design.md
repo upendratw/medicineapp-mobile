@@ -1,5 +1,7 @@
 # E33 Mobile Data and Configuration Design
 
+The canonical MED-1361 consolidation is `E33-final-data-architecture.md` and `E33-final-environment-architecture.md`. This document retains the detailed model inventory.
+
 | Model/domain             | Source of truth                     | Mobile lifetime/persistence                  | Sensitive / validation                                    |
 | ------------------------ | ----------------------------------- | -------------------------------------------- | --------------------------------------------------------- |
 | Auth/session             | FastAPI auth                        | SecureStore until logout/invalid             | Secret; bounded token validation, fail closed             |

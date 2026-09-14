@@ -1,6 +1,6 @@
 # E33 Engineering Traceability Matrix
 
-MED-1304–1345 detailed requirement rows are in `E33-requirements-acceptance-review.md`. This matrix extends governance traceability through MED-1355.
+MED-1304–1345 detailed requirement rows are in `E33-requirements-acceptance-review.md`. This matrix closes engineering traceability through MED-1363; owner acceptance remains a human decision.
 
 | Range/task    | Implementation                                         | Tests                                             | Documentation / gap                                       |
 | ------------- | ------------------------------------------------------ | ------------------------------------------------- | --------------------------------------------------------- |
@@ -26,3 +26,6 @@ MED-1304–1345 detailed requirement rows are in `E33-requirements-acceptance-re
 | MED-1358      | preview/test profile review                            | release/config validation                         | test deployment report; API/target and deployment pending |
 | MED-1359      | no live target                                         | 33 suites/167 tests plus static/export checks     | regression report; live integration pending               |
 | MED-1360      | no code change required                                | full retest                                       | zero-defect register; deployed retest pending             |
+| MED-1361      | canonical API/data/mobile/environment architecture     | repository and documentation consistency review   | final technical documentation package complete            |
+| MED-1362      | operational runbook, support checklist, limitations    | operational/safety scenario review                | support package technically complete                      |
+| MED-1363      | owner acceptance package                               | final automated evidence and risk review          | ACCEPTANCE PACKAGE COMPLETE / OWNER DECISION PENDING      |
