@@ -8,4 +8,4 @@ Outstanding criteria remain: E19 production delivery; patient medication/OCR, in
 
 No roadmap task with one of those dependencies is promoted to COMPLETE. This review introduces no new product capability.
 
-MED-1356 through MED-1362 are not implemented or accepted by this batch; their authoritative task definitions were not supplied and are not inferred. MED-1363 remains the explicitly identified future owner-acceptance task.
+MED-1356–1360 now have local configuration, discovery, regression, and export evidence. They do not have actual development/test deployments, deployed smoke, device execution, backend connectivity, or remote integration evidence. MED-1361–1362 remain outside this batch; MED-1363 owner acceptance remains pending.
