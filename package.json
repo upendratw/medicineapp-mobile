@@ -50,6 +50,7 @@
     "ios": "expo start --ios",
     "test": "jest",
     "lint": "expo lint",
+    "release:check": "node scripts/validate-release-config.mjs",
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check ."
   },
