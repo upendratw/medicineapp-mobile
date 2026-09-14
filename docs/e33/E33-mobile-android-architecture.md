@@ -1,5 +1,7 @@
 # E33 Mobile Android Architecture
 
+MED-1334 through MED-1342 validate the existing Expo-managed Android boundary without adding hand-written native compatibility branches. Expo owns OS-specific permission and native component behavior; application code owns explicit permission initiation, safe denial, bounded offline state, transient sensitive state, scalable design primitives, and accessible semantics. The source does not assume a resident process or retain capture, symptom, or voice state across recreation. Device-specific runtime evidence is tracked separately and remains pending where no matching target was available.
+
 MED-1332 adds an in-memory, allowlisted deep-link intent boundary ahead of the existing auth/onboarding route guard. MED-1333 adds Expo Notifications permission/token acquisition, a private generic notification channel, authenticated backend device registration, SecureStore registration metadata, logout revocation, and notification-tap routing through the same deep-link boundary. No notification action directly performs clinical or emergency work.
 
 MED-1328 through MED-1331 add a preferences provider feeding reusable design primitives, typed en-IN/hi-IN UI resources, an injectable network-state boundary with offline/stale banner, a bounded allowlisted AsyncStorage cache, and versioned SecureStore session handling. UI preferences are separate from clinical evidence language, and no offline clinical-write architecture exists.

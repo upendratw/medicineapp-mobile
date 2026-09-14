@@ -16,6 +16,7 @@ export function MedicationCard({
 }) {
   return (
     <AppCard
+      accessible
       accessibilityLabel={`${medication.canonicalName}. ${status[medication.reviewStatus]}`}
     >
       <AppText variant="heading">{medication.canonicalName}</AppText>

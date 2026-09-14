@@ -1,5 +1,7 @@
 # E33 Test Evidence
 
+MED-1334 through MED-1342 add Android 10–15+ configuration/static checks, state-recreation and low-memory resilience coverage, large-text wrapping/control coverage, TalkBack semantic coverage, and an explicit device-evidence matrix. No emulator, system image, AVD, or connected physical device was available on 2026-09-14, so version-specific runtime, memory-pressure, Android system-font-scale, and manual TalkBack execution remain pending. Warning alerts and medication cards received narrowly scoped accessibility-semantic corrections.
+
 MED-1332–1333 add allowlist, malformed/sensitive/action-link, auth/onboarding-gate, notification-route, permission, token rotation/unavailable, offline, backend failure, logout revocation, endpoint-contract, and lock-screen privacy tests. Static checks assert no token logging, AsyncStorage token persistence, direct service clients, clinical payloads, or automatic medication/SOS actions.
 
 MED-1328 through MED-1331 add preference restoration/persistence, design-token propagation, runtime localization, E22 translation-boundary, offline TTL/stale/corruption/bounds, fail-safe offline action, and SecureStore availability/corruption tests. Final command results are recorded in the branch handoff and do not establish production or clinical validation.

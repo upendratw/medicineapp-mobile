@@ -22,7 +22,10 @@ export function AppAlert({
     'errorSurface' | 'successSurface' | 'warningSurface' | 'infoSurface';
   return (
     <View
-      accessibilityRole={tone === 'error' ? 'alert' : undefined}
+      accessible
+      accessibilityRole={
+        tone === 'error' || tone === 'warning' ? 'alert' : undefined
+      }
       style={[
         styles.base,
         styles[tone],
