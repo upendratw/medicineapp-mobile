@@ -1,5 +1,7 @@
 # E33 Clinical Feature Integration Status
 
+MED-1325 symptom assessment and MED-1327 voice/STT are pending. MED-1326 uses the real emergency-contact list; emergency dispatch and caregiver SOS messaging are unavailable and are not simulated.
+
 | Task                             | Backend availability | Mobile behavior                                                               |
 | -------------------------------- | -------------------- | ----------------------------------------------------------------------------- |
 | MED-1322 interactions            | Missing              | Typed pending production adapter; backend-validated display component only    |

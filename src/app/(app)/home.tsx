@@ -29,6 +29,21 @@ export default function HomeScreen() {
       />
       <AppButton
         variant="secondary"
+        label="Symptom information"
+        onPress={() => router.push('/symptoms')}
+      />
+      <AppButton
+        variant="secondary"
+        label="Emergency help options"
+        onPress={() => router.push('/sos')}
+      />
+      <AppButton
+        variant="secondary"
+        label="Voice controls"
+        onPress={() => router.push('/voice')}
+      />
+      <AppButton
+        variant="secondary"
         label="Interaction information"
         onPress={() => router.push('/interactions')}
       />

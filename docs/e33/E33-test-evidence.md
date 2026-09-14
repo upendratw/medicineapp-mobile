@@ -1,5 +1,7 @@
 # E33 Test Evidence
 
+MED-1325 through MED-1327 add cross-feature tests for self-reported symptom input, pending validated assessment, SOS confirmation/cancellation, deterministic navigation intents, blocked clinical voice commands, and absence of logging, persistence, location, SMS, or fabricated clinical routes.
+
 MED-1322 through MED-1324 add tests for all display states, textual severity, prescription confirmation/correction/rejection, explicit processing, transient-image privacy, inventory validation, incomplete-estimate behavior, pending adapters, and prohibited clinical advice.
 
 MED-1318 through MED-1321 add component, action-state, backend-contract, evidence-status, translation, history, failure-sanitization, navigation, privacy, and clinical-language coverage. Final command results are reported at feature-branch handoff and do not establish clinical validation or production readiness.
