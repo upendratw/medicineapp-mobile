@@ -1,37 +1,37 @@
+import { useRouter } from 'expo-router';
+import { useCallback } from 'react';
+
 import {
   AppButton,
-  AppCard,
   AppHeader,
   AppScreen,
-  AppText,
-  EmptyState,
+  PatientDashboard,
 } from '@/components';
-import { useAuth } from '@/state/AuthContext';
-import { useOnboarding } from '@/state/OnboardingContext';
+import { useAsyncResource } from '@/hooks/useAsyncResource';
+import { dashboardService } from '@/services/registry';
+
 export default function HomeScreen() {
-  const { logout } = useAuth();
-  const { reset } = useOnboarding();
-  const signOut = async () => {
-    await logout();
-    await reset();
-  };
+  const router = useRouter();
+  const load = useCallback(() => dashboardService.load(), []);
+  const state = useAsyncResource(load);
   return (
     <AppScreen>
       <AppHeader
-        title="MedicineApp"
-        subtitle="Medication support designed for clarity and safety."
+        title="Your dashboard"
+        subtitle="Medication routines at a glance."
       />
-      <AppCard>
-        <EmptyState
-          title="Your dashboard is ready"
-          message="Medication features will be added in later E33 tasks."
-        />
-      </AppCard>
-      <AppText variant="caption">
-        MedicineApp does not diagnose, prescribe, or recommend changing
-        medication or dosage.
-      </AppText>
-      <AppButton variant="secondary" label="Sign out" onPress={signOut} />
+      <PatientDashboard
+        data={state.data}
+        loading={state.loading}
+        error={state.error}
+        onRetry={state.refresh}
+        onNavigate={(route) => router.push(route)}
+      />
+      <AppButton
+        variant="secondary"
+        label="Open caregiver dashboard"
+        onPress={() => router.push('/caregiver-dashboard')}
+      />
     </AppScreen>
   );
 }

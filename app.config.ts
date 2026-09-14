@@ -30,6 +30,14 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    [
+      'expo-camera',
+      {
+        cameraPermission:
+          'Allow MedicineApp to photograph medicine packaging for your review.',
+        recordAudioAndroid: false,
+      },
+    ],
     ['expo-secure-store', { configureAndroidBackup: true }],
     [
       'expo-splash-screen',

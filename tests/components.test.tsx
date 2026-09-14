@@ -7,7 +7,9 @@ test('button exposes an accessible label and invokes its action', async () => {
   const screen = await render(
     <AppButton label="Continue safely" onPress={action} />,
   );
-  fireEvent.press(screen.getByRole('button', { name: 'Continue safely' }));
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Continue safely' }),
+  );
   expect(action).toHaveBeenCalledTimes(1);
 });
 
@@ -21,7 +23,7 @@ test('loading button is busy, disabled, and cannot submit repeatedly', async () 
     disabled: true,
     busy: true,
   });
-  fireEvent.press(button);
+  await fireEvent.press(button);
   expect(action).not.toHaveBeenCalled();
 });
 
