@@ -1,5 +1,7 @@
 # E33 Detailed Technical Design
 
+MED-1361 final consolidation is authoritative in `E33-final-mobile-architecture.md`, `E33-final-api-integration-matrix.md`, `E33-final-data-architecture.md`, and `E33-final-environment-architecture.md`. This historical design remains consistent with those canonical documents; configuration does not establish deployment or release readiness.
+
 ## Implemented architecture
 
 ```text

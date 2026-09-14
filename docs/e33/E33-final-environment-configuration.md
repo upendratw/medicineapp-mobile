@@ -1,0 +1,12 @@
+# E33 Final Environment Configuration
+
+| Environment | `EXPO_PUBLIC_APP_ENV` | API URL                                                                  | HTTPS                                                         | Diagnostics   | Development fixtures                                           | EAS profile   | Deployment / validation                                        |
+| ----------- | --------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------- | ------------- | -------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
+| Development | `development`         | Required for device/remote use; local default is `http://127.0.0.1:8000` | Not required locally                                          | May be true   | Explicit diagnostic-only medication/reminder adapters possible | `development` | Local config/export pass; actual deployment and smoke pending  |
+| Test        | `test`                | Explicit Test backend required                                           | Recommended; protected rule not currently enforced for `test` | Must be false | Disabled                                                       | `preview`     | Profile/config intent only; deployment/live regression pending |
+| Staging     | `staging`             | Explicit non-loopback backend                                            | Required                                                      | Must be false | Disabled                                                       | `staging`     | Profile design only; not deployed                              |
+| Production  | `production`          | Explicit non-loopback backend                                            | Required                                                      | Must be false | Disabled                                                       | `production`  | AAB intent only; signing/build/Play/deployment pending         |
+
+Request timeout is an integer from 1,000 to 30,000 ms. Secret-like `EXPO_PUBLIC_*` names are rejected because all public variables are bundled. `npm run release:check` validates release invariants. No environment URL or secret is embedded in `eas.json`.
+
+Configuration readiness is not deployment evidence. See `E33-final-environment-architecture.md` and `E33-environment-promotion-status.md`.

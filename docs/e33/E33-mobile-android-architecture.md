@@ -1,5 +1,7 @@
 # E33 Mobile Android Architecture
 
+See `E33-final-mobile-architecture.md` for the canonical MED-1361 system view. Actual Development/Test deployment, Android device execution, signed AAB creation, and production release remain pending.
+
 MED-1345 adds reviewed EAS profile intent without embedding environment URLs or secrets. Development and internal APK profiles remain separate from the production AAB profile. Protected runtime configuration requires HTTPS, rejects loopback hosts and public secret-like variables, and keeps diagnostics disabled; signing and EAS/Play environment provisioning remain outside source control.
 
 MED-1346–1355 consolidate the implemented design and add bounded, injected mobile observability. `ApiClient` emits only sanitized failure codes and low-cardinality duration signals through no-op-by-default sinks. Mobile operational records are not the authoritative clinical/security audit trail; FastAPI remains authoritative.

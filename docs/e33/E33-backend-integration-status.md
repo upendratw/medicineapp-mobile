@@ -1,5 +1,7 @@
 # E33 Backend Integration Status
 
+The canonical endpoint-by-endpoint inventory is `E33-final-api-integration-matrix.md`. In addition to the gaps below, automatic access-token refresh is not implemented even though the refresh token is stored securely.
+
 MED-1333 uses real authenticated `POST /api/v1/devices` registration and `DELETE /api/v1/devices/{did}` revocation. The backend accepts a bounded push token and returns an opaque device record ID. E19 production notification delivery remains pending; no endpoint is fabricated.
 
 MED-1328 and MED-1329 are device UI concerns. MED-1330 caches only approved read-only summaries and never bypasses backend authority. MED-1331 preserves the backend authentication contract while hardening device token storage. No backend changes or fabricated endpoints are required.

@@ -1,5 +1,14 @@
 # E33 Mobile Data Classification
 
+MED-1361 reconciliation confirms four storage classes:
+
+- **Class A — Secrets:** access and refresh tokens use SecureStore only. Logout clears tokens and the opaque push registration ID; malformed/partial values fail closed.
+- **Class B — Sensitive health data:** symptoms, prescription images, OCR text, history, caregiver data, voice/audio/transcripts, and clinical evidence are server-backed or transient in memory by default. Capture state is cleared on retake/continuation and is not placed in offline storage.
+- **Class C — Limited operational cache:** only approved UI, medication-summary, and schedule-summary categories use the bounded TTL cache. Expired/corrupt data is removed; stale reads require an explicit stale path.
+- **Class D — Non-sensitive preferences:** language, accessibility, and onboarding preferences may use AsyncStorage.
+
+The push token is transient; only a bounded opaque backend registration ID uses SecureStore. See `E33-final-data-architecture.md` for the canonical limits and prohibitions.
+
 | Class                        | Examples                                                                    | Permitted persistence                                           |
 | ---------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | A — Secret                   | Access and refresh tokens                                                   | SecureStore only                                                |
