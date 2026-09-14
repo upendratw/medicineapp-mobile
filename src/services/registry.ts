@@ -8,6 +8,11 @@ import {
 } from '@/services/medicationService';
 import { buildOcrService } from '@/services/ocrService';
 import { ScheduleService } from '@/services/scheduleService';
+import {
+  PendingInteractionService,
+  PendingInventoryService,
+  PendingPrescriptionScanService,
+} from '@/services/clinicalFeatureServices';
 import { DrugInformationService } from '@/services/drugInformationService';
 import { MedicationHistoryService } from '@/services/historyService';
 import {
@@ -31,3 +36,6 @@ export const reminderService = new ReminderService(api);
 export const reminderContextService = buildReminderContextService();
 export const medicationHistoryService = new MedicationHistoryService(api);
 export const drugInformationService = new DrugInformationService(api);
+export const interactionService = new PendingInteractionService();
+export const prescriptionScanService = new PendingPrescriptionScanService();
+export const inventoryService = new PendingInventoryService();

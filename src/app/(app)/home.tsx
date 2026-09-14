@@ -29,6 +29,21 @@ export default function HomeScreen() {
       />
       <AppButton
         variant="secondary"
+        label="Interaction information"
+        onPress={() => router.push('/interactions')}
+      />
+      <AppButton
+        variant="secondary"
+        label="Scan prescription"
+        onPress={() => router.push('/prescription-scan')}
+      />
+      <AppButton
+        variant="secondary"
+        label="Inventory and refill"
+        onPress={() => router.push('/inventory')}
+      />
+      <AppButton
+        variant="secondary"
         label="View medication history"
         onPress={() => router.push('/medication-history')}
       />
