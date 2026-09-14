@@ -2,6 +2,8 @@
 
 MED-1343 through MED-1345 add draft-only Play listing, privacy/Data Safety, and release-profile evidence plus automated protected-environment checks. Release configuration rejects protected HTTP/loopback backends and secret-like `EXPO_PUBLIC_*` names. No Play upload, signing credential, signed AAB, legal approval, production deployment, or clinical validation is established.
 
+MED-1346 through MED-1355 add retrospective traceability/test catalogs, actual-state technical/data/threat designs, bounded no-op observability, sanitized API failure/duration evidence, and consolidated negative paths. This is engineering self-review only; independent human review and MED-1363 owner acceptance remain pending.
+
 MED-1334 through MED-1342 add Android 10–15+ configuration/static checks, state-recreation and low-memory resilience coverage, large-text wrapping/control coverage, TalkBack semantic coverage, and an explicit device-evidence matrix. No emulator, system image, AVD, or connected physical device was available on 2026-09-14, so version-specific runtime, memory-pressure, Android system-font-scale, and manual TalkBack execution remain pending. Warning alerts and medication cards received narrowly scoped accessibility-semantic corrections.
 
 MED-1332–1333 add allowlist, malformed/sensitive/action-link, auth/onboarding-gate, notification-route, permission, token rotation/unavailable, offline, backend failure, logout revocation, endpoint-contract, and lock-screen privacy tests. Static checks assert no token logging, AsyncStorage token persistence, direct service clients, clinical payloads, or automatic medication/SOS actions.

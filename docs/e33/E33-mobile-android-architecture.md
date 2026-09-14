@@ -2,6 +2,8 @@
 
 MED-1345 adds reviewed EAS profile intent without embedding environment URLs or secrets. Development and internal APK profiles remain separate from the production AAB profile. Protected runtime configuration requires HTTPS, rejects loopback hosts and public secret-like variables, and keeps diagnostics disabled; signing and EAS/Play environment provisioning remain outside source control.
 
+MED-1346–1355 consolidate the implemented design and add bounded, injected mobile observability. `ApiClient` emits only sanitized failure codes and low-cardinality duration signals through no-op-by-default sinks. Mobile operational records are not the authoritative clinical/security audit trail; FastAPI remains authoritative.
+
 MED-1334 through MED-1342 validate the existing Expo-managed Android boundary without adding hand-written native compatibility branches. Expo owns OS-specific permission and native component behavior; application code owns explicit permission initiation, safe denial, bounded offline state, transient sensitive state, scalable design primitives, and accessible semantics. The source does not assume a resident process or retain capture, symptom, or voice state across recreation. Device-specific runtime evidence is tracked separately and remains pending where no matching target was available.
 
 MED-1332 adds an in-memory, allowlisted deep-link intent boundary ahead of the existing auth/onboarding route guard. MED-1333 adds Expo Notifications permission/token acquisition, a private generic notification channel, authenticated backend device registration, SecureStore registration metadata, logout revocation, and notification-tap routing through the same deep-link boundary. No notification action directly performs clinical or emergency work.

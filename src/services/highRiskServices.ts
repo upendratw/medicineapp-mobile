@@ -1,5 +1,6 @@
 import { Linking } from 'react-native';
 import { ApiClient } from '@/api/client';
+import { mobileObservability, type MobileObservability } from '@/observability';
 import { IntegrationPendingError } from '@/services/integration';
 
 export type SelfReportedSeverity = 'mild' | 'moderate' | 'severe';
@@ -79,29 +80,50 @@ export type VoiceIntent =
   | { kind: 'UNKNOWN' };
 
 export class VoiceCommandResolver {
+  constructor(
+    private readonly observability: MobileObservability = mobileObservability,
+  ) {}
   resolve(raw: string): VoiceIntent {
     const text = raw.trim().toLowerCase();
     if (
       /stop (my )?medicine|double (my )?(next )?dose|change (my )?dose|diagnos|what should i take/.test(
         text,
       )
-    )
+    ) {
+      this.observability.event(
+        'dangerous_voice_command_blocked',
+        'application',
+        'rejected',
+      );
       return {
         kind: 'BLOCKED_CLINICAL',
         description: 'This request cannot be performed by voice.',
       };
-    if (/call emergency|emergency services|\bsos\b/.test(text))
+    }
+    if (/call emergency|emergency services|\bsos\b/.test(text)) {
+      this.observability.event(
+        'confirmation_required_action_displayed',
+        'application',
+        'success',
+      );
       return {
         kind: 'CONFIRM_REQUIRED',
         action: 'OPEN_SOS',
         description: 'Open emergency help options',
       };
-    if (/mark .*taken|skip .*medicine|record .*taken/.test(text))
+    }
+    if (/mark .*taken|skip .*medicine|record .*taken/.test(text)) {
+      this.observability.event(
+        'confirmation_required_action_displayed',
+        'application',
+        'success',
+      );
       return {
         kind: 'CONFIRM_REQUIRED',
         action: 'MEDICATION_ACTION',
         description: 'Open the medication action for visual confirmation',
       };
+    }
     if (/medicine list|my medicines/.test(text))
       return { kind: 'NAVIGATE', route: '/medicines' };
     if (/schedule/.test(text)) return { kind: 'NAVIGATE', route: '/schedule' };

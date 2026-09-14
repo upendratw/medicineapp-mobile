@@ -1,3 +1,5 @@
+import { mobileObservability, type MobileObservability } from '@/observability';
+
 export type SafeDestination =
   | '/home'
   | '/medicines'
@@ -26,39 +28,56 @@ export type DeepLinkResolution = Readonly<{
   accepted: boolean;
   reason?: 'scheme' | 'payload' | 'route' | 'structure';
 }>;
-export function resolveDeepLink(raw: string): DeepLinkResolution {
+export function resolveDeepLink(
+  raw: string,
+  observability: MobileObservability = mobileObservability,
+): DeepLinkResolution {
   if (!raw || raw.length > 512 || prohibited.test(decodeSafely(raw)))
-    return { destination: '/home', accepted: false, reason: 'payload' };
+    return rejected('payload', observability);
   try {
     const url = new URL(raw);
     if (url.protocol !== 'medicineapp:')
-      return { destination: '/home', accepted: false, reason: 'scheme' };
+      return rejected('scheme', observability);
     if (url.username || url.password || url.search || url.hash)
-      return { destination: '/home', accepted: false, reason: 'structure' };
+      return rejected('structure', observability);
     const segments = [url.hostname, ...url.pathname.split('/')]
       .filter(Boolean)
       .map((item) => decodeURIComponent(item));
     if (segments.length !== 1 || segments[0].length > 64)
-      return { destination: '/home', accepted: false, reason: 'structure' };
+      return rejected('structure', observability);
     const destination = destinations[segments[0]];
     return destination
       ? { destination, accepted: true }
-      : { destination: '/home', accepted: false, reason: 'route' };
+      : rejected('route', observability);
   } catch {
-    return { destination: '/home', accepted: false, reason: 'structure' };
+    return rejected('structure', observability);
   }
 }
 export function resolveNotificationDestination(
   value: unknown,
+  observability: MobileObservability = mobileObservability,
 ): DeepLinkResolution {
   if (typeof value !== 'string' || !/^\/[a-z-]{1,64}$/.test(value))
-    return { destination: '/home', accepted: false, reason: 'structure' };
+    return rejected('structure', observability);
   const entry = Object.entries(destinations).find(
     ([, destination]) => destination === value,
   );
   return entry
     ? { destination: entry[1], accepted: true }
-    : { destination: '/home', accepted: false, reason: 'route' };
+    : rejected('route', observability);
+}
+function rejected(
+  reason: NonNullable<DeepLinkResolution['reason']>,
+  observability: MobileObservability,
+): DeepLinkResolution {
+  observability.event(
+    'deep_link_rejected',
+    'navigation',
+    'rejected',
+    reason.toUpperCase(),
+  );
+  observability.increment('deep_link_rejected', 'navigation', 'rejected');
+  return { destination: '/home', accepted: false, reason };
 }
 function decodeSafely(value: string): string {
   try {

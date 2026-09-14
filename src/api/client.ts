@@ -1,4 +1,5 @@
 import { publicEnvironment } from '@/config/environment';
+import { mobileObservability, type MobileObservability } from '@/observability';
 import type { SecureTokenStore } from '@/security/SecureTokenStore';
 
 type ApiEnvelope<T> = { data: T };
@@ -19,6 +20,7 @@ export class ApiClient {
     private readonly baseUrl = publicEnvironment.apiBaseUrl,
     private readonly timeoutMs = publicEnvironment.requestTimeoutMs,
     private readonly tokenStore?: SecureTokenStore,
+    private readonly observability: MobileObservability = mobileObservability,
   ) {}
 
   async request<T>(
@@ -28,6 +30,8 @@ export class ApiClient {
   ): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const startedAt = Date.now();
+    let outcome: 'success' | 'failure' = 'failure';
     try {
       const headers = new Headers(options.headers);
       headers.set('Accept', 'application/json');
@@ -53,17 +57,29 @@ export class ApiClient {
       if (!body || typeof body !== 'object' || !('data' in body)) {
         throw new ApiError('INVALID_RESPONSE', 502);
       }
+      outcome = 'success';
       return body.data;
     } catch (error) {
-      if (error instanceof ApiError) throw error;
-      throw new ApiError(
-        error instanceof Error && error.name === 'AbortError'
-          ? 'REQUEST_TIMEOUT'
-          : 'NETWORK_UNAVAILABLE',
-        0,
+      const sanitized =
+        error instanceof ApiError
+          ? error
+          : new ApiError(
+              error instanceof Error && error.name === 'AbortError'
+                ? 'REQUEST_TIMEOUT'
+                : 'NETWORK_UNAVAILABLE',
+              0,
+            );
+      this.observability.event(
+        'api_request_failure',
+        'api',
+        'failure',
+        sanitized.code,
       );
+      this.observability.increment('api_request_failure', 'api', 'failure');
+      throw sanitized;
     } finally {
       clearTimeout(timeout);
+      this.observability.duration(Date.now() - startedAt, 'api', outcome);
     }
   }
 }
