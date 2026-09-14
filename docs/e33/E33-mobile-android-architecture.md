@@ -1,5 +1,7 @@
 # E33 Mobile Android Architecture
 
+MED-1332 adds an in-memory, allowlisted deep-link intent boundary ahead of the existing auth/onboarding route guard. MED-1333 adds Expo Notifications permission/token acquisition, a private generic notification channel, authenticated backend device registration, SecureStore registration metadata, logout revocation, and notification-tap routing through the same deep-link boundary. No notification action directly performs clinical or emergency work.
+
 MED-1328 through MED-1331 add a preferences provider feeding reusable design primitives, typed en-IN/hi-IN UI resources, an injectable network-state boundary with offline/stale banner, a bounded allowlisted AsyncStorage cache, and versioned SecureStore session handling. UI preferences are separate from clinical evidence language, and no offline clinical-write architecture exists.
 
 MED-1325 through MED-1327 preserve the protected UI → typed service boundary. Sensitive symptom/transcript state remains in memory. Only the real authenticated emergency-contact GET route is used. OS dialing is isolated behind a mockable device abstraction and always follows explicit confirmation.

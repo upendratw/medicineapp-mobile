@@ -18,3 +18,25 @@ jest.mock('@react-native-community/netinfo', () => ({
   __esModule: true,
   default: { addEventListener: jest.fn(() => jest.fn()) },
 }));
+
+jest.mock('expo-notifications', () => ({
+  PermissionStatus: {
+    GRANTED: 'granted',
+    DENIED: 'denied',
+    UNDETERMINED: 'undetermined',
+  },
+  AndroidImportance: { DEFAULT: 3 },
+  AndroidNotificationVisibility: { PRIVATE: 0 },
+  getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'undetermined' }),
+  requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'denied' }),
+  getExpoPushTokenAsync: jest.fn(),
+  setNotificationChannelAsync: jest.fn().mockResolvedValue(null),
+  addNotificationResponseReceivedListener: jest.fn(() => ({
+    remove: jest.fn(),
+  })),
+}));
+
+jest.mock('expo-application', () => ({
+  getAndroidId: jest.fn(() => 'synthetic-device-id'),
+}));
+jest.mock('expo-device', () => ({ isDevice: true }));

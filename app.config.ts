@@ -39,6 +39,7 @@ const config: ExpoConfig = {
       },
     ],
     ['expo-secure-store', { configureAndroidBackup: true }],
+    ['expo-notifications', { defaultChannel: 'medicineapp-reminders-v1' }],
     [
       'expo-splash-screen',
       {
