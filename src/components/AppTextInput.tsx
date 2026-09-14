@@ -2,10 +2,12 @@ import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { AppText } from '@/components/AppText';
 import { theme } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/useAppTheme';
 
 type Props = TextInputProps & { label: string; error?: string };
 
 export function AppTextInput({ label, error, style, ...props }: Props) {
+  const activeTheme = useAppTheme();
   const errorId = error ? `${props.nativeID ?? 'input'}-error` : undefined;
   return (
     <View style={styles.group}>
@@ -15,8 +17,19 @@ export function AppTextInput({ label, error, style, ...props }: Props) {
         accessibilityHint={error}
         aria-describedby={errorId}
         allowFontScaling
-        placeholderTextColor={theme.colors.mutedText}
-        style={[styles.input, error && styles.inputError, style]}
+        placeholderTextColor={activeTheme.colors.mutedText}
+        style={[
+          styles.input,
+          {
+            minHeight: activeTheme.touchTarget,
+            borderColor: activeTheme.colors.border,
+            backgroundColor: activeTheme.colors.surface,
+            color: activeTheme.colors.text,
+            fontSize: activeTheme.typography.body,
+          },
+          error && styles.inputError,
+          style,
+        ]}
         {...props}
       />
       {error ? (

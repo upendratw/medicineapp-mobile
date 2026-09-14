@@ -7,6 +7,7 @@ import {
 
 import { AppText } from '@/components/AppText';
 import { theme } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/useAppTheme';
 
 type Props = PressableProps & {
   label: string;
@@ -22,6 +23,7 @@ export function AppButton({
   style,
   ...props
 }: Props) {
+  const activeTheme = useAppTheme();
   const unavailable = disabled || loading;
   return (
     <Pressable
@@ -31,7 +33,16 @@ export function AppButton({
       disabled={unavailable}
       style={({ pressed }) => [
         styles.base,
+        { minHeight: activeTheme.touchTarget },
         styles[variant],
+        variant === 'primary' && {
+          backgroundColor: activeTheme.colors.primary,
+          borderColor: activeTheme.colors.primary,
+        },
+        variant === 'secondary' && {
+          backgroundColor: activeTheme.colors.surface,
+          borderColor: activeTheme.colors.primary,
+        },
         unavailable && styles.disabled,
         pressed && !unavailable && styles.pressed,
         typeof style === 'function' ? style({ pressed }) : style,
@@ -41,13 +52,15 @@ export function AppButton({
       {loading ? (
         <ActivityIndicator
           accessibilityLabel="Loading"
-          color={variant === 'primary' ? '#FFFFFF' : theme.colors.primary}
+          color={variant === 'primary' ? '#FFFFFF' : activeTheme.colors.primary}
         />
       ) : (
         <AppText
           variant="label"
           style={
-            variant === 'primary' ? styles.primaryText : styles.secondaryText
+            variant === 'primary'
+              ? styles.primaryText
+              : { color: activeTheme.colors.primary }
           }
         >
           {label}

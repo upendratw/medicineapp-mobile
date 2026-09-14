@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/AppText';
 import { theme } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/useAppTheme';
 
 type Tone = 'error' | 'success' | 'warning' | 'info';
 const symbols: Record<Tone, string> = {
@@ -16,10 +17,20 @@ export function AppAlert({
   message: string;
   tone?: Tone;
 }) {
+  const activeTheme = useAppTheme();
+  const surfaceKey = `${tone}Surface` as
+    'errorSurface' | 'successSurface' | 'warningSurface' | 'infoSurface';
   return (
     <View
       accessibilityRole={tone === 'error' ? 'alert' : undefined}
-      style={[styles.base, styles[tone]]}
+      style={[
+        styles.base,
+        styles[tone],
+        {
+          backgroundColor: activeTheme.colors[surfaceKey],
+          borderColor: activeTheme.colors[tone],
+        },
+      ]}
     >
       <AppText>
         <AppText variant="label">{symbols[tone]} </AppText>

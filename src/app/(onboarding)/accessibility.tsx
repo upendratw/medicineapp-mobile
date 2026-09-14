@@ -10,7 +10,7 @@ import {
 import { usePreferences } from '@/state/PreferencesContext';
 export default function AccessibilityScreen() {
   const router = useRouter();
-  const { accessibility, setAccessibility } = usePreferences();
+  const { accessibility, updateAccessibility } = usePreferences();
   return (
     <AppScreen>
       <AppHeader
@@ -23,14 +23,18 @@ export default function AccessibilityScreen() {
       </AppText>
       <AppCard>
         <AppButton
-          variant={accessibility === 'system' ? 'primary' : 'secondary'}
+          variant={
+            accessibility.textSize === 'default' ? 'primary' : 'secondary'
+          }
           label="Use device settings"
-          onPress={() => setAccessibility('system')}
+          onPress={() => updateAccessibility({ textSize: 'default' })}
         />
         <AppButton
-          variant={accessibility === 'enhanced' ? 'primary' : 'secondary'}
+          variant={accessibility.textSize === 'large' ? 'primary' : 'secondary'}
           label="Enhanced clarity"
-          onPress={() => setAccessibility('enhanced')}
+          onPress={() =>
+            updateAccessibility({ textSize: 'large', largerControls: true })
+          }
         />
       </AppCard>
       <AppAlert message="Important information is communicated with words as well as color." />

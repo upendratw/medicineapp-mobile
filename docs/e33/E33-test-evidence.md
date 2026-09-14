@@ -1,5 +1,7 @@
 # E33 Test Evidence
 
+MED-1328 through MED-1331 add preference restoration/persistence, design-token propagation, runtime localization, E22 translation-boundary, offline TTL/stale/corruption/bounds, fail-safe offline action, and SecureStore availability/corruption tests. Final command results are recorded in the branch handoff and do not establish production or clinical validation.
+
 MED-1325 through MED-1327 add cross-feature tests for self-reported symptom input, pending validated assessment, SOS confirmation/cancellation, deterministic navigation intents, blocked clinical voice commands, and absence of logging, persistence, location, SMS, or fabricated clinical routes.
 
 MED-1322 through MED-1324 add tests for all display states, textual severity, prescription confirmation/correction/rejection, explicit processing, transient-image privacy, inventory validation, incomplete-estimate behavior, pending adapters, and prohibited clinical advice.

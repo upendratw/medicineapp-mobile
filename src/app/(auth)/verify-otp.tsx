@@ -11,10 +11,12 @@ import {
 } from '@/components';
 import { useAuth } from '@/state/AuthContext';
 import { isValidOtp } from '@/utils/phone';
+import { useTranslation } from '@/localization';
 
 export default function VerifyOtpScreen() {
   const router = useRouter();
   const { pendingChallenge, requestOtp, verifyOtp } = useAuth();
+  const { t } = useTranslation();
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -60,12 +62,12 @@ export default function VerifyOtpScreen() {
   return (
     <AppScreen>
       <AppHeader
-        title="Verify your number"
+        title={t('verifyNumber')}
         subtitle="Enter the one-time code sent to your mobile number."
       />
       {error ? <AppAlert tone="error" message={error} /> : null}
       <AppTextInput
-        label="Verification code"
+        label={t('verificationCode')}
         accessibilityLabel="One-time verification code"
         value={otp}
         onChangeText={setOtp}
@@ -75,7 +77,7 @@ export default function VerifyOtpScreen() {
         secureTextEntry
       />
       <AppButton
-        label="Verify and continue"
+        label={t('verifyContinue')}
         loading={loading}
         onPress={submit}
       />

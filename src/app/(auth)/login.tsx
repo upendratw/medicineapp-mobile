@@ -12,10 +12,12 @@ import {
 import { publicEnvironment } from '@/config/environment';
 import { useAuth } from '@/state/AuthContext';
 import { normalizeIndianPhone } from '@/utils/phone';
+import { useTranslation } from '@/localization';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { requestOtp } = useAuth();
+  const { t } = useTranslation();
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,11 +41,11 @@ export default function LoginScreen() {
   return (
     <AppScreen>
       <AppHeader
-        title="Sign in"
+        title={t('signIn')}
         subtitle="Use your mobile number to receive a one-time verification code."
       />
       <AppTextInput
-        label="Mobile number"
+        label={t('mobileNumber')}
         accessibilityLabel="Indian mobile number"
         value={phone}
         onChangeText={setPhone}
@@ -53,11 +55,7 @@ export default function LoginScreen() {
         error={error || undefined}
         maxLength={14}
       />
-      <AppButton
-        label="Send verification code"
-        loading={loading}
-        onPress={submit}
-      />
+      <AppButton label={t('sendCode')} loading={loading} onPress={submit} />
       {publicEnvironment.developerDiagnostics ? (
         <AppAlert message="Development diagnostics are enabled. Verification codes are never displayed here." />
       ) : null}
