@@ -1,0 +1,6 @@
+node_modules
+.expo
+dist
+coverage
+assets/expo.icon
+scripts/reset-project.js
