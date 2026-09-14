@@ -31,4 +31,6 @@ npx expo config --type public
 
 Authentication tokens are stored only through `expo-secure-store`. AsyncStorage is limited to non-sensitive onboarding/preferences state. The app never connects directly to MySQL, AWS, S3, OpenSearch, or Gemini.
 
+Protected mobile foundations now include patient and caregiver dashboards, medicine-list and manual-entry flows, explicit camera capture, mandatory OCR-candidate confirmation, and backend-aligned daily schedule creation. Patient medicine creation and OCR remain visibly pending where the backend has no corresponding patient API.
+
 MedicineApp supports medication management workflows. It does not diagnose, prescribe, recommend medication changes, alter dosage, or replace a doctor or pharmacist.
