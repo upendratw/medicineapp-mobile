@@ -1,5 +1,7 @@
 # E33 Backend Integration Status
 
+MED-1318 through MED-1321 add real reminder acknowledgement, snooze, intake-history, and E22 drug-information integrations. Production notification delivery/context remains pending E19. See `E33-E18-E19-E20-integration-status.md` for the dependency matrix.
+
 | Mobile capability                  | Backend status | Integration                                               |
 | ---------------------------------- | -------------- | --------------------------------------------------------- |
 | Medication catalog search/details  | Available      | Real `/api/v1/medications` contracts                      |
