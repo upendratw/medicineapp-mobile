@@ -15,6 +15,20 @@ export type PublicEnvironment = Readonly<{
 
 type EnvironmentInput = Readonly<Record<string, string | undefined>>;
 
+const SECRET_LIKE_PUBLIC_NAME =
+  /(?:^|_)(?:SECRET|PASSWORD|PRIVATE_KEY|ACCESS_KEY|API_KEY|BEARER|JWT|REFRESH_TOKEN)(?:_|$)/i;
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+
+function rejectPublicSecrets(input: EnvironmentInput): void {
+  const unsafeName = Object.keys(input).find(
+    (name) =>
+      name.startsWith('EXPO_PUBLIC_') && SECRET_LIKE_PUBLIC_NAME.test(name),
+  );
+  if (unsafeName) {
+    throw new Error('Secrets must never use EXPO_PUBLIC environment variables');
+  }
+}
+
 const parseBoolean = (value: string | undefined): boolean => {
   if (value === undefined || value === 'false') return false;
   if (value === 'true') return true;
@@ -24,6 +38,7 @@ const parseBoolean = (value: string | undefined): boolean => {
 export function parsePublicEnvironment(
   input: EnvironmentInput,
 ): PublicEnvironment {
+  rejectPublicSecrets(input);
   const candidate = input.EXPO_PUBLIC_APP_ENV ?? 'development';
   if (!APP_ENVIRONMENTS.includes(candidate as AppEnvironment)) {
     throw new Error('Unsupported application environment');
@@ -44,6 +59,12 @@ export function parsePublicEnvironment(
     parsedUrl.protocol !== 'https:'
   ) {
     throw new Error('Protected environments require an HTTPS backend');
+  }
+  if (
+    ['staging', 'production'].includes(appEnvironment) &&
+    LOOPBACK_HOSTS.has(parsedUrl.hostname)
+  ) {
+    throw new Error('Protected environments cannot use a loopback backend');
   }
   const requestTimeoutMs = Number(
     input.EXPO_PUBLIC_REQUEST_TIMEOUT_MS ?? '10000',
@@ -71,10 +92,4 @@ export function parsePublicEnvironment(
   });
 }
 
-export const publicEnvironment = parsePublicEnvironment({
-  EXPO_PUBLIC_APP_ENV: process.env.EXPO_PUBLIC_APP_ENV,
-  EXPO_PUBLIC_API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL,
-  EXPO_PUBLIC_REQUEST_TIMEOUT_MS: process.env.EXPO_PUBLIC_REQUEST_TIMEOUT_MS,
-  EXPO_PUBLIC_DEVELOPER_DIAGNOSTICS:
-    process.env.EXPO_PUBLIC_DEVELOPER_DIAGNOSTICS,
-});
+export const publicEnvironment = parsePublicEnvironment(process.env);

@@ -38,3 +38,25 @@ test('rejects diagnostics outside development', () => {
     }),
   ).toThrow('diagnostics');
 });
+
+test.each(['localhost', '127.0.0.1', '[::1]'])(
+  'rejects protected loopback backend %s',
+  (hostname) => {
+    expect(() =>
+      parsePublicEnvironment({
+        ...development,
+        EXPO_PUBLIC_APP_ENV: 'production',
+        EXPO_PUBLIC_API_BASE_URL: `https://${hostname}:8000`,
+      }),
+    ).toThrow('loopback');
+  },
+);
+
+test('rejects secret-like Expo public variables', () => {
+  expect(() =>
+    parsePublicEnvironment({
+      ...development,
+      EXPO_PUBLIC_GEMINI_API_KEY: 'synthetic-do-not-use',
+    }),
+  ).toThrow('Secrets must never use EXPO_PUBLIC');
+});
