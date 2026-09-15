@@ -6,6 +6,7 @@ This index covers MED-1364–1415 using the existing cross-platform application.
 2. Environment discovery: environment discovery
 3. iOS identity/signing: application identity; signing/certificates
 4. APNs/notifications: APNs entitlements; E33 push architecture
+   - Personal Team local iPhone mode: `E34-personal-team-local-iphone-build.md`
 5. Architecture: detailed and final architecture
 6. API/data/configuration: data design, data flow, API matrix, environments
 7. Authentication/onboarding: shared E33 implementation and test plan

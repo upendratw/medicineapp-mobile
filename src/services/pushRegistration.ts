@@ -23,7 +23,12 @@ export type PushPermission = NotificationPermission;
 export type PushPlatform = 'android' | 'ios';
 export type PushRegistrationResult = Readonly<{
   status:
-    'registered' | 'denied' | 'unavailable' | 'unsupported_runtime' | 'offline';
+    | 'registered'
+    | 'denied'
+    | 'unavailable'
+    | 'unsupported_runtime'
+    | 'unsupported_personal_team'
+    | 'offline';
   deviceId?: string;
 }>;
 export interface PushPermissionGateway {
@@ -147,8 +152,9 @@ export class PushRegistrationCoordinator {
     requestPermission: boolean,
     online: boolean,
   ): Promise<PushRegistrationResult> {
-    if (this.gateway.runtimeStatus() === 'unsupported_runtime') {
-      return { status: 'unsupported_runtime' };
+    const runtimeStatus = this.gateway.runtimeStatus();
+    if (runtimeStatus !== 'supported') {
+      return { status: runtimeStatus };
     }
     const permission = await this.gateway.permission(requestPermission);
     if (permission === 'denied') return { status: 'denied' };

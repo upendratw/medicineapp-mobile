@@ -8,15 +8,17 @@ export function PushRegistrationSettings() {
   const message =
     result?.status === 'registered'
       ? t('registrationComplete')
-      : result?.status === 'unsupported_runtime'
-        ? t('notificationsUnsupportedRuntime')
-        : result?.status === 'denied'
-          ? t('permissionDenied')
-          : result?.status === 'offline'
-            ? t('registrationOffline')
-            : result
-              ? t('registrationPending')
-              : null;
+      : result?.status === 'unsupported_personal_team'
+        ? t('notificationsUnsupportedPersonalTeam')
+        : result?.status === 'unsupported_runtime'
+          ? t('notificationsUnsupportedRuntime')
+          : result?.status === 'denied'
+            ? t('permissionDenied')
+            : result?.status === 'offline'
+              ? t('registrationOffline')
+              : result
+                ? t('registrationPending')
+                : null;
   return (
     <>
       <AppText>{t('notificationsHelp')}</AppText>
@@ -25,7 +27,10 @@ export function PushRegistrationSettings() {
         loading={loading}
         onPress={register}
         accessibilityHint={t('notificationsHelp')}
-        disabled={result?.status === 'unsupported_runtime'}
+        disabled={
+          result?.status === 'unsupported_runtime' ||
+          result?.status === 'unsupported_personal_team'
+        }
       />
       {message ? (
         <AppAlert

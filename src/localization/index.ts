@@ -57,6 +57,8 @@ const en = {
   registrationOffline: 'Connect to the internet to register notifications.',
   notificationsUnsupportedRuntime:
     'Push notifications require an installed development or preview build. Other app features remain available in Expo Go.',
+  notificationsUnsupportedPersonalTeam:
+    'Push notifications are unavailable in this local Personal Team build. Other app features remain available.',
   openNotificationSettings: 'Open device notification settings',
 } as const;
 const hi: Partial<Record<keyof typeof en, string>> = {
@@ -116,6 +118,8 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   registrationOffline: 'सूचनाएँ पंजीकृत करने के लिए इंटरनेट से जुड़ें।',
   notificationsUnsupportedRuntime:
     'पुश सूचनाओं के लिए इंस्टॉल किया गया डेवलपमेंट या प्रीव्यू बिल्ड आवश्यक है। Expo Go में ऐप की अन्य सुविधाएँ उपलब्ध रहती हैं।',
+  notificationsUnsupportedPersonalTeam:
+    'इस स्थानीय Personal Team बिल्ड में पुश सूचनाएँ उपलब्ध नहीं हैं। ऐप की अन्य सुविधाएँ उपलब्ध रहती हैं।',
   openNotificationSettings: 'डिवाइस सूचना सेटिंग्स खोलें',
 };
 export type TranslationKey = keyof typeof en;
