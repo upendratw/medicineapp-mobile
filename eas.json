@@ -5,10 +5,12 @@
   },
   "build": {
     "development": {
+      "developmentClient": true,
       "distribution": "internal",
       "environment": "development",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "development",
+        "EXPO_PUBLIC_API_BASE_URL": "https://api-medicine.ankala.ai",
         "EXPO_PUBLIC_DEVELOPER_DIAGNOSTICS": "true"
       },
       "android": {
@@ -20,6 +22,7 @@
       "environment": "preview",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "test",
+        "EXPO_PUBLIC_API_BASE_URL": "https://api-medicine.ankala.ai",
         "EXPO_PUBLIC_DEVELOPER_DIAGNOSTICS": "false"
       },
       "android": {

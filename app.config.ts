@@ -3,6 +3,7 @@ import type { ExpoConfig } from 'expo/config';
 const config: ExpoConfig = {
   name: 'MedicineApp',
   slug: 'medicineapp-mobile',
+  owner: 'ankala.ai',
   version: '1.0.0',
 
   orientation: 'portrait',
@@ -15,8 +16,12 @@ const config: ExpoConfig = {
 
   ios: {
     bundleIdentifier: 'com.medicineapp.mobile',
+    buildNumber: '1',
     icon: './assets/expo.icon',
     supportsTablet: true,
+    config: {
+      usesNonExemptEncryption: false,
+    },
   },
 
   android: {

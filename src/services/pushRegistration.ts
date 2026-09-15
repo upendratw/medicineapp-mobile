@@ -20,6 +20,7 @@ export const DEFAULT_NOTIFICATION_COPY = Object.freeze({
 const REGISTRATION_ID_KEY = 'medicineapp.secure.v1.push.registration-id';
 
 export type PushPermission = NotificationPermission;
+export type PushPlatform = 'android' | 'ios';
 export type PushRegistrationResult = Readonly<{
   status:
     'registered' | 'denied' | 'unavailable' | 'unsupported_runtime' | 'offline';
@@ -30,13 +31,14 @@ export interface PushPermissionGateway {
   permission(request: boolean): Promise<PushPermission>;
   token(): Promise<string | null>;
   deviceIdentifier(): Promise<string | null>;
+  platform(): PushPlatform | null;
   configureChannel(): Promise<void>;
 }
 export interface PushRegistrationService {
   register(input: {
     deviceIdentifier: string;
     pushToken: string;
-    platform: 'android';
+    platform: PushPlatform;
     appVersion: string | null;
   }): Promise<{ deviceId: string }>;
   unregister(deviceId: string): Promise<void>;
@@ -64,8 +66,14 @@ export class ExpoPushPermissionGateway implements PushPermissionGateway {
     return this.capability.expoPushToken(projectId);
   }
   async deviceIdentifier(): Promise<string | null> {
-    if (Platform.OS !== 'android') return null;
-    return Application.getAndroidId();
+    if (Platform.OS === 'android') return Application.getAndroidId();
+    if (Platform.OS === 'ios') return Application.getIosIdForVendorAsync();
+    return null;
+  }
+  platform(): PushPlatform | null {
+    return Platform.OS === 'android' || Platform.OS === 'ios'
+      ? Platform.OS
+      : null;
   }
   async configureChannel(): Promise<void> {
     if (Platform.OS !== 'android') return;
@@ -78,7 +86,7 @@ export class BackendPushRegistrationService implements PushRegistrationService {
   async register(input: {
     deviceIdentifier: string;
     pushToken: string;
-    platform: 'android';
+    platform: PushPlatform;
     appVersion: string | null;
   }): Promise<{ deviceId: string }> {
     const data = await this.client.request<{
@@ -151,11 +159,13 @@ export class PushRegistrationCoordinator {
       this.gateway.token(),
       this.gateway.deviceIdentifier(),
     ]);
-    if (!pushToken || !deviceIdentifier) return { status: 'unavailable' };
+    const platform = this.gateway.platform();
+    if (!pushToken || !deviceIdentifier || !platform)
+      return { status: 'unavailable' };
     const result = await this.backend.register({
       deviceIdentifier,
       pushToken,
-      platform: 'android',
+      platform,
       appVersion: Constants.expoConfig?.version ?? null,
     });
     await this.store.writeRegistrationId(result.deviceId);

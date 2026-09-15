@@ -24,6 +24,11 @@ if (production?.android?.buildType !== 'app-bundle')
   fail('production Android output is not an app bundle');
 if (!appConfig.includes("package: 'com.medicineapp.mobile'"))
   fail('Android package changed');
+if (!appConfig.includes("bundleIdentifier: 'com.medicineapp.mobile'"))
+  fail('iOS bundle identifier changed');
+if (!appConfig.includes("owner: 'ankala.ai'")) fail('EAS owner changed');
+if (!appConfig.includes("buildNumber: '1'"))
+  fail('iOS buildNumber is undocumented');
 if (!appConfig.includes('versionCode: 1')) fail('versionCode is undocumented');
 if (!environment.includes('Protected environments require an HTTPS backend'))
   fail('protected HTTPS guard is missing');
