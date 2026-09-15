@@ -1,0 +1,3 @@
++# iOS TestFlight and release readiness +
++TestFlight build configuration: READY. Actual signed TestFlight build: PENDING Apple credentials. TestFlight upload: NOT PERFORMED. Production release configuration: COMPLETE. Signed release build and App Store submission: PENDING and NOT PERFORMED. +
++The development profile is an installed development client; preview/test and staging are internal distributions; production is store-oriented. Before any build, the owner must verify Apple team, bundle ID, certificate/profile purpose, build-number increment, privacy answers, age rating, screenshots, disclaimer, and legal/clinical approvals. Submission requires separate explicit authorization.

@@ -22,6 +22,9 @@ class Gateway implements PushPermissionGateway {
   permission = jest.fn(async () => this.state);
   token = jest.fn(async () => this.pushToken);
   deviceIdentifier = jest.fn(async () => this.identifier);
+  platform = jest.fn(
+    (): ReturnType<PushPermissionGateway['platform']> => 'android',
+  );
   configureChannel = jest.fn(async () => undefined);
 }
 
@@ -42,9 +45,11 @@ test('unsupported notification runtime never attempts permission, token, or back
 });
 class Backend implements PushRegistrationService {
   tokens: string[] = [];
+  platforms: string[] = [];
   unregister = jest.fn(async () => undefined);
-  async register(input: { pushToken: string }) {
+  async register(input: { pushToken: string; platform: string }) {
     this.tokens.push(input.pushToken);
+    this.platforms.push(input.platform);
     return { deviceId: 'device-record' };
   }
 }
@@ -160,6 +165,18 @@ test('backend adapter uses only real authenticated device endpoints', async () =
     { method: 'DELETE' },
     true,
   );
+});
+test('supported iOS runtime uses the backend-mediated iOS registration contract', async () => {
+  const gateway = new Gateway();
+  gateway.platform.mockReturnValue('ios');
+  const backend = new Backend();
+  await expect(
+    new PushRegistrationCoordinator(gateway, backend, new Store()).register(
+      true,
+      true,
+    ),
+  ).resolves.toMatchObject({ status: 'registered' });
+  expect(backend.platforms).toEqual(['ios']);
 });
 test('generic default notification content contains no sensitive health details', () => {
   expect(DEFAULT_NOTIFICATION_COPY).toEqual({

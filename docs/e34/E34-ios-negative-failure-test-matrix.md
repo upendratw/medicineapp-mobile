@@ -1,0 +1,3 @@
+# iOS negative/failure test matrix
+
+Automated coverage includes invalid environment, missing/malformed URL behavior, insecure protected URL, malformed API response, auth/OTP errors, SecureStore unavailable/corrupt/partial state, denied camera and notifications, Expo Go unsupported push, token/backend registration failure, malformed/unauthorized links, unsafe notification actions, offline writes, cache corruption, backend feature unavailable, unsupported clinical translation, high-risk voice rejection, automatic-SOS prohibition, and sensitive observability rejection/static scans. Native permission dialogs, APNs, and terminated-app behavior remain PENDING installed-device execution.

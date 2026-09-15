@@ -1,0 +1,3 @@
+# iOS threat model
+
+Threats and controls: token theft → Keychain and no logs; malicious deep link/tap → strict whitelist and route guard; notification disclosure → generic copy/no action mutation; device spoof/registration abuse → authenticated backend and bounded identifier; cache corruption/stale authority → validate/discard and never authorize from cache; image leakage → user initiation/transient handling; MITM/insecure configuration → HTTPS protected-environment guards; embedded cloud credential/direct data access → static exclusions and backend-only architecture. Residual threats include compromised device/account and external signing/APNs governance.
