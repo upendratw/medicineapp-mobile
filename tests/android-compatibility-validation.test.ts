@@ -17,13 +17,15 @@ test('managed Android configuration preserves supported Expo and React Native ba
 
 test('Android 10 through 15 compatibility delegates notification differences to Expo', () => {
   const config = read('app.config.ts');
-  const push = read('src/services/pushRegistration.ts');
+  const push =
+    read('src/services/pushRegistration.ts') +
+    read('src/services/notificationCapability.ts');
   expect(config).not.toContain('POST_NOTIFICATIONS');
   expect(push).not.toMatch(
     /Platform\.Version|Build\.VERSION|request.*POST_NOTIFICATIONS/i,
   );
-  expect(push).toContain('Notifications.getPermissionsAsync()');
-  expect(push).toContain('Notifications.requestPermissionsAsync()');
+  expect(push).toContain('notifications.getPermissionsAsync()');
+  expect(push).toContain('notifications.requestPermissionsAsync()');
 });
 
 test('no broad storage, location, microphone, or unsupported native API assumption exists', () => {

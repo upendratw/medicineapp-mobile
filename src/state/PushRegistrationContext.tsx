@@ -1,4 +1,3 @@
-import * as Notifications from 'expo-notifications';
 import {
   createContext,
   type PropsWithChildren,
@@ -15,6 +14,7 @@ import {
   pushRegistrationCoordinator,
   type PushRegistrationResult,
 } from '@/services/pushRegistration';
+import { notificationCapability } from '@/services/notificationCapability';
 type Value = {
   result: PushRegistrationResult | null;
   loading: boolean;
@@ -60,11 +60,19 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
     };
   }, [online, status]);
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      (response) =>
-        acceptNotification(response.notification.request.content.data?.route),
-    );
-    return () => subscription.remove();
+    let active = true;
+    let remove: (() => void) | undefined;
+    void notificationCapability
+      .addResponseListener(acceptNotification)
+      .then((subscription) => {
+        if (!active) subscription?.remove();
+        else remove = () => subscription?.remove();
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+      remove?.();
+    };
   }, [acceptNotification]);
   const register = useCallback(() => run(true), [run]);
   const value = useMemo(

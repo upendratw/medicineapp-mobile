@@ -5,7 +5,7 @@ import {
   AppCard,
   AppText,
   AppTextInput,
-} from '@/components';
+} from '@/components/primitives';
 import type { OcrCandidate } from '@/types/medication';
 
 type Props = {

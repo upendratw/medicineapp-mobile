@@ -7,7 +7,7 @@ import {
   AppTextInput,
   EmptyState,
   LoadingIndicator,
-} from '@/components';
+} from '@/components/primitives';
 import type { InventoryRecord } from '@/types/clinicalFeatures';
 
 export function InventoryRefill({

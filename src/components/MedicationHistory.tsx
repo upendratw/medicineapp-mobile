@@ -5,7 +5,7 @@ import {
   AppText,
   EmptyState,
   LoadingIndicator,
-} from '@/components';
+} from '@/components/primitives';
 import type { IntakeHistoryItem } from '@/types/history';
 
 export function MedicationHistory({

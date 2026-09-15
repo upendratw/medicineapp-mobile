@@ -1,4 +1,4 @@
-import { AppAlert, AppButton, AppText } from '@/components';
+import { AppAlert, AppButton, AppText } from '@/components/primitives';
 import { useTranslation } from '@/localization';
 import { usePushRegistration } from '@/state/PushRegistrationContext';
 import { Linking } from 'react-native';
@@ -8,13 +8,15 @@ export function PushRegistrationSettings() {
   const message =
     result?.status === 'registered'
       ? t('registrationComplete')
-      : result?.status === 'denied'
-        ? t('permissionDenied')
-        : result?.status === 'offline'
-          ? t('registrationOffline')
-          : result
-            ? t('registrationPending')
-            : null;
+      : result?.status === 'unsupported_runtime'
+        ? t('notificationsUnsupportedRuntime')
+        : result?.status === 'denied'
+          ? t('permissionDenied')
+          : result?.status === 'offline'
+            ? t('registrationOffline')
+            : result
+              ? t('registrationPending')
+              : null;
   return (
     <>
       <AppText>{t('notificationsHelp')}</AppText>
@@ -23,6 +25,7 @@ export function PushRegistrationSettings() {
         loading={loading}
         onPress={register}
         accessibilityHint={t('notificationsHelp')}
+        disabled={result?.status === 'unsupported_runtime'}
       />
       {message ? (
         <AppAlert

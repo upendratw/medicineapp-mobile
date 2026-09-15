@@ -16,11 +16,30 @@ class Gateway implements PushPermissionGateway {
     public pushToken: string | null = 'ExponentPushToken[synthetic]',
     public identifier: string | null = 'synthetic-device',
   ) {}
+  runtimeStatus = jest.fn(
+    (): ReturnType<PushPermissionGateway['runtimeStatus']> => 'supported',
+  );
   permission = jest.fn(async () => this.state);
   token = jest.fn(async () => this.pushToken);
   deviceIdentifier = jest.fn(async () => this.identifier);
   configureChannel = jest.fn(async () => undefined);
 }
+
+test('unsupported notification runtime never attempts permission, token, or backend registration', async () => {
+  const gateway = new Gateway();
+  gateway.runtimeStatus.mockReturnValue('unsupported_runtime');
+  const backend = new Backend();
+  await expect(
+    new PushRegistrationCoordinator(gateway, backend, new Store()).register(
+      true,
+      true,
+    ),
+  ).resolves.toEqual({ status: 'unsupported_runtime' });
+  expect(gateway.permission).not.toHaveBeenCalled();
+  expect(gateway.token).not.toHaveBeenCalled();
+  expect(gateway.configureChannel).not.toHaveBeenCalled();
+  expect(backend.tokens).toHaveLength(0);
+});
 class Backend implements PushRegistrationService {
   tokens: string[] = [];
   unregister = jest.fn(async () => undefined);

@@ -6,7 +6,7 @@ import {
   AppText,
   AppTextInput,
   EmptyState,
-} from '@/components';
+} from '@/components/primitives';
 import type { PrescriptionCandidate } from '@/types/clinicalFeatures';
 
 export function PrescriptionReview({

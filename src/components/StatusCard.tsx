@@ -1,4 +1,4 @@
-import { AppCard, AppText } from '@/components';
+import { AppCard, AppText } from '@/components/primitives';
 export function StatusCard({
   label,
   value,

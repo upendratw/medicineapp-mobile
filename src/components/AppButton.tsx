@@ -31,7 +31,7 @@ export function AppButton({
       accessibilityLabel={props.accessibilityLabel ?? label}
       accessibilityState={{ disabled: unavailable, busy: loading }}
       disabled={unavailable}
-      style={({ pressed }) => [
+      style={(state) => [
         styles.base,
         { minHeight: activeTheme.touchTarget },
         styles[variant],
@@ -44,8 +44,8 @@ export function AppButton({
           borderColor: activeTheme.colors.primary,
         },
         unavailable && styles.disabled,
-        pressed && !unavailable && styles.pressed,
-        typeof style === 'function' ? style({ pressed }) : style,
+        state.pressed && !unavailable && styles.pressed,
+        typeof style === 'function' ? style(state) : style,
       ]}
       {...props}
     >

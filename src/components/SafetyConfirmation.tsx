@@ -1,4 +1,4 @@
-import { AppAlert, AppButton, AppText } from '@/components';
+import { AppAlert, AppButton, AppText } from '@/components/primitives';
 export function SafetyConfirmation({
   action,
   target,
