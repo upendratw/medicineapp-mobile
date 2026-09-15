@@ -8,6 +8,7 @@ These items remain open and must not be represented as completed:
 - Play graphics, synthetic-data screenshots, production privacy-policy URL, and approved store declarations.
 - Independent human peer review, epic-owner decision, privacy/legal/India regulatory review, clinical/regulatory validation, and production release approval.
 - E19 production push/reminder delivery and context.
+- Expo Go supports bounded non-push development only; Android remote-notification registration and tap validation require an installed EAS development/preview build.
 - Patient-owned medication list/create backend contract and production OCR/recognition.
 - Validated interaction engine, prescription OCR/upload, inventory/refill, symptom assessment, and production voice/STT backends.
 - Automatic access-token refresh is not implemented; the refresh token is stored but no refresh service flow exists.

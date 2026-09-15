@@ -1,11 +1,16 @@
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { ApiClient } from '@/api/client';
 import { secureTokenStore } from '@/security/SecureTokenStore';
+import {
+  notificationCapability,
+  type ExpoNotificationCapability,
+  type NotificationPermission,
+  type NotificationRuntimeStatus,
+} from '@/services/notificationCapability';
 
 export const NOTIFICATION_CHANNEL_ID = 'medicineapp-reminders-v1';
 export const DEFAULT_NOTIFICATION_COPY = Object.freeze({
@@ -14,12 +19,14 @@ export const DEFAULT_NOTIFICATION_COPY = Object.freeze({
 });
 const REGISTRATION_ID_KEY = 'medicineapp.secure.v1.push.registration-id';
 
-export type PushPermission = 'granted' | 'denied' | 'undetermined';
+export type PushPermission = NotificationPermission;
 export type PushRegistrationResult = Readonly<{
-  status: 'registered' | 'denied' | 'unavailable' | 'offline';
+  status:
+    'registered' | 'denied' | 'unavailable' | 'unsupported_runtime' | 'offline';
   deviceId?: string;
 }>;
 export interface PushPermissionGateway {
+  runtimeStatus(): NotificationRuntimeStatus;
   permission(request: boolean): Promise<PushPermission>;
   token(): Promise<string | null>;
   deviceIdentifier(): Promise<string | null>;
@@ -41,28 +48,20 @@ export interface PushRegistrationStore {
 }
 
 export class ExpoPushPermissionGateway implements PushPermissionGateway {
+  constructor(
+    private readonly capability: ExpoNotificationCapability = notificationCapability,
+  ) {}
+  runtimeStatus(): NotificationRuntimeStatus {
+    return this.capability.status();
+  }
   async permission(request: boolean): Promise<PushPermission> {
-    let result = await Notifications.getPermissionsAsync();
-    if (
-      result.status === Notifications.PermissionStatus.UNDETERMINED &&
-      request
-    )
-      result = await Notifications.requestPermissionsAsync();
-    return result.status === Notifications.PermissionStatus.GRANTED
-      ? 'granted'
-      : result.status === Notifications.PermissionStatus.DENIED
-        ? 'denied'
-        : 'undetermined';
+    return (await this.capability.permission(request)) ?? 'undetermined';
   }
   async token(): Promise<string | null> {
     if (!Device.isDevice) return null;
     const projectId = Constants.easConfig?.projectId;
     if (!projectId) return null;
-    try {
-      return (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-    } catch {
-      return null;
-    }
+    return this.capability.expoPushToken(projectId);
   }
   async deviceIdentifier(): Promise<string | null> {
     if (Platform.OS !== 'android') return null;
@@ -70,12 +69,7 @@ export class ExpoPushPermissionGateway implements PushPermissionGateway {
   }
   async configureChannel(): Promise<void> {
     if (Platform.OS !== 'android') return;
-    await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNEL_ID, {
-      name: 'MedicineApp reminders',
-      importance: Notifications.AndroidImportance.DEFAULT,
-      vibrationPattern: null,
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
-    });
+    await this.capability.configureAndroidChannel(NOTIFICATION_CHANNEL_ID);
   }
 }
 
@@ -145,6 +139,9 @@ export class PushRegistrationCoordinator {
     requestPermission: boolean,
     online: boolean,
   ): Promise<PushRegistrationResult> {
+    if (this.gateway.runtimeStatus() === 'unsupported_runtime') {
+      return { status: 'unsupported_runtime' };
+    }
     const permission = await this.gateway.permission(requestPermission);
     if (permission === 'denied') return { status: 'denied' };
     if (permission !== 'granted') return { status: 'unavailable' };

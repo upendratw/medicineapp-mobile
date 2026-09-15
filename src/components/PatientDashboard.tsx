@@ -5,8 +5,8 @@ import {
   AppText,
   EmptyState,
   LoadingIndicator,
-  StatusCard,
-} from '@/components';
+} from '@/components/primitives';
+import { StatusCard } from '@/components/StatusCard';
 import type { PatientDashboardData } from '@/types/dashboard';
 
 type Props = {

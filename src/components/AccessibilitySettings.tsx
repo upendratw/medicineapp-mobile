@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppText } from '@/components';
+import { AppButton, AppCard, AppText } from '@/components/primitives';
 import { useTranslation } from '@/localization';
 import {
   usePreferences,

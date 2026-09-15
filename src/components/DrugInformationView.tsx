@@ -4,7 +4,7 @@ import {
   AppText,
   EmptyState,
   LoadingIndicator,
-} from '@/components';
+} from '@/components/primitives';
 import type { DrugInformationResult } from '@/types/drugInformation';
 
 export function DrugInformationView({

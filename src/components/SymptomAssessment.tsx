@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { AppAlert, AppButton, AppText, AppTextInput } from '@/components';
+import {
+  AppAlert,
+  AppButton,
+  AppText,
+  AppTextInput,
+} from '@/components/primitives';
 import type {
   SelfReportedSeverity,
   SymptomInput,

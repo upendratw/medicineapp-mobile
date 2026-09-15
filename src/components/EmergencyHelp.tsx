@@ -6,8 +6,8 @@ import {
   AppText,
   EmptyState,
   LoadingIndicator,
-  SafetyConfirmation,
-} from '@/components';
+} from '@/components/primitives';
+import { SafetyConfirmation } from '@/components/SafetyConfirmation';
 import type { EmergencyContact } from '@/services/highRiskServices';
 export function EmergencyHelp({
   contacts,

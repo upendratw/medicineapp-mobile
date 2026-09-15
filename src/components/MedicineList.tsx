@@ -4,8 +4,8 @@ import {
   AppButton,
   EmptyState,
   LoadingIndicator,
-  MedicationCard,
-} from '@/components';
+} from '@/components/primitives';
+import { MedicationCard } from '@/components/MedicationCard';
 import type { MedicationSummary } from '@/types/medication';
 
 type Props = {

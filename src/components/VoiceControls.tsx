@@ -5,8 +5,8 @@ import {
   AppCard,
   AppText,
   AppTextInput,
-  SafetyConfirmation,
-} from '@/components';
+} from '@/components/primitives';
+import { SafetyConfirmation } from '@/components/SafetyConfirmation';
 import type { VoiceIntent } from '@/services/highRiskServices';
 export function VoiceControls({
   resolve,

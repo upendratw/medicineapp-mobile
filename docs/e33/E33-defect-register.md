@@ -1,9 +1,9 @@
 # MED-1360 Defect Register
 
-**NO NEW CODE DEFECTS IDENTIFIED IN EXECUTED TEST SCOPE.**
+The earlier MED-1360 local scope found no defect. Subsequent real Expo Go execution identified the following runtime defect:
 
-| Defect ID | Source/severity                     | Description/root cause/fix/test                                     | Retest/residual risk/status  |
-| --------- | ----------------------------------- | ------------------------------------------------------------------- | ---------------------------- |
-| None      | Local automated/static/export scope | No reproducible code defect found; no unrelated change manufactured | Full local validation passed |
+| Defect ID      | Source/severity | Description/root cause/fix/test                                                                                                         | Retest/residual risk/status                                            |
+| -------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| E33-RUNTIME-01 | Expo Go / High  | Static `expo-notifications` imports caused module initialization failure, secondary Router default-export warnings, and startup failure | Lazy runtime capability adapter; automated and runtime retest required |
 
-Deployment capability gaps—missing API URLs, EAS project linkage, Android target/tooling, native artifact, and custom development client—are environment prerequisites, not code defects. Fourteen moderate dependency advisories remain a governance risk. Live runtime may reveal defects when deployment prerequisites exist.
+Deployment/device prerequisites remain distinct from code defects. Fourteen moderate dependency advisories remain a governance risk.

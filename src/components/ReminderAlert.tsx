@@ -5,7 +5,7 @@ import {
   AppCard,
   AppText,
   LoadingIndicator,
-} from '@/components';
+} from '@/components/primitives';
 import type { ReminderAction, ReminderContext } from '@/types/reminder';
 
 type Props = {

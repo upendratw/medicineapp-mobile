@@ -36,3 +36,15 @@ test('text input exposes its error as an alert and accessibility hint', async ()
   );
   expect(screen.getByRole('alert')).toHaveTextContent('Enter a valid number');
 });
+
+test('component implementations do not import their own public barrel', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const directory = path.join(process.cwd(), 'src/components');
+  for (const name of fs
+    .readdirSync(directory)
+    .filter((item: string) => item.endsWith('.tsx'))) {
+    const source = fs.readFileSync(path.join(directory, name), 'utf8');
+    expect(source).not.toMatch(/from ['"]@\/components['"]/);
+  }
+});

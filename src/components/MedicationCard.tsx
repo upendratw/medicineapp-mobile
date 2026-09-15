@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppText } from '@/components';
+import { AppButton, AppCard, AppText } from '@/components/primitives';
 import type { MedicationSummary } from '@/types/medication';
 
 const status: Record<MedicationSummary['reviewStatus'], string> = {

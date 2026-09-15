@@ -4,7 +4,7 @@ import {
   AppText,
   EmptyState,
   LoadingIndicator,
-} from '@/components';
+} from '@/components/primitives';
 import type { InteractionWarning } from '@/types/clinicalFeatures';
 
 export function InteractionWarnings({

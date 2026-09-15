@@ -1,4 +1,4 @@
-import { AppAlert, AppButton } from '@/components';
+import { AppAlert, AppButton } from '@/components/primitives';
 import { useTranslation } from '@/localization';
 import { usePreferences, type AppLanguage } from '@/state/PreferencesContext';
 export function LanguageSettings() {
