@@ -1,5 +1,13 @@
 import type { ExpoConfig } from 'expo/config';
 
+const personalTeamValue = process.env.MEDICINEAPP_IOS_PERSONAL_TEAM_BUILD;
+if (personalTeamValue && !['true', 'false'].includes(personalTeamValue)) {
+  throw new Error(
+    'MEDICINEAPP_IOS_PERSONAL_TEAM_BUILD must be true or false when set',
+  );
+}
+const iosPersonalTeamBuild = personalTeamValue === 'true';
+
 const config: ExpoConfig = {
   name: 'MedicineApp',
   slug: 'medicineapp-mobile',
@@ -62,6 +70,10 @@ const config: ExpoConfig = {
       },
     ],
 
+    ...(iosPersonalTeamBuild
+      ? ['./plugins/withPersonalTeamNotificationsDisabled']
+      : []),
+
     [
       'expo-notifications',
       {
@@ -85,6 +97,7 @@ const config: ExpoConfig = {
 
   extra: {
     router: {},
+    iosPersonalTeamBuild,
 
     eas: {
       projectId: '2f80f2d1-5285-479b-9358-0cf8a88cbe93',

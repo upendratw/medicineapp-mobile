@@ -46,8 +46,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "test": "jest",
     "lint": "expo lint",
     "release:check": "node scripts/validate-release-config.mjs",

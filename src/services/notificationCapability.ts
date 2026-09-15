@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 
-export type NotificationRuntimeStatus = 'supported' | 'unsupported_runtime';
+export type NotificationRuntimeStatus =
+  'supported' | 'unsupported_runtime' | 'unsupported_personal_team';
 export type NotificationPermission = 'granted' | 'denied' | 'undetermined';
 export type NotificationSubscription = Readonly<{ remove(): void }>;
 
@@ -12,14 +13,17 @@ export class ExpoNotificationCapability {
     private readonly expoGoConfig: object | null = Constants.expoGoConfig,
     private readonly loader: NotificationsLoader = () =>
       import('expo-notifications'),
+    private readonly iosPersonalTeamBuild: boolean = Constants.expoConfig?.extra
+      ?.iosPersonalTeamBuild === true,
   ) {}
 
   status(): NotificationRuntimeStatus {
+    if (this.iosPersonalTeamBuild) return 'unsupported_personal_team';
     return this.expoGoConfig !== null ? 'unsupported_runtime' : 'supported';
   }
 
   private async load(): Promise<NotificationsModule | null> {
-    if (this.status() === 'unsupported_runtime') return null;
+    if (this.status() !== 'supported') return null;
     try {
       return await this.loader();
     } catch {

@@ -35,6 +35,16 @@ test('Expo Go capability never loads unsupported notification module', async () 
   expect(loader).not.toHaveBeenCalled();
 });
 
+test('Personal Team capability never loads notification native module', async () => {
+  const loader = jest.fn();
+  const capability = new ExpoNotificationCapability(null, loader, true);
+  expect(capability.status()).toBe('unsupported_personal_team');
+  await expect(capability.permission(true)).resolves.toBeNull();
+  await expect(capability.expoPushToken('project')).resolves.toBeNull();
+  await expect(capability.addResponseListener(jest.fn())).resolves.toBeNull();
+  expect(loader).not.toHaveBeenCalled();
+});
+
 test('application startup path has no static expo-notifications import', () => {
   for (const file of [
     'src/services/pushRegistration.ts',
