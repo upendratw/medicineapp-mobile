@@ -12,7 +12,7 @@ import { useAppTheme } from '@/theme/useAppTheme';
 type Props = PressableProps & {
   label: string;
   loading?: boolean;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'danger';
 };
 
 export function AppButton({
@@ -43,6 +43,10 @@ export function AppButton({
           backgroundColor: activeTheme.colors.surface,
           borderColor: activeTheme.colors.primary,
         },
+        variant === 'danger' && {
+          backgroundColor: activeTheme.colors.errorSurface,
+          borderColor: activeTheme.colors.error,
+        },
         unavailable && styles.disabled,
         state.pressed && !unavailable && styles.pressed,
         typeof style === 'function' ? style(state) : style,
@@ -57,11 +61,14 @@ export function AppButton({
       ) : (
         <AppText
           variant="label"
-          style={
-            variant === 'primary'
-              ? styles.primaryText
-              : { color: activeTheme.colors.primary }
-          }
+          style={{
+            color:
+              variant === 'primary'
+                ? '#FFFFFF'
+                : variant === 'danger'
+                  ? activeTheme.colors.error
+                  : activeTheme.colors.primary,
+          }}
         >
           {label}
         </AppText>
@@ -87,12 +94,14 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderColor: theme.colors.primary,
   },
+  danger: {
+    backgroundColor: theme.colors.errorSurface,
+    borderColor: theme.colors.error,
+  },
   disabled: {
     backgroundColor: theme.colors.disabled,
     borderColor: theme.colors.border,
     opacity: 0.75,
   },
   pressed: { transform: [{ scale: 0.99 }] },
-  primaryText: { color: '#FFFFFF' },
-  secondaryText: { color: theme.colors.primary },
 });

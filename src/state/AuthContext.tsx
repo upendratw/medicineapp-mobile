@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import { ApiClient } from '@/api/client';
+import { sessionEvents } from '@/security/SessionEvents';
 import { secureTokenStore } from '@/security/SecureTokenStore';
 import { AuthService, type OtpChallenge } from '@/services/authService';
 import { pushRegistrationCoordinator } from '@/services/pushRegistration';
@@ -41,6 +42,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       .then((tokens) => setStatus(tokens ? 'authenticated' : 'unauthenticated'))
       .catch(() => setStatus('error'));
   }, []);
+  useEffect(
+    () =>
+      sessionEvents.subscribe(() => {
+        setPendingChallenge(null);
+        setStatus('unauthenticated');
+      }),
+    [],
+  );
   const requestOtp = useCallback(async (phone: string) => {
     const challenge = await service.requestOtp(phone);
     setPendingChallenge({ ...challenge, phone });
@@ -59,9 +68,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [pendingChallenge],
   );
   const logout = useCallback(async () => {
-    await service.logout();
-    setPendingChallenge(null);
-    setStatus('unauthenticated');
+    try {
+      await service.logout();
+    } finally {
+      setPendingChallenge(null);
+      setStatus('unauthenticated');
+    }
   }, []);
   const value = useMemo(
     () => ({ status, pendingChallenge, requestOtp, verifyOtp, logout }),
