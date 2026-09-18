@@ -4,13 +4,16 @@ export function useAsyncResource<T>(loader: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [failure, setFailure] = useState<unknown>(null);
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(false);
+    setFailure(null);
     try {
       setData(await loader());
-    } catch {
+    } catch (caught) {
       setError(true);
+      setFailure(caught);
     } finally {
       setLoading(false);
     }
@@ -21,11 +24,13 @@ export function useAsyncResource<T>(loader: () => Promise<T>) {
       (value) => {
         if (!active) return;
         setData(value);
+        setFailure(null);
         setLoading(false);
       },
-      () => {
+      (caught) => {
         if (!active) return;
         setError(true);
+        setFailure(caught);
         setLoading(false);
       },
     );
@@ -33,5 +38,5 @@ export function useAsyncResource<T>(loader: () => Promise<T>) {
       active = false;
     };
   }, [loader]);
-  return { data, loading, error, refresh };
+  return { data, loading, error, failure, refresh };
 }

@@ -69,6 +69,19 @@ const en = {
   notificationsUnsupportedPersonalTeam:
     'Push notifications are unavailable in this local Personal Team build. Other app features remain available.',
   openNotificationSettings: 'Open device notification settings',
+  medicineSaveSuccess:
+    'User-entered medicine recorded. The form is ready for another medicine.',
+  cameraTakePhoto: 'Take photo',
+  cameraTakePhotoHint:
+    'Captures the medicine packaging for your review. It is not uploaded automatically.',
+  cameraCaptureFailed: 'The image could not be captured. Please try again.',
+  caregiverAccessUnavailable: 'Caregiver access is not available',
+  caregiverAccessUnavailableMessage:
+    'This account does not have caregiver access. Your patient experience remains available.',
+  caregiverReturnHome: 'Return to patient home',
+  caregiverTemporaryFailure:
+    'Caregiver information is temporarily unavailable.',
+  caregiverTryAgain: 'Try again',
 } as const;
 const hi: Partial<Record<keyof typeof en, string>> = {
   settings: 'सेटिंग्स',
@@ -139,6 +152,19 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   notificationsUnsupportedPersonalTeam:
     'इस स्थानीय Personal Team बिल्ड में पुश सूचनाएँ उपलब्ध नहीं हैं। ऐप की अन्य सुविधाएँ उपलब्ध रहती हैं।',
   openNotificationSettings: 'डिवाइस सूचना सेटिंग्स खोलें',
+  medicineSaveSuccess:
+    'उपयोगकर्ता द्वारा दर्ज दवा सहेजी गई। फ़ॉर्म दूसरी दवा के लिए तैयार है।',
+  cameraTakePhoto: 'फ़ोटो लें',
+  cameraTakePhotoHint:
+    'आपकी समीक्षा के लिए दवा की पैकेजिंग की फ़ोटो लेता है। यह अपने आप अपलोड नहीं होती।',
+  cameraCaptureFailed: 'फ़ोटो नहीं ली जा सकी। कृपया फिर प्रयास करें।',
+  caregiverAccessUnavailable: 'देखभालकर्ता पहुँच उपलब्ध नहीं है',
+  caregiverAccessUnavailableMessage:
+    'इस खाते में देखभालकर्ता पहुँच नहीं है। रोगी अनुभव उपलब्ध रहता है।',
+  caregiverReturnHome: 'रोगी होम पर लौटें',
+  caregiverTemporaryFailure:
+    'देखभालकर्ता की जानकारी अस्थायी रूप से उपलब्ध नहीं है।',
+  caregiverTryAgain: 'फिर प्रयास करें',
 };
 export type TranslationKey = keyof typeof en;
 export function translate(language: AppLanguage, key: TranslationKey): string {

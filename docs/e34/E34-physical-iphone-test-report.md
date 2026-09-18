@@ -35,3 +35,39 @@ The evidence supports a client recovery gap after backend rejection of the resto
 8. Confirm Personal-Team push remains explicitly unavailable and that no push token request occurs.
 
 Post-fix physical result: **PENDING**. Do not mark this report passed until the steps above are executed and recorded by a human tester.
+
+## Batch 2 physical evidence
+
+Confirmed PASS on the iPhone 16 Personal-Team build:
+
+- native launch;
+- OTP request and verification;
+- access-token 401 followed by refresh 200 and successful protected-request retry;
+- authenticated medication-schedule retrieval;
+- backend logout;
+- manual medicine creation through the current Development adapter;
+- camera permission and preview opening;
+- medication history;
+- emergency-contact retrieval.
+
+Confirmed FAIL before Batch 2 implementation:
+
+- manual form retained all values after confirmed creation (`E34-DEF-004`);
+- camera preview exposed no visible/usable capture control (`E34-DEF-005`).
+
+OCR confirmation was blocked by E34-DEF-005. The caregiver patient-list endpoint returned 403 for the authenticated account, which is consistent with its caregiver-role contract but was presented with incorrect temporary-outage copy (`E34-DEF-006`). The E22 query returned 404; source investigation is recorded as E34-DEF-007.
+
+Batch 2 post-fix physical retest remains **PENDING**. Automated success is not physical-device evidence.
+
+### Batch 2 physical retest
+
+1. Reload the Batch 2 JavaScript bundle in the existing Personal-Team development build.
+2. Manually enter all medicine fields and save successfully; confirm every field resets, success is announced, and another tap cannot duplicate the prior record.
+3. Trigger validation, offline/network, and controlled backend failure paths where available; confirm entered fields remain.
+4. Open Scan Medicine Packaging; confirm the text-labelled **Take photo** control remains above the home indicator and is usable with VoiceOver.
+5. Double-tap capture rapidly; confirm only one photo is produced and the control is disabled during capture.
+6. Confirm capture failure reveals only sanitized retry copy.
+7. Capture, inspect Preview, Retake, capture again, and explicitly Continue to OCR review. Confirm no automatic upload or automatic medicine confirmation.
+8. Open caregiver dashboard from a patient account; confirm neutral access-unavailable copy and return to patient Home. Confirm a caregiver account with no relationships receives the legitimate empty state.
+9. Query E22 with a known active approved backend medication. Record only the sanitized API error code/status and whether deployed OpenAPI contains `/api/v1/drug-information/query`; do not record medication content or credentials.
+10. Reconfirm the previously passing 401 → refresh 200 → retry 200 and Logout flows.
