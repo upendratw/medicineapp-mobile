@@ -46,6 +46,11 @@ export default function HomeScreen() {
       />
       <AppButton
         variant="secondary"
+        label={t('accountSettings')}
+        onPress={() => router.push('/account-settings')}
+      />
+      <AppButton
+        variant="secondary"
         label={t('symptomInformation')}
         onPress={() => router.push('/symptoms')}
       />

@@ -46,6 +46,15 @@ const en = {
   verifyNumber: 'Verify your number',
   verifyContinue: 'Verify and continue',
   notificationSettings: 'Notification settings',
+  accountSettings: 'Account and session',
+  accountSettingsHelp: 'Manage this signed-in session on this device.',
+  logout: 'Log out',
+  logoutHint: 'Ends this session and returns to sign in.',
+  logoutConfirmTitle: 'Log out of MedicineApp?',
+  logoutConfirmMessage:
+    'You will need to verify your mobile number to sign in again.',
+  logoutCancel: 'Cancel',
+  logoutError: 'Logout could not be completed. Please try again.',
   notificationsHelp:
     'Notifications can provide generic reminder alerts. They are optional and do not replace clinical care.',
   enableNotifications: 'Enable notifications',
@@ -107,6 +116,15 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   verifyNumber: 'अपना नंबर सत्यापित करें',
   verifyContinue: 'सत्यापित करके आगे बढ़ें',
   notificationSettings: 'सूचना सेटिंग्स',
+  accountSettings: 'खाता और सत्र',
+  accountSettingsHelp: 'इस डिवाइस पर साइन-इन सत्र प्रबंधित करें।',
+  logout: 'लॉग आउट करें',
+  logoutHint: 'यह सत्र समाप्त करके साइन इन स्क्रीन पर लौटता है।',
+  logoutConfirmTitle: 'MedicineApp से लॉग आउट करें?',
+  logoutConfirmMessage:
+    'फिर से साइन इन करने के लिए आपको अपना मोबाइल नंबर सत्यापित करना होगा।',
+  logoutCancel: 'रद्द करें',
+  logoutError: 'लॉग आउट पूरा नहीं हो सका। कृपया फिर प्रयास करें।',
   notificationsHelp:
     'सूचनाएँ सामान्य रिमाइंडर दे सकती हैं। वे वैकल्पिक हैं और चिकित्सकीय देखभाल का विकल्प नहीं हैं।',
   enableNotifications: 'सूचनाएँ चालू करें',

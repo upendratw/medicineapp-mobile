@@ -19,6 +19,9 @@ This index covers MED-1364–1415 using the existing cross-platform application.
 14. TestFlight/release: signing and deployment documents
 15. Testing: unit plan, negative matrix, regression and defect reports
 16. Deployment: development/test deployment and smoke report
+
+- Physical-iPhone evidence: `E34-physical-iphone-test-report.md`
+
 17. Operations: telemetry/logging and support runbooks
 18. Governance: review, traceability, exception register
 19. Final acceptance: owner acceptance package (owner decision pending)
