@@ -1,4 +1,4 @@
-import { ApiClient } from '@/api/client';
+import { ApiClient, ApiError } from '@/api/client';
 import type {
   CaregiverDashboardData,
   CaregiverPatient,
@@ -22,6 +22,17 @@ type DashboardResponse = {
 export interface CaregiverService {
   listAuthorizedPatients(): Promise<readonly CaregiverPatient[]>;
   dashboard(patientUserId: string): Promise<CaregiverDashboardData>;
+}
+
+export type CaregiverFailureKind = 'authentication' | 'forbidden' | 'temporary';
+
+export function classifyCaregiverFailure(
+  failure: unknown,
+): CaregiverFailureKind {
+  if (failure instanceof ApiError && failure.status === 401)
+    return 'authentication';
+  if (failure instanceof ApiError && failure.status === 403) return 'forbidden';
+  return 'temporary';
 }
 
 export class BackendCaregiverService implements CaregiverService {

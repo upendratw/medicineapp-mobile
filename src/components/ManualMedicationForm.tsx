@@ -9,6 +9,7 @@ import type {
   ManualMedicationInput,
   MedicationSummary,
 } from '@/types/medication';
+import { useTranslation } from '@/localization';
 import { validateManualMedication } from '@/utils/medicationValidation';
 
 type Props = {
@@ -23,6 +24,7 @@ export function ManualMedicationForm({
   onCamera,
   onSaved,
 }: Props) {
+  const { t } = useTranslation();
   const [name, setName] = useState(initial?.name ?? '');
   const [strength, setStrength] = useState(initial?.strength ?? '');
   const [dosageForm, setDosageForm] = useState(initial?.dosageForm ?? '');
@@ -45,6 +47,11 @@ export function ManualMedicationForm({
     setLoading(true);
     try {
       await submit(result.value);
+      setName('');
+      setStrength('');
+      setDosageForm('');
+      setNotes('');
+      setErrors({});
       setOutcome('success');
       onSaved?.();
     } catch {
@@ -58,10 +65,7 @@ export function ManualMedicationForm({
     <>
       <AppAlert message="This is a user-entered record. Saving it does not mean MedicineApp clinically reviewed or approved the medicine." />
       {outcome === 'success' ? (
-        <AppAlert
-          tone="success"
-          message="User-entered medicine recorded for this development session."
-        />
+        <AppAlert tone="success" announce message={t('medicineSaveSuccess')} />
       ) : null}
       {outcome === 'failure' ? (
         <AppAlert

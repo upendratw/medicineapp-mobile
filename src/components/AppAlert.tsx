@@ -13,9 +13,11 @@ const symbols: Record<Tone, string> = {
 export function AppAlert({
   message,
   tone = 'info',
+  announce = false,
 }: {
   message: string;
   tone?: Tone;
+  announce?: boolean;
 }) {
   const activeTheme = useAppTheme();
   const surfaceKey = `${tone}Surface` as
@@ -24,8 +26,9 @@ export function AppAlert({
     <View
       accessible
       accessibilityRole={
-        tone === 'error' || tone === 'warning' ? 'alert' : undefined
+        announce || tone === 'error' || tone === 'warning' ? 'alert' : undefined
       }
+      accessibilityLiveRegion={announce ? 'polite' : undefined}
       style={[
         styles.base,
         styles[tone],

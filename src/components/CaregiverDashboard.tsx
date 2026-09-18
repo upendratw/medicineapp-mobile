@@ -6,6 +6,8 @@ import {
   LoadingIndicator,
 } from '@/components/primitives';
 import { StatusCard } from '@/components/StatusCard';
+import { useTranslation } from '@/localization';
+import type { CaregiverFailureKind } from '@/services/caregiverService';
 import type {
   CaregiverDashboardData,
   CaregiverPatient,
@@ -16,9 +18,10 @@ type Props = {
   selected: string | null;
   data: CaregiverDashboardData | null;
   loading: boolean;
-  error: boolean;
+  error: CaregiverFailureKind | null;
   onSelect(id: string): void;
   onRetry(): void;
+  onBack(): void;
 };
 export function CaregiverDashboard({
   patients,
@@ -28,17 +31,32 @@ export function CaregiverDashboard({
   error,
   onSelect,
   onRetry,
+  onBack,
 }: Props) {
+  const { t } = useTranslation();
   if (loading)
     return <LoadingIndicator label="Loading authorized caregiver view" />;
-  if (error)
+  if (error === 'authentication')
+    return <LoadingIndicator label="Returning to sign in" />;
+  if (error === 'forbidden')
     return (
       <>
-        <AppAlert
-          tone="error"
-          message="Caregiver information is temporarily unavailable."
+        <EmptyState
+          title={t('caregiverAccessUnavailable')}
+          message={t('caregiverAccessUnavailableMessage')}
         />
-        <AppButton label="Try again" onPress={onRetry} />
+        <AppButton
+          variant="secondary"
+          label={t('caregiverReturnHome')}
+          onPress={onBack}
+        />
+      </>
+    );
+  if (error === 'temporary')
+    return (
+      <>
+        <AppAlert tone="error" message={t('caregiverTemporaryFailure')} />
+        <AppButton label={t('caregiverTryAgain')} onPress={onRetry} />
       </>
     );
   if (!patients.length)

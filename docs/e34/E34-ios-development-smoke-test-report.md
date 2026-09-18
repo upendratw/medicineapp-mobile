@@ -13,3 +13,7 @@ An iPhone 16 running a native Personal-Team development build was tested against
 | Reachable Logout                              | FAIL       | Automated PASS; physical retest PENDING |
 
 Login/OTP, onboarding, camera, reminder/history, E22, accessibility, Hindi, offline/reconnect, deep-link, and wider device-matrix execution remain pending unless separately evidenced. Expo Go remote push is not applicable by its supported-runtime boundary. The Personal-Team build intentionally excludes push capability.
+
+## Batch 2 update
+
+Physical PASS evidence now includes native launch, OTP, authentication, refresh/retry, Logout, schedule retrieval, manual Development creation, camera permission/preview, medication history, and emergency-contact retrieval. Manual post-success reset and camera capture control failed before this implementation; OCR confirmation was blocked. Caregiver returned authorization 403 with incorrect outage copy. E22 returned HTTP 404, with the exact deployed error code not captured. E34-DEF-004 through E34-DEF-007 record the fixes/investigation. All Batch 2 post-fix physical retests remain pending.

@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   AppAlert,
@@ -16,13 +17,18 @@ import { IntegrationPendingError } from '@/services/integration';
 import { ocrService } from '@/services/registry';
 import { useCapture } from '@/state/CaptureContext';
 import { theme } from '@/theme/tokens';
+import { useTranslation } from '@/localization';
+import { SingleFlight } from '@/utils/singleFlight';
 
 export default function MedicineCameraScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const camera = useRef<CameraView>(null);
+  const captureGate = useRef(new SingleFlight()).current;
   const [permission, requestPermission] = useCameraPermissions();
   const { imageUri, setImage, setCandidate } = useCapture();
   const [working, setWorking] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [error, setError] = useState('');
   if (!permission)
     return <LoadingIndicator label="Checking camera permission" />;
@@ -46,17 +52,20 @@ export default function MedicineCameraScreen() {
       </AppScreen>
     );
   const capture = async () => {
-    if (working) return;
-    setWorking(true);
-    setError('');
-    try {
-      const photo = await camera.current?.takePictureAsync({ quality: 0.7 });
-      if (photo?.uri) setImage(photo.uri);
-    } catch {
-      setError('The image could not be captured. Please try again.');
-    } finally {
-      setWorking(false);
-    }
+    if (working || !cameraReady) return;
+    await captureGate.run(async () => {
+      setWorking(true);
+      setError('');
+      try {
+        const photo = await camera.current?.takePictureAsync({ quality: 0.7 });
+        if (!photo?.uri) throw new Error('Camera returned no image');
+        setImage(photo.uri);
+      } catch {
+        setError(t('cameraCaptureFailed'));
+      } finally {
+        setWorking(false);
+      }
+    });
   };
   const continueToReview = async () => {
     if (!imageUri || working) return;
@@ -94,23 +103,37 @@ export default function MedicineCameraScreen() {
         <AppButton
           variant="secondary"
           label="Retake photo"
+          disabled={working}
           onPress={() => {
             setImage(null);
             setCandidate(null);
+            setCameraReady(false);
+            setError('');
           }}
         />
       </AppScreen>
     );
   return (
     <View style={styles.container}>
-      <CameraView ref={camera} style={styles.camera} facing="back">
+      <CameraView
+        ref={camera}
+        testID="medicine-camera-preview"
+        style={StyleSheet.absoluteFill}
+        facing="back"
+        onCameraReady={() => setCameraReady(true)}
+        onMountError={() => setError(t('cameraCaptureFailed'))}
+      />
+      <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
         <View style={styles.controls}>
           <AppText style={styles.cameraText}>
             Place the medicine name and strength inside the frame.
           </AppText>
+          {error ? <AppAlert tone="error" message={error} /> : null}
           <AppButton
-            label="Capture medicine packaging"
+            label={t('cameraTakePhoto')}
+            accessibilityHint={t('cameraTakePhotoHint')}
             loading={working}
+            disabled={!cameraReady}
             onPress={capture}
           />
           <AppButton
@@ -119,13 +142,18 @@ export default function MedicineCameraScreen() {
             onPress={() => router.back()}
           />
         </View>
-      </CameraView>
+      </SafeAreaView>
     </View>
   );
 }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000000' },
-  camera: { flex: 1, justifyContent: 'flex-end' },
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    zIndex: 1,
+    elevation: 1,
+  },
   controls: {
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
