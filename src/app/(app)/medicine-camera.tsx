@@ -27,6 +27,7 @@ export default function MedicineCameraScreen() {
   const { t } = useTranslation();
   const camera = useRef<CameraView>(null);
   const captureGate = useRef(new SingleFlight()).current;
+  const recognitionGate = useRef(new SingleFlight()).current;
   const [permission, requestPermission] = useCameraPermissions();
   const { image, imageUri, setImage, setCandidate, clear } = useCapture();
   const recognitionController = useRef<AbortController | null>(null);
@@ -34,10 +35,16 @@ export default function MedicineCameraScreen() {
   const [working, setWorking] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [error, setError] = useState('');
-  useEffect(() => () => {
-    mounted.current = false;
-    recognitionController.current?.abort();
-  });
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      recognitionController.current?.abort();
+    };
+  }, []);
+  useEffect(() => {
+    if (!image) recognitionController.current?.abort();
+  }, [image]);
   const chooseFromGallery = async () => {
     if (working) return;
     setWorking(true);
@@ -102,27 +109,29 @@ export default function MedicineCameraScreen() {
   };
   const continueToReview = async () => {
     if (!image || working) return;
-    recognitionController.current?.abort();
-    const controller = new AbortController();
-    recognitionController.current = controller;
-    setWorking(true);
-    setError('');
-    try {
-      setCandidate(await ocrService.recognize(image, controller.signal));
-      if (controller.signal.aborted) return;
-      router.push('/ocr-confirmation');
-    } catch (failure) {
-      if (controller.signal.aborted || !mounted.current) return;
-      setError(
-        failure instanceof IntegrationPendingError
-          ? 'Recognition could not produce a safe candidate. Retake the image or enter the medicine manually.'
-          : 'Recognition is temporarily unavailable.',
-      );
-    } finally {
-      if (recognitionController.current === controller)
-        recognitionController.current = null;
-      if (mounted.current) setWorking(false);
-    }
+    await recognitionGate.run(async () => {
+      recognitionController.current?.abort();
+      const controller = new AbortController();
+      recognitionController.current = controller;
+      setWorking(true);
+      setError('');
+      try {
+        setCandidate(await ocrService.recognize(image, controller.signal));
+        if (controller.signal.aborted) return;
+        router.push('/ocr-confirmation');
+      } catch (failure) {
+        if (controller.signal.aborted || !mounted.current) return;
+        setError(
+          failure instanceof IntegrationPendingError
+            ? 'Recognition could not produce a safe candidate. Retake the image or enter the medicine manually.'
+            : 'Recognition is temporarily unavailable.',
+        );
+      } finally {
+        if (recognitionController.current === controller)
+          recognitionController.current = null;
+        if (mounted.current) setWorking(false);
+      }
+    });
   };
   if (!permission)
     return <LoadingIndicator label="Checking camera permission" />;
@@ -174,7 +183,6 @@ export default function MedicineCameraScreen() {
         <AppButton
           variant="secondary"
           label="Retake photo"
-          disabled={working}
           onPress={() => {
             recognitionController.current?.abort();
             setImage(null);

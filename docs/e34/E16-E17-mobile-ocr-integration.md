@@ -29,6 +29,11 @@ canonical catalog.
 
 - Unsupported type, unreadable/low-quality image, no match, timeout, and safe
   provider failure do not fabricate a candidate.
+- Local preparation uses Expo FileSystem `File.bytes()` under a deadline and
+  constructs an explicit binary `Blob`; native `File` objects are not passed
+  ambiguously across the React Native fetch boundary.
+- Capture initiation, presigned PUT, completion, and total polling each have
+  bounded deadlines and abort propagation.
 - A failed PUT requests best-effort backend cancellation/cleanup.
 - Camera denial still permits gallery selection and manual entry.
 - Photo-library selection uses the Expo SDK 57 ImagePicker system UI with a

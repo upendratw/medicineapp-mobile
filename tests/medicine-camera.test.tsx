@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockTakePictureAsync = jest.fn();
 const mockPush = jest.fn();
@@ -73,6 +73,7 @@ const readyCamera = async (
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockRecognize.mockReset();
   mockRecognize.mockResolvedValue({
     captureId: '00000000-0000-4000-8000-000000000456',
     candidateId: '00000000-0000-4000-8000-000000000789',
@@ -197,4 +198,103 @@ test('gallery selection remains local until explicit Continue', async () => {
       expect.any(AbortSignal),
     ),
   );
+});
+
+test('double Continue starts exactly one recognition operation', async () => {
+  mockTakePictureAsync.mockResolvedValue({
+    uri: 'file:///temporary/synthetic-image.jpg',
+    width: 800,
+    height: 600,
+  });
+  let resolveRecognition!: (value: unknown) => void;
+  mockRecognize.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        resolveRecognition = resolve;
+      }),
+  );
+  const screen = await render(view());
+  await readyCamera(screen);
+  await fireEvent.press(screen.getByRole('button', { name: 'Take photo' }));
+  const continueButton = await screen.findByRole('button', {
+    name: 'Continue to recognition review',
+  });
+  fireEvent.press(continueButton);
+  await waitFor(() => expect(mockRecognize).toHaveBeenCalledTimes(1));
+  fireEvent.press(continueButton);
+  expect(mockRecognize).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    resolveRecognition({
+      captureId: '00000000-0000-4000-8000-000000000456',
+      candidateId: '00000000-0000-4000-8000-000000000789',
+      name: 'Synthetic candidate',
+      strength: '',
+      dosageForm: '',
+      alternatives: [],
+      sourceStatus: 'backend_candidate',
+    });
+    await Promise.resolve();
+  });
+  await waitFor(() => expect(mockPush).toHaveBeenCalledTimes(1));
+  await screen.unmount();
+});
+
+test('recognition failure clears working state and remains retryable', async () => {
+  mockTakePictureAsync.mockResolvedValue({
+    uri: 'file:///temporary/synthetic-image.jpg',
+    width: 800,
+    height: 600,
+  });
+  mockRecognize.mockRejectedValueOnce(new Error('private failure detail'));
+  const screen = await render(view());
+  await readyCamera(screen);
+  await fireEvent.press(screen.getByRole('button', { name: 'Take photo' }));
+  await fireEvent.press(
+    await screen.findByRole('button', {
+      name: 'Continue to recognition review',
+    }),
+  );
+  await waitFor(() =>
+    expect(JSON.stringify(screen.toJSON())).toContain(
+      'Recognition is temporarily unavailable.',
+    ),
+  );
+  expect(
+    screen.getByRole('button', { name: 'Continue to recognition review' }).props
+      .accessibilityState.disabled,
+  ).toBe(false);
+  expect(JSON.stringify(screen.toJSON())).not.toContain(
+    'private failure detail',
+  );
+});
+
+test('Retake aborts pending recognition and clears the transient image', async () => {
+  mockTakePictureAsync.mockResolvedValue({
+    uri: 'file:///temporary/synthetic-image.jpg',
+    width: 800,
+    height: 600,
+  });
+  let recognitionSignal: AbortSignal | undefined;
+  mockRecognize.mockImplementationOnce(
+    (_image, signal: AbortSignal) =>
+      new Promise((_resolve, reject) => {
+        recognitionSignal = signal;
+        signal.addEventListener('abort', () => reject(new Error('cancelled')), {
+          once: true,
+        });
+      }),
+  );
+  const screen = await render(view());
+  await readyCamera(screen);
+  await fireEvent.press(screen.getByRole('button', { name: 'Take photo' }));
+  fireEvent.press(
+    await screen.findByRole('button', {
+      name: 'Continue to recognition review',
+    }),
+  );
+  await waitFor(() => expect(mockRecognize).toHaveBeenCalledTimes(1));
+  await fireEvent.press(screen.getByRole('button', { name: 'Retake photo' }));
+  expect(recognitionSignal?.aborted).toBe(true);
+  await screen.findByTestId('medicine-camera-preview');
+  expect(mockPush).not.toHaveBeenCalled();
 });

@@ -2,8 +2,19 @@ import { ApiError, type ApiClient } from '@/api/client';
 import {
   BackendOcrService,
   isUneditedPresentedCandidate,
+  readLocalImage,
 } from '@/services/ocrService';
 import type { CapturedMedicineImage, OcrCandidate } from '@/types/medication';
+
+const mockFileState = {
+  exists: true,
+  size: 4,
+  bytes: jest.fn(async () => new Uint8Array([0xff, 0xd8, 0xff, 0xd9])),
+};
+
+jest.mock('expo-file-system', () => ({
+  File: jest.fn().mockImplementation(() => mockFileState),
+}));
 
 const image: CapturedMedicineImage = {
   uri: 'file:///synthetic/medicine.jpg',
@@ -37,6 +48,105 @@ const ready = {
     },
   ],
 };
+
+const fastTimeouts = {
+  localReadMs: 20,
+  initiationMs: 20,
+  uploadMs: 20,
+  completionMs: 20,
+  processingMs: 20,
+};
+
+const never = <T>(): Promise<T> => new Promise<T>(() => undefined);
+
+beforeEach(() => {
+  mockFileState.exists = true;
+  mockFileState.size = 4;
+  mockFileState.bytes.mockReset();
+  mockFileState.bytes.mockResolvedValue(
+    new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+  );
+});
+
+const expectWorkflowFailure = async (
+  promise: Promise<unknown>,
+  code: string,
+): Promise<void> => {
+  await expect(promise).rejects.toMatchObject({
+    name: 'OcrWorkflowError',
+    code,
+  });
+};
+
+test.each(['camera', 'gallery'] as const)(
+  'valid %s image preparation yields an uploadable binary Blob',
+  async (source) => {
+    const prepared = await readLocalImage({ ...image, source });
+    expect(prepared).toBeInstanceOf(Blob);
+    expect(prepared.size).toBeGreaterThan(0);
+    expect(prepared.type).toBe('image/jpeg');
+  },
+);
+
+test.each([
+  ['missing', false, 0],
+  ['empty', true, 0],
+  ['oversized', true, 5 * 1024 * 1024 + 1],
+])(
+  '%s local file fails before capture initiation',
+  async (_case, exists, size) => {
+    mockFileState.exists = exists as boolean;
+    mockFileState.size = size as number;
+    const request = jest.fn();
+    const service = new BackendOcrService(
+      { request } as unknown as ApiClient,
+      fetch,
+      0,
+      1,
+      readLocalImage,
+      fastTimeouts,
+    );
+    await expectWorkflowFailure(
+      service.recognize(image),
+      'local_file_unavailable',
+    );
+    expect(request).not.toHaveBeenCalled();
+  },
+);
+
+test('unsupported media type fails before capture initiation', async () => {
+  const request = jest.fn();
+  const service = new BackendOcrService(
+    { request } as unknown as ApiClient,
+    fetch,
+    0,
+    1,
+    readLocalImage,
+    fastTimeouts,
+  );
+  await expectWorkflowFailure(
+    service.recognize({ ...image, mediaType: 'image/gif' as 'image/jpeg' }),
+    'local_file_unavailable',
+  );
+  expect(request).not.toHaveBeenCalled();
+});
+
+test('local read timeout terminates without backend initiation', async () => {
+  const request = jest.fn();
+  const service = new BackendOcrService(
+    { request } as unknown as ApiClient,
+    fetch,
+    0,
+    1,
+    () => never(),
+    { ...fastTimeouts, localReadMs: 1 },
+  );
+  await expectWorkflowFailure(
+    service.recognize(image),
+    'local_file_read_timeout',
+  );
+  expect(request).not.toHaveBeenCalled();
+});
 
 test('backend OCR uploads only after recognize and returns a review candidate', async () => {
   const request = jest
@@ -78,6 +188,143 @@ test('backend OCR uploads only after recognize and returns a review candidate', 
     expect.objectContaining({ method: 'POST' }),
     true,
   );
+  expect(
+    request.mock.calls.filter(([path]) => path === '/api/v1/medicine-captures'),
+  ).toHaveLength(1);
+});
+
+test('capture initiation timeout terminates before upload', async () => {
+  const request = jest.fn(() => never());
+  const fetcher = jest.fn();
+  const service = new BackendOcrService(
+    { request } as unknown as ApiClient,
+    fetcher as unknown as typeof fetch,
+    0,
+    1,
+    async () => new Blob(['image']),
+    { ...fastTimeouts, initiationMs: 1 },
+  );
+  await expectWorkflowFailure(
+    service.recognize(image),
+    'capture_initiation_timeout',
+  );
+  expect(request).toHaveBeenCalledTimes(1);
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+test('presigned PUT timeout aborts and requests best-effort cancellation', async () => {
+  const request = jest
+    .fn()
+    .mockResolvedValueOnce(initiated)
+    .mockResolvedValueOnce({});
+  const fetcher = jest.fn(() => never<Response>());
+  const service = new BackendOcrService(
+    { request } as unknown as ApiClient,
+    fetcher as unknown as typeof fetch,
+    0,
+    1,
+    async () => new Blob(['image']),
+    { ...fastTimeouts, uploadMs: 1 },
+  );
+  await expectWorkflowFailure(service.recognize(image), 'upload_timeout');
+  expect(request).toHaveBeenLastCalledWith(
+    `/api/v1/medicine-captures/${initiated.capture_id}/cancel`,
+    expect.objectContaining({
+      method: 'POST',
+      signal: expect.any(AbortSignal),
+    }),
+    true,
+  );
+});
+
+test('completion timeout terminates and requests cancellation', async () => {
+  const request = jest
+    .fn()
+    .mockResolvedValueOnce(initiated)
+    .mockImplementationOnce(() => never())
+    .mockResolvedValueOnce({});
+  const service = new BackendOcrService(
+    { request } as unknown as ApiClient,
+    jest.fn().mockResolvedValue({ ok: true }) as unknown as typeof fetch,
+    0,
+    1,
+    async () => new Blob(['image']),
+    { ...fastTimeouts, completionMs: 1 },
+  );
+  await expectWorkflowFailure(service.recognize(image), 'completion_timeout');
+  expect(request).toHaveBeenLastCalledWith(
+    `/api/v1/medicine-captures/${initiated.capture_id}/cancel`,
+    expect.objectContaining({
+      method: 'POST',
+      signal: expect.any(AbortSignal),
+    }),
+    true,
+  );
+});
+
+test('abort during local preparation terminates as cancelled', async () => {
+  const request = jest.fn(() => never());
+  const service = new BackendOcrService(
+    { request } as unknown as ApiClient,
+    fetch,
+    0,
+    1,
+    () => never<Blob>(),
+    fastTimeouts,
+  );
+  const controller = new AbortController();
+  const pending = service.recognize(image, controller.signal);
+  await Promise.resolve();
+  controller.abort();
+  await expectWorkflowFailure(pending, 'cancelled');
+  expect(request).not.toHaveBeenCalled();
+});
+
+test('abort during capture initiation terminates as cancelled', async () => {
+  const request = jest.fn(() => never());
+  const service = new BackendOcrService(
+    { request } as unknown as ApiClient,
+    fetch,
+    0,
+    1,
+    async () => new Blob(['image']),
+    fastTimeouts,
+  );
+  const controller = new AbortController();
+  const pending = service.recognize(image, controller.signal);
+  while (request.mock.calls.length === 0) await Promise.resolve();
+  controller.abort();
+  await expectWorkflowFailure(pending, 'cancelled');
+  expect(request).toHaveBeenCalledTimes(1);
+});
+
+test('abort during upload terminates and requests cancellation', async () => {
+  const request = jest
+    .fn()
+    .mockResolvedValueOnce(initiated)
+    .mockResolvedValueOnce({});
+  const fetcher = jest.fn(() => never<Response>());
+  const service = new BackendOcrService(
+    { request } as unknown as ApiClient,
+    fetcher as unknown as typeof fetch,
+    0,
+    1,
+    async () => new Blob(['image']),
+    fastTimeouts,
+  );
+  const controller = new AbortController();
+  const pending = service.recognize(image, controller.signal);
+  while (fetcher.mock.calls.length === 0) await Promise.resolve();
+  controller.abort();
+  await expectWorkflowFailure(pending, 'cancelled');
+  expect(request).toHaveBeenCalledWith(
+    `/api/v1/medicine-captures/${initiated.capture_id}/cancel`,
+    expect.objectContaining({
+      method: 'POST',
+      signal: expect.any(AbortSignal),
+    }),
+    true,
+  );
 });
 
 test('failed upload requests cleanup and never triggers fake recognition success', async () => {
@@ -93,13 +340,14 @@ test('failed upload requests cleanup and never triggers fake recognition success
     1,
     async () => new Blob(['image']),
   );
-  await expect(service.recognize(image)).rejects.toMatchObject({
-    name: 'IntegrationPendingError',
-  });
+  await expectWorkflowFailure(service.recognize(image), 'upload_failed');
   expect(request).toHaveBeenCalledTimes(2);
   expect(request).toHaveBeenLastCalledWith(
     `/api/v1/medicine-captures/${initiated.capture_id}/cancel`,
-    { method: 'POST' },
+    expect.objectContaining({
+      method: 'POST',
+      signal: expect.any(AbortSignal),
+    }),
     true,
   );
 });
@@ -160,13 +408,10 @@ test('abort cancels bounded polling without fabricating a candidate', async () =
   );
   const controller = new AbortController();
   const pending = service.recognize(image, controller.signal);
-  await Promise.resolve();
-  await Promise.resolve();
+  while (request.mock.calls.length < 2) await Promise.resolve();
   controller.abort();
-  await expect(pending).rejects.toMatchObject({
-    name: 'IntegrationPendingError',
-  });
-  expect(request).toHaveBeenCalledTimes(2);
+  await expectWorkflowFailure(pending, 'cancelled');
+  expect(request).toHaveBeenCalledTimes(3);
 });
 
 test('authorization failures are not retried by OCR polling', async () => {
@@ -183,7 +428,7 @@ test('authorization failures are not retried by OCR polling', async () => {
     async () => new Blob(['image']),
   );
   await expect(service.recognize(image)).rejects.toMatchObject({ status: 403 });
-  expect(request).toHaveBeenCalledTimes(2);
+  expect(request).toHaveBeenCalledTimes(3);
 });
 
 test('confirmation is backend-mediated with capture and candidate references', async () => {
