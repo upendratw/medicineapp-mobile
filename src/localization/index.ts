@@ -75,6 +75,10 @@ const en = {
   cameraTakePhotoHint:
     'Captures the medicine packaging for your review. It is not uploaded automatically.',
   cameraCaptureFailed: 'The image could not be captured. Please try again.',
+  cameraChoosePhoto: 'Choose from photo library',
+  cameraChooseAnotherPhoto: 'Choose another photo',
+  cameraUnsupportedPhoto: 'Choose a JPEG or PNG medicine image.',
+  cameraPhotoOpenFailed: 'The selected image could not be opened.',
   caregiverAccessUnavailable: 'Caregiver access is not available',
   caregiverAccessUnavailableMessage:
     'This account does not have caregiver access. Your patient experience remains available.',
@@ -158,6 +162,10 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   cameraTakePhotoHint:
     'आपकी समीक्षा के लिए दवा की पैकेजिंग की फ़ोटो लेता है। यह अपने आप अपलोड नहीं होती।',
   cameraCaptureFailed: 'फ़ोटो नहीं ली जा सकी। कृपया फिर प्रयास करें।',
+  cameraChoosePhoto: 'फ़ोटो लाइब्रेरी से चुनें',
+  cameraChooseAnotherPhoto: 'दूसरी फ़ोटो चुनें',
+  cameraUnsupportedPhoto: 'JPEG या PNG दवा की फ़ोटो चुनें।',
+  cameraPhotoOpenFailed: 'चुनी गई फ़ोटो खोली नहीं जा सकी।',
   caregiverAccessUnavailable: 'देखभालकर्ता पहुँच उपलब्ध नहीं है',
   caregiverAccessUnavailableMessage:
     'इस खाते में देखभालकर्ता पहुँच नहीं है। रोगी अनुभव उपलब्ध रहता है।',

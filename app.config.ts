@@ -64,6 +64,14 @@ const config: ExpoConfig = {
     ],
 
     [
+      'expo-image-picker',
+      {
+        photosPermission:
+          'Allow MedicineApp to select a medicine packaging photo for your review.',
+      },
+    ],
+
+    [
       'expo-secure-store',
       {
         configureAndroidBackup: true,

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import {
   AppButton,
   AppText,
@@ -10,6 +10,7 @@ import {
 } from '@/components';
 import { CaptureProvider, useCapture } from '@/state/CaptureContext';
 import { PreferencesProvider } from '@/state/PreferencesContext';
+import { sessionEvents } from '@/security/SessionEvents';
 
 function CaptureProbe() {
   const capture = useCapture();
@@ -41,6 +42,22 @@ test('process-style provider recreation drops transient OCR image state', async 
     </CaptureProvider>,
   );
   expect(restored.getByText('no transient image')).toBeTruthy();
+});
+
+test('session invalidation clears transient OCR capture metadata', async () => {
+  const screen = await render(
+    <CaptureProvider>
+      <CaptureProbe />
+    </CaptureProvider>,
+  );
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Set transient image' }),
+  );
+  expect(screen.getByText('memory://synthetic')).toBeTruthy();
+  await act(async () => sessionEvents.notifyInvalidated());
+  await waitFor(() =>
+    expect(screen.getByText('no transient image')).toBeTruthy(),
+  );
 });
 
 test('symptom state safely resets after component recreation', async () => {

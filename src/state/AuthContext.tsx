@@ -71,8 +71,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       await service.logout();
     } finally {
-      setPendingChallenge(null);
-      setStatus('unauthenticated');
+      await sessionEvents.notifyInvalidated();
     }
   }, []);
   const value = useMemo(

@@ -1,5 +1,7 @@
 import { useRouter } from 'expo-router';
 import { AppHeader, AppScreen, OcrConfirmationForm } from '@/components';
+import { ocrService } from '@/services/registry';
+import { isUneditedPresentedCandidate } from '@/services/ocrService';
 import { useCapture } from '@/state/CaptureContext';
 export default function OcrConfirmationScreen() {
   const router = useRouter();
@@ -12,18 +14,33 @@ export default function OcrConfirmationScreen() {
       />
       <OcrConfirmationForm
         candidate={candidate}
-        onConfirm={(value) => {
+        onConfirm={async (value) => {
+          const edited =
+            !candidate || !isUneditedPresentedCandidate(candidate, value);
+          await ocrService.decide?.(
+            value,
+            edited ? 'none_of_these' : 'confirm',
+          );
           setCandidate(value);
           router.push('/add-medicine');
         }}
-        onReject={() => {
-          setCandidate(null);
-        }}
-        onRetry={() => {
+        onReject={async () => {
+          if (candidate) await ocrService.decide?.(candidate, 'reject');
           clear();
           router.replace('/medicine-camera');
         }}
-        onManual={() => {
+        onNone={async () => {
+          if (candidate) await ocrService.decide?.(candidate, 'none_of_these');
+          clear();
+          router.replace('/add-medicine');
+        }}
+        onRetry={async () => {
+          if (candidate) await ocrService.decide?.(candidate, 'reject');
+          clear();
+          router.replace('/medicine-camera');
+        }}
+        onManual={async () => {
+          if (candidate) await ocrService.decide?.(candidate, 'none_of_these');
           clear();
           router.replace('/add-medicine');
         }}

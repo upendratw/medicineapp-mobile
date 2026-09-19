@@ -4,6 +4,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { sessionEvents } from '@/security/SessionEvents';
 import { AuthProvider, useAuth } from '@/state/AuthContext';
+import { CaptureProvider, useCapture } from '@/state/CaptureContext';
 
 function Probe() {
   const { status, logout } = useAuth();
@@ -12,6 +13,22 @@ function Probe() {
       <Text>{status}</Text>
       <Pressable accessibilityRole="button" onPress={logout}>
         <Text>logout-probe</Text>
+      </Pressable>
+    </>
+  );
+}
+
+function CaptureProbe() {
+  const capture = useCapture();
+  return (
+    <>
+      <Text>{capture.imageUri ?? 'no transient image'}</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="set-capture"
+        onPress={() => capture.setImage('memory://synthetic-user-a')}
+      >
+        <Text>set-capture</Text>
       </Pressable>
     </>
   );
@@ -53,4 +70,26 @@ test('logout transitions authenticated state to Login-compatible unauthenticated
   await act(async () => fireEvent.press(screen.getByRole('button')));
   await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy());
   expect(SecureStore.deleteItemAsync).toHaveBeenCalled();
+});
+
+test('logout clears transient OCR state before a subsequent user can authenticate', async () => {
+  jest.spyOn(global, 'fetch').mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ data: { logged_out: true } }),
+  } as Response);
+  const screen = await render(
+    <AuthProvider>
+      <CaptureProvider>
+        <Probe />
+        <CaptureProbe />
+      </CaptureProvider>
+    </AuthProvider>,
+  );
+  await waitFor(() => expect(screen.getByText('authenticated')).toBeTruthy());
+  await fireEvent.press(screen.getByRole('button', { name: 'set-capture' }));
+  expect(screen.getByText('memory://synthetic-user-a')).toBeTruthy();
+  await act(async () => fireEvent.press(screen.getByText('logout-probe')));
+  await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy());
+  expect(screen.getByText('no transient image')).toBeTruthy();
 });
