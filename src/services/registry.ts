@@ -38,7 +38,7 @@ export const dashboardService = new DashboardService(
   patientMedicationService,
   scheduleService,
 );
-export const ocrService = buildOcrService();
+export const ocrService = buildOcrService(api);
 export const reminderService = new ReminderService(api);
 export const reminderContextService = buildReminderContextService();
 export const medicationHistoryService = new MedicationHistoryService(api);

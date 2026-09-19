@@ -4,6 +4,7 @@ const mockTakePictureAsync = jest.fn();
 const mockPush = jest.fn();
 const mockBack = jest.fn();
 const mockRecognize = jest.fn();
+const mockLaunchImageLibraryAsync = jest.fn();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, back: mockBack }),
@@ -39,6 +40,14 @@ jest.mock('expo-image', () => {
   };
 });
 
+jest.mock('expo-crypto', () => ({
+  randomUUID: () => '00000000-0000-4000-8000-000000000123',
+}));
+jest.mock('expo-image-picker', () => ({
+  launchImageLibraryAsync: (...args: unknown[]) =>
+    mockLaunchImageLibraryAsync(...args),
+}));
+
 jest.mock('@/services/registry', () => ({
   ocrService: { recognize: (...args: unknown[]) => mockRecognize(...args) },
 }));
@@ -65,6 +74,8 @@ const readyCamera = async (
 beforeEach(() => {
   jest.clearAllMocks();
   mockRecognize.mockResolvedValue({
+    captureId: '00000000-0000-4000-8000-000000000456',
+    candidateId: '00000000-0000-4000-8000-000000000789',
     name: 'Synthetic candidate',
     strength: '',
     dosageForm: '',
@@ -90,6 +101,8 @@ test('renders a safe accessible capture control after camera readiness', async (
 test('capture displays only a transient preview', async () => {
   mockTakePictureAsync.mockResolvedValue({
     uri: 'file:///temporary/synthetic-image.jpg',
+    width: 800,
+    height: 600,
   });
   const screen = await render(view());
   await readyCamera(screen);
@@ -137,6 +150,8 @@ test('capture failure is sanitized and remains retryable', async () => {
 test('retake returns to camera and Continue explicitly enters OCR review', async () => {
   mockTakePictureAsync.mockResolvedValue({
     uri: 'file:///temporary/synthetic-image.jpg',
+    width: 800,
+    height: 600,
   });
   const screen = await render(view());
   await readyCamera(screen);
@@ -152,4 +167,34 @@ test('retake returns to camera and Continue explicitly enters OCR review', async
   );
   await waitFor(() => expect(mockRecognize).toHaveBeenCalledTimes(1));
   expect(mockPush).toHaveBeenCalledWith('/ocr-confirmation');
+});
+
+test('gallery selection remains local until explicit Continue', async () => {
+  mockLaunchImageLibraryAsync.mockResolvedValue({
+    canceled: false,
+    assets: [
+      {
+        uri: 'file:///temporary/gallery-image.png',
+        width: 640,
+        height: 480,
+        mimeType: 'image/png',
+      },
+    ],
+  });
+  const screen = await render(view());
+  await readyCamera(screen);
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Choose from photo library' }),
+  );
+  await screen.findByLabelText('Captured medicine packaging preview');
+  expect(mockRecognize).not.toHaveBeenCalled();
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Continue to recognition review' }),
+  );
+  await waitFor(() =>
+    expect(mockRecognize).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'gallery', mediaType: 'image/png' }),
+      expect.any(AbortSignal),
+    ),
+  );
 });

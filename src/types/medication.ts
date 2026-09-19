@@ -20,12 +20,28 @@ export type ManualMedicationInput = Readonly<{
 }>;
 
 export type OcrCandidate = Readonly<{
+  captureId?: string;
+  candidateId?: string;
   name: string;
   strength: string;
   dosageForm: string;
   confidence?: number;
   alternatives: readonly string[];
+  alternativeCandidates?: readonly Readonly<{
+    candidateId: string;
+    name: string;
+    strength: string;
+    dosageForm: string;
+    confidence?: number;
+  }>[];
   sourceStatus: 'development_fixture' | 'backend_candidate';
 }>;
 
-export type CapturedMedicineImage = Readonly<{ uri: string }>;
+export type CapturedMedicineImage = Readonly<{
+  uri: string;
+  width: number;
+  height: number;
+  mediaType: 'image/jpeg' | 'image/png';
+  source: 'camera' | 'gallery';
+  idempotencyKey: string;
+}>;

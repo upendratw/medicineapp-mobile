@@ -1,7 +1,9 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Crypto from 'expo-crypto';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,31 +28,54 @@ export default function MedicineCameraScreen() {
   const camera = useRef<CameraView>(null);
   const captureGate = useRef(new SingleFlight()).current;
   const [permission, requestPermission] = useCameraPermissions();
-  const { imageUri, setImage, setCandidate } = useCapture();
+  const { image, imageUri, setImage, setCandidate, clear } = useCapture();
+  const recognitionController = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
   const [working, setWorking] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [error, setError] = useState('');
-  if (!permission)
-    return <LoadingIndicator label="Checking camera permission" />;
-  if (!permission.granted)
-    return (
-      <AppScreen>
-        <AppHeader title="Camera permission" />
-        <AppAlert
-          tone="warning"
-          message="Camera access is needed only when you choose to photograph medicine packaging."
-        />
-        <AppButton label="Allow camera access" onPress={requestPermission} />
-        {permission.canAskAgain ? null : (
-          <AppAlert message="Camera access is denied. You can use manual entry or enable permission in device settings." />
-        )}
-        <AppButton
-          variant="secondary"
-          label="Use manual entry"
-          onPress={() => router.replace('/add-medicine')}
-        />
-      </AppScreen>
-    );
+  useEffect(() => () => {
+    mounted.current = false;
+    recognitionController.current?.abort();
+  });
+  const chooseFromGallery = async () => {
+    if (working) return;
+    setWorking(true);
+    setError('');
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+        exif: false,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      const mediaType = asset.mimeType ?? 'image/jpeg';
+      if (
+        !asset.uri ||
+        asset.width < 1 ||
+        asset.height < 1 ||
+        !['image/jpeg', 'image/png'].includes(mediaType)
+      ) {
+        setError(t('cameraUnsupportedPhoto'));
+        return;
+      }
+      setCandidate(null);
+      setImage({
+        uri: asset.uri,
+        width: asset.width,
+        height: asset.height,
+        mediaType: mediaType as 'image/jpeg' | 'image/png',
+        source: 'gallery',
+        idempotencyKey: Crypto.randomUUID(),
+      });
+    } catch {
+      setError(t('cameraPhotoOpenFailed'));
+    } finally {
+      setWorking(false);
+    }
+  };
   const capture = async () => {
     if (working || !cameraReady) return;
     await captureGate.run(async () => {
@@ -59,7 +84,15 @@ export default function MedicineCameraScreen() {
       try {
         const photo = await camera.current?.takePictureAsync({ quality: 0.7 });
         if (!photo?.uri) throw new Error('Camera returned no image');
-        setImage(photo.uri);
+        setCandidate(null);
+        setImage({
+          uri: photo.uri,
+          width: photo.width,
+          height: photo.height,
+          mediaType: 'image/jpeg',
+          source: 'camera',
+          idempotencyKey: Crypto.randomUUID(),
+        });
       } catch {
         setError(t('cameraCaptureFailed'));
       } finally {
@@ -68,19 +101,57 @@ export default function MedicineCameraScreen() {
     });
   };
   const continueToReview = async () => {
-    if (!imageUri || working) return;
+    if (!image || working) return;
+    recognitionController.current?.abort();
+    const controller = new AbortController();
+    recognitionController.current = controller;
     setWorking(true);
     setError('');
     try {
-      setCandidate(await ocrService.recognize({ uri: imageUri }));
-    } catch (failure) {
-      if (!(failure instanceof IntegrationPendingError))
-        setError('Recognition is temporarily unavailable.');
-    } finally {
-      setWorking(false);
+      setCandidate(await ocrService.recognize(image, controller.signal));
+      if (controller.signal.aborted) return;
       router.push('/ocr-confirmation');
+    } catch (failure) {
+      if (controller.signal.aborted || !mounted.current) return;
+      setError(
+        failure instanceof IntegrationPendingError
+          ? 'Recognition could not produce a safe candidate. Retake the image or enter the medicine manually.'
+          : 'Recognition is temporarily unavailable.',
+      );
+    } finally {
+      if (recognitionController.current === controller)
+        recognitionController.current = null;
+      if (mounted.current) setWorking(false);
     }
   };
+  if (!permission)
+    return <LoadingIndicator label="Checking camera permission" />;
+  if (!permission.granted)
+    return (
+      <AppScreen>
+        <AppHeader title="Choose a medicine image" />
+        {error ? <AppAlert tone="error" message={error} /> : null}
+        <AppAlert
+          tone="warning"
+          message="Camera access is needed only when you choose to photograph medicine packaging."
+        />
+        <AppButton label="Allow camera access" onPress={requestPermission} />
+        {permission.canAskAgain ? null : (
+          <AppAlert message="Camera access is denied. You can select a photo, use manual entry, or enable permission in device settings." />
+        )}
+        <AppButton
+          variant="secondary"
+          label={t('cameraChoosePhoto')}
+          loading={working}
+          onPress={chooseFromGallery}
+        />
+        <AppButton
+          variant="secondary"
+          label="Use manual entry"
+          onPress={() => router.replace('/add-medicine')}
+        />
+      </AppScreen>
+    );
   if (imageUri)
     return (
       <AppScreen>
@@ -105,11 +176,18 @@ export default function MedicineCameraScreen() {
           label="Retake photo"
           disabled={working}
           onPress={() => {
+            recognitionController.current?.abort();
             setImage(null);
             setCandidate(null);
             setCameraReady(false);
             setError('');
           }}
+        />
+        <AppButton
+          variant="secondary"
+          label={t('cameraChooseAnotherPhoto')}
+          disabled={working}
+          onPress={chooseFromGallery}
         />
       </AppScreen>
     );
@@ -138,8 +216,18 @@ export default function MedicineCameraScreen() {
           />
           <AppButton
             variant="secondary"
+            label={t('cameraChoosePhoto')}
+            disabled={working}
+            onPress={chooseFromGallery}
+          />
+          <AppButton
+            variant="secondary"
             label="Cancel camera"
-            onPress={() => router.back()}
+            onPress={() => {
+              recognitionController.current?.abort();
+              clear();
+              router.back();
+            }}
           />
         </View>
       </SafeAreaView>

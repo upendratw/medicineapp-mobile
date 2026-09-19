@@ -107,6 +107,13 @@ export class ApiClient {
     body: ApiEnvelope<T> & ApiErrorEnvelope;
   }> {
     const controller = new AbortController();
+    const externalSignal = options.signal;
+    const abortFromCaller = () => controller.abort();
+    if (externalSignal?.aborted) controller.abort();
+    else
+      externalSignal?.addEventListener('abort', abortFromCaller, {
+        once: true,
+      });
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
       const headers = new Headers(options.headers);
@@ -123,6 +130,7 @@ export class ApiClient {
       return { response, body };
     } finally {
       clearTimeout(timeout);
+      externalSignal?.removeEventListener('abort', abortFromCaller);
     }
   }
 

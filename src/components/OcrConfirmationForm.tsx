@@ -10,15 +10,17 @@ import type { OcrCandidate } from '@/types/medication';
 
 type Props = {
   candidate: OcrCandidate | null;
-  onConfirm(candidate: OcrCandidate): void;
-  onReject(): void;
-  onRetry(): void;
-  onManual(): void;
+  onConfirm(candidate: OcrCandidate): Promise<void> | void;
+  onReject(): Promise<void> | void;
+  onNone(): Promise<void> | void;
+  onRetry(): Promise<void> | void;
+  onManual(): Promise<void> | void;
 };
 export function OcrConfirmationForm({
   candidate,
   onConfirm,
   onReject,
+  onNone,
   onRetry,
   onManual,
 }: Props) {
@@ -33,6 +35,21 @@ export function OcrConfirmationForm({
     strength: candidate?.strength ?? '',
     dosageForm: candidate?.dosageForm ?? '',
   });
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState('');
+  const [selection, setSelection] = useState(candidate);
+  const run = async (operation: () => Promise<void> | void) => {
+    if (working) return;
+    setWorking(true);
+    setError('');
+    try {
+      await operation();
+    } catch {
+      setError('Your decision could not be saved. Please try again.');
+    } finally {
+      setWorking(false);
+    }
+  };
   if (!candidate)
     return (
       <>
@@ -41,15 +58,16 @@ export function OcrConfirmationForm({
         <AppButton variant="secondary" label="Retry scan" onPress={onRetry} />
       </>
     );
-  const name = edits.source === candidate ? edits.name : candidate.name;
+  const selected = selection ?? candidate;
+  const name = edits.source === selected ? edits.name : selected.name;
   const strength =
-    edits.source === candidate ? edits.strength : candidate.strength;
+    edits.source === selected ? edits.strength : selected.strength;
   const dosageForm =
-    edits.source === candidate ? edits.dosageForm : candidate.dosageForm;
+    edits.source === selected ? edits.dosageForm : selected.dosageForm;
   const update = (values: Partial<Omit<typeof edits, 'source'>>) =>
-    setEdits({ source: candidate, name, strength, dosageForm, ...values });
+    setEdits({ source: selected, name, strength, dosageForm, ...values });
   const corrected = {
-    ...candidate,
+    ...selected,
     name: name.trim(),
     strength: strength.trim(),
     dosageForm: dosageForm.trim(),
@@ -60,16 +78,17 @@ export function OcrConfirmationForm({
         tone="warning"
         message="Recognition can be incorrect. Verify the medicine name, strength, and form against the label or packaging."
       />
+      {error ? <AppAlert tone="error" message={error} /> : null}
       <AppCard>
         <AppText variant="label">
           Candidate status:{' '}
-          {candidate.sourceStatus === 'development_fixture'
+          {selected.sourceStatus === 'development_fixture'
             ? 'Development-only example'
             : 'Backend recognition candidate'}
         </AppText>
-        {candidate.confidence == null ? null : (
+        {selected.confidence == null ? null : (
           <AppText>
-            Confidence: {Math.round(candidate.confidence * 100)}%
+            Confidence: {Math.round(selected.confidence * 100)}%
           </AppText>
         )}
         <AppTextInput
@@ -90,27 +109,61 @@ export function OcrConfirmationForm({
           onChangeText={(value) => update({ dosageForm: value })}
           maxLength={60}
         />
-        {candidate.alternatives.length ? (
-          <AppText>
-            Other candidates: {candidate.alternatives.join(', ')}
-          </AppText>
-        ) : null}
+        {candidate.alternativeCandidates?.map((alternative) => (
+          <AppButton
+            key={alternative.candidateId}
+            variant="secondary"
+            label={`Review alternative: ${alternative.name}`}
+            disabled={working}
+            onPress={() => {
+              const next = {
+                ...candidate,
+                candidateId: alternative.candidateId,
+                name: alternative.name,
+                strength: alternative.strength,
+                dosageForm: alternative.dosageForm,
+                confidence: alternative.confidence,
+              };
+              setSelection(next);
+              setEdits({
+                source: next,
+                name: next.name,
+                strength: next.strength,
+                dosageForm: next.dosageForm,
+              });
+            }}
+          />
+        ))}
       </AppCard>
       <AppButton
         label="I verified this candidate"
         disabled={name.trim().length < 2}
-        onPress={() => onConfirm(corrected)}
+        loading={working}
+        onPress={() => run(() => onConfirm(corrected))}
       />
       <AppButton
         variant="secondary"
         label="Reject candidate"
-        onPress={onReject}
+        disabled={working}
+        onPress={() => run(onReject)}
       />
-      <AppButton variant="secondary" label="Retry scan" onPress={onRetry} />
+      <AppButton
+        variant="secondary"
+        label="None of these"
+        disabled={working}
+        onPress={() => run(onNone)}
+      />
+      <AppButton
+        variant="secondary"
+        label="Retry scan"
+        disabled={working}
+        onPress={() => run(onRetry)}
+      />
       <AppButton
         variant="secondary"
         label="Enter manually instead"
-        onPress={onManual}
+        disabled={working}
+        onPress={() => run(onManual)}
       />
     </>
   );

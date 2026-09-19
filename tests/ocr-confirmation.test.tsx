@@ -14,6 +14,7 @@ const candidate: OcrCandidate = {
 test('OCR candidate requires explicit editable confirmation', async () => {
   const confirm = jest.fn();
   const reject = jest.fn();
+  const none = jest.fn();
   const retry = jest.fn();
   const manual = jest.fn();
   const screen = await render(
@@ -21,6 +22,7 @@ test('OCR candidate requires explicit editable confirmation', async () => {
       candidate={candidate}
       onConfirm={confirm}
       onReject={reject}
+      onNone={none}
       onRetry={retry}
       onManual={manual}
     />,
@@ -45,6 +47,8 @@ test('OCR candidate requires explicit editable confirmation', async () => {
     screen.getByRole('button', { name: 'Enter manually instead' }),
   );
   expect(reject).toHaveBeenCalled();
+  await fireEvent.press(screen.getByRole('button', { name: 'None of these' }));
+  expect(none).toHaveBeenCalled();
   expect(retry).toHaveBeenCalled();
   expect(manual).toHaveBeenCalled();
 });
@@ -57,6 +61,7 @@ test('missing OCR backend provides manual and retry fallbacks without auto-save'
       candidate={null}
       onConfirm={jest.fn()}
       onReject={jest.fn()}
+      onNone={jest.fn()}
       onRetry={retry}
       onManual={manual}
     />,
