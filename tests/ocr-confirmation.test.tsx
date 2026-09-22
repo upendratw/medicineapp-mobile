@@ -1,73 +1,60 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { OcrConfirmationForm } from '@/components';
-import type { OcrCandidate } from '@/types/medication';
 
-const candidate: OcrCandidate = {
-  name: 'Synthetic Candidate',
-  strength: '10 mg',
+const extracted = {
+  medicineName: 'Dolo 650',
+  strength: '650 mg',
   dosageForm: 'Tablet',
-  confidence: 0.81,
-  alternatives: ['Alternative candidate'],
-  sourceStatus: 'backend_candidate',
+  activeIngredient: 'Paracetamol',
+  manufacturer: 'Micro Labs Limited',
 };
 
-test('OCR candidate requires explicit editable confirmation', async () => {
+test('structured OCR fields remain editable and require explicit confirmation', async () => {
   const confirm = jest.fn();
-  const reject = jest.fn();
-  const none = jest.fn();
-  const retry = jest.fn();
-  const manual = jest.fn();
+  const retake = jest.fn();
   const screen = await render(
     <OcrConfirmationForm
-      candidate={candidate}
+      extracted={extracted}
       onConfirm={confirm}
-      onReject={reject}
-      onNone={none}
-      onRetry={retry}
-      onManual={manual}
+      onRetake={retake}
     />,
   );
-  expect(screen.getByText(/Recognition can be incorrect/)).toBeTruthy();
-  expect(screen.getByText('Confidence: 81%')).toBeTruthy();
+  expect(screen.getByText(/Please check and correct it/)).toBeTruthy();
   await fireEvent.changeText(
-    screen.getByLabelText('Recognized medicine name'),
-    'Corrected Candidate',
+    screen.getByLabelText('Medicine Name'),
+    'Corrected Dolo',
+  );
+  await fireEvent.changeText(
+    screen.getByLabelText('Active Ingredient'),
+    'Corrected Ingredient',
   );
   await fireEvent.press(
-    screen.getByRole('button', { name: 'I verified this candidate' }),
+    screen.getByRole('button', { name: 'Confirm Medicine' }),
   );
   expect(confirm).toHaveBeenCalledWith(
-    expect.objectContaining({ name: 'Corrected Candidate' }),
+    expect.objectContaining({
+      medicineName: 'Corrected Dolo',
+      activeIngredient: 'Corrected Ingredient',
+    }),
   );
-  await fireEvent.press(
-    screen.getByRole('button', { name: 'Reject candidate' }),
-  );
-  await fireEvent.press(screen.getByRole('button', { name: 'Retry scan' }));
-  await fireEvent.press(
-    screen.getByRole('button', { name: 'Enter manually instead' }),
-  );
-  expect(reject).toHaveBeenCalled();
-  await fireEvent.press(screen.getByRole('button', { name: 'None of these' }));
-  expect(none).toHaveBeenCalled();
-  expect(retry).toHaveBeenCalled();
-  expect(manual).toHaveBeenCalled();
 });
 
-test('missing OCR backend provides manual and retry fallbacks without auto-save', async () => {
-  const manual = jest.fn();
-  const retry = jest.fn();
+test('medicine name is required and retake remains explicit', async () => {
+  const confirm = jest.fn();
+  const retake = jest.fn();
   const screen = await render(
     <OcrConfirmationForm
-      candidate={null}
-      onConfirm={jest.fn()}
-      onReject={jest.fn()}
-      onNone={jest.fn()}
-      onRetry={retry}
-      onManual={manual}
+      extracted={extracted}
+      onConfirm={confirm}
+      onRetake={retake}
     />,
   );
+  await fireEvent.changeText(screen.getByLabelText('Medicine Name'), ' ');
   expect(
-    screen.queryByRole('button', { name: 'I verified this candidate' }),
-  ).toBeNull();
-  expect(screen.getByText(/uploaded automatically/i)).toBeTruthy();
+    screen.getByRole('button', { name: 'Confirm Medicine' }).props
+      .accessibilityState.disabled,
+  ).toBe(true);
+  await fireEvent.press(screen.getByRole('button', { name: 'Retake' }));
+  expect(retake).toHaveBeenCalled();
+  expect(confirm).not.toHaveBeenCalled();
 });

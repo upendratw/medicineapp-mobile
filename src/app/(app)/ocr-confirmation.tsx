@@ -1,50 +1,110 @@
 import { useRouter } from 'expo-router';
-import { AppHeader, AppScreen, OcrConfirmationForm } from '@/components';
+import { useState } from 'react';
+import {
+  AppAlert,
+  AppHeader,
+  AppScreen,
+  OcrConfirmationForm,
+  OcrOutcomePanel,
+} from '@/components';
 import { ocrService } from '@/services/registry';
-import { isUneditedPresentedCandidate } from '@/services/ocrService';
 import { useCapture } from '@/state/CaptureContext';
+
 export default function OcrConfirmationScreen() {
   const router = useRouter();
-  const { candidate, clear, setCandidate } = useCapture();
+  const { recognitionResult, clear, setReviewedMedicine } = useCapture();
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState('');
+  if (recognitionResult?.kind === 'review_ready') {
+    return (
+      <AppScreen>
+        <AppHeader
+          title="Review medicine"
+          subtitle="Please check what we read before continuing."
+        />
+        <OcrConfirmationForm
+          extracted={recognitionResult.extractedMedicine}
+          onConfirm={async (medicine) => {
+            await ocrService.confirmReview?.(
+              recognitionResult.captureId,
+              medicine,
+            );
+            setReviewedMedicine(medicine);
+            router.push('/add-medicine');
+          }}
+          onRetake={async () => {
+            await ocrService.cancel?.(recognitionResult.captureId);
+            clear();
+            router.replace('/medicine-camera');
+          }}
+        />
+      </AppScreen>
+    );
+  }
+  if (recognitionResult) {
+    const run = async (
+      operation: () => Promise<void>,
+      destination:
+        | '/medicine-camera'
+        | '/add-medicine'
+        | '/medicine-camera?choose=gallery',
+    ) => {
+      if (working) return;
+      setWorking(true);
+      setError('');
+      try {
+        await operation();
+        clear();
+        router.replace(destination);
+      } catch {
+        setError(
+          'The recognition choice could not be saved. Please try again.',
+        );
+      } finally {
+        setWorking(false);
+      }
+    };
+    const explicitlyCancel = () =>
+      run(
+        async () => ocrService.cancel?.(recognitionResult.captureId),
+        '/medicine-camera',
+      );
+    return (
+      <AppScreen>
+        <AppHeader
+          title="Recognition result"
+          subtitle="Nothing becomes medication information without your review."
+        />
+        {error ? <AppAlert tone="error" message={error} /> : null}
+        <OcrOutcomePanel
+          result={recognitionResult}
+          working={working}
+          onRetake={explicitlyCancel}
+          onChooseAnother={() =>
+            run(async () => {
+              await ocrService.cancel?.(recognitionResult.captureId);
+            }, '/medicine-camera?choose=gallery')
+          }
+          onManual={() =>
+            run(async () => {
+              if (
+                recognitionResult.kind !== 'failed_safe' &&
+                recognitionResult.kind !== 'expired'
+              )
+                await ocrService.decideOutcome?.(
+                  recognitionResult.captureId,
+                  'none_of_these',
+                );
+            }, '/add-medicine')
+          }
+          onCancel={explicitlyCancel}
+        />
+      </AppScreen>
+    );
+  }
   return (
     <AppScreen>
-      <AppHeader
-        title="Confirm recognition"
-        subtitle="Nothing becomes medication truth until you review and confirm it."
-      />
-      <OcrConfirmationForm
-        candidate={candidate}
-        onConfirm={async (value) => {
-          const edited =
-            !candidate || !isUneditedPresentedCandidate(candidate, value);
-          await ocrService.decide?.(
-            value,
-            edited ? 'none_of_these' : 'confirm',
-          );
-          setCandidate(value);
-          router.push('/add-medicine');
-        }}
-        onReject={async () => {
-          if (candidate) await ocrService.decide?.(candidate, 'reject');
-          clear();
-          router.replace('/medicine-camera');
-        }}
-        onNone={async () => {
-          if (candidate) await ocrService.decide?.(candidate, 'none_of_these');
-          clear();
-          router.replace('/add-medicine');
-        }}
-        onRetry={async () => {
-          if (candidate) await ocrService.decide?.(candidate, 'reject');
-          clear();
-          router.replace('/medicine-camera');
-        }}
-        onManual={async () => {
-          if (candidate) await ocrService.decide?.(candidate, 'none_of_these');
-          clear();
-          router.replace('/add-medicine');
-        }}
-      />
+      <AppAlert tone="error" message="Recognition result is unavailable." />
     </AppScreen>
   );
 }

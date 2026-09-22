@@ -4,7 +4,7 @@ import { patientMedicationService } from '@/services/registry';
 import { useCapture } from '@/state/CaptureContext';
 export default function AddMedicineScreen() {
   const router = useRouter();
-  const { candidate, clear } = useCapture();
+  const { candidate, reviewedMedicine, clear } = useCapture();
   return (
     <AppScreen>
       <AppHeader
@@ -13,13 +13,21 @@ export default function AddMedicineScreen() {
       />
       <ManualMedicationForm
         initial={
-          candidate
+          reviewedMedicine
             ? {
-                name: candidate.name,
-                strength: candidate.strength,
-                dosageForm: candidate.dosageForm,
+                name: reviewedMedicine.medicineName,
+                strength: reviewedMedicine.strength,
+                dosageForm: reviewedMedicine.dosageForm,
+                activeIngredient: reviewedMedicine.activeIngredient,
+                manufacturer: reviewedMedicine.manufacturer,
               }
-            : undefined
+            : candidate
+              ? {
+                  name: candidate.name,
+                  strength: candidate.strength,
+                  dosageForm: candidate.dosageForm,
+                }
+              : undefined
         }
         submit={(input) => patientMedicationService.create(input)}
         onSaved={clear}

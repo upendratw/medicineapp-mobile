@@ -2,7 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Crypto from 'expo-crypto';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,22 +16,44 @@ import {
   LoadingIndicator,
 } from '@/components';
 import { IntegrationPendingError } from '@/services/integration';
+import { publicEnvironment } from '@/config/environment';
+import { OcrWorkflowError } from '@/services/ocrService';
 import { ocrService } from '@/services/registry';
 import { useCapture } from '@/state/CaptureContext';
 import { theme } from '@/theme/tokens';
 import { useTranslation } from '@/localization';
 import { SingleFlight } from '@/utils/singleFlight';
 
+export const recognitionFailureMessage = (
+  failure: unknown,
+  developerDiagnostics = publicEnvironment.developerDiagnostics,
+): string => {
+  if (failure instanceof OcrWorkflowError && developerDiagnostics)
+    return `Recognition unavailable [${failure.code}]`;
+  return failure instanceof IntegrationPendingError
+    ? 'Recognition could not produce a safe candidate. Retake the image or enter the medicine manually.'
+    : 'Recognition is temporarily unavailable.';
+};
+
 export default function MedicineCameraScreen() {
   const router = useRouter();
+  const { choose } = useLocalSearchParams<{ choose?: string }>();
   const { t } = useTranslation();
   const camera = useRef<CameraView>(null);
   const captureGate = useRef(new SingleFlight()).current;
   const recognitionGate = useRef(new SingleFlight()).current;
   const [permission, requestPermission] = useCameraPermissions();
-  const { image, imageUri, setImage, setCandidate, clear } = useCapture();
+  const {
+    image,
+    imageUri,
+    setImage,
+    setCandidate,
+    setRecognitionResult,
+    clear,
+  } = useCapture();
   const recognitionController = useRef<AbortController | null>(null);
   const mounted = useRef(true);
+  const galleryRequestHandled = useRef(false);
   const [working, setWorking] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [error, setError] = useState('');
@@ -69,6 +91,7 @@ export default function MedicineCameraScreen() {
         return;
       }
       setCandidate(null);
+      setRecognitionResult(null);
       setImage({
         uri: asset.uri,
         width: asset.width,
@@ -83,6 +106,19 @@ export default function MedicineCameraScreen() {
       setWorking(false);
     }
   };
+  useEffect(() => {
+    if (
+      choose === 'gallery' &&
+      permission?.granted &&
+      !image &&
+      !galleryRequestHandled.current
+    ) {
+      galleryRequestHandled.current = true;
+      void chooseFromGallery();
+    }
+    // The route hint is consumed once; callback recreation must not reopen the picker.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [choose, image, permission?.granted]);
   const capture = async () => {
     if (working || !cameraReady) return;
     await captureGate.run(async () => {
@@ -92,6 +128,7 @@ export default function MedicineCameraScreen() {
         const photo = await camera.current?.takePictureAsync({ quality: 0.7 });
         if (!photo?.uri) throw new Error('Camera returned no image');
         setCandidate(null);
+        setRecognitionResult(null);
         setImage({
           uri: photo.uri,
           width: photo.width,
@@ -116,16 +153,13 @@ export default function MedicineCameraScreen() {
       setWorking(true);
       setError('');
       try {
-        setCandidate(await ocrService.recognize(image, controller.signal));
+        const result = await ocrService.recognize(image, controller.signal);
         if (controller.signal.aborted) return;
+        setRecognitionResult(result);
         router.push('/ocr-confirmation');
       } catch (failure) {
         if (controller.signal.aborted || !mounted.current) return;
-        setError(
-          failure instanceof IntegrationPendingError
-            ? 'Recognition could not produce a safe candidate. Retake the image or enter the medicine manually.'
-            : 'Recognition is temporarily unavailable.',
-        );
+        setError(recognitionFailureMessage(failure));
       } finally {
         if (recognitionController.current === controller)
           recognitionController.current = null;
@@ -187,6 +221,7 @@ export default function MedicineCameraScreen() {
             recognitionController.current?.abort();
             setImage(null);
             setCandidate(null);
+            setRecognitionResult(null);
             setCameraReady(false);
             setError('');
           }}

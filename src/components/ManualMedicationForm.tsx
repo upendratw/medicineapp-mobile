@@ -28,6 +28,10 @@ export function ManualMedicationForm({
   const [name, setName] = useState(initial?.name ?? '');
   const [strength, setStrength] = useState(initial?.strength ?? '');
   const [dosageForm, setDosageForm] = useState(initial?.dosageForm ?? '');
+  const [activeIngredient, setActiveIngredient] = useState(
+    initial?.activeIngredient ?? '',
+  );
+  const [manufacturer, setManufacturer] = useState(initial?.manufacturer ?? '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -38,6 +42,8 @@ export function ManualMedicationForm({
       name,
       strength,
       dosageForm,
+      activeIngredient,
+      manufacturer,
       notes,
     });
     setErrors(result.errors);
@@ -50,6 +56,8 @@ export function ManualMedicationForm({
       setName('');
       setStrength('');
       setDosageForm('');
+      setActiveIngredient('');
+      setManufacturer('');
       setNotes('');
       setErrors({});
       setOutcome('success');
@@ -94,6 +102,18 @@ export function ManualMedicationForm({
         onChangeText={setDosageForm}
         maxLength={60}
         placeholder="For example, tablet"
+      />
+      <AppTextInput
+        label="Active ingredient (optional)"
+        value={activeIngredient}
+        onChangeText={setActiveIngredient}
+        maxLength={160}
+      />
+      <AppTextInput
+        label="Manufacturer (optional)"
+        value={manufacturer}
+        onChangeText={setManufacturer}
+        maxLength={160}
       />
       <AppTextInput
         label="Notes (optional)"

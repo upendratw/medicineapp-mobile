@@ -79,6 +79,20 @@ const en = {
   cameraChooseAnotherPhoto: 'Choose another photo',
   cameraUnsupportedPhoto: 'Choose a JPEG or PNG medicine image.',
   cameraPhotoOpenFailed: 'The selected image could not be opened.',
+  recognitionNoMatch:
+    "We couldn't confidently match this medicine to the verified medicine list.",
+  recognitionRetake:
+    'Please try a clearer medicine-packaging image, choose another photo, or enter the medicine manually.',
+  recognitionFailedSafe:
+    'Recognition is temporarily unavailable. No medicine was created or confirmed.',
+  recognitionExpired:
+    'This recognition session expired. Retake the photo or choose another image.',
+  recognitionQualityAdvisory:
+    'Image quality may be improved with steadier focus and clearer lighting.',
+  recognitionRetakeAction: 'Retake photo',
+  recognitionChooseAnotherAction: 'Choose another photo',
+  recognitionManualAction: 'Enter medicine manually',
+  recognitionCancelAction: 'Cancel recognition',
   caregiverAccessUnavailable: 'Caregiver access is not available',
   caregiverAccessUnavailableMessage:
     'This account does not have caregiver access. Your patient experience remains available.',
@@ -166,6 +180,20 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   cameraChooseAnotherPhoto: 'दूसरी फ़ोटो चुनें',
   cameraUnsupportedPhoto: 'JPEG या PNG दवा की फ़ोटो चुनें।',
   cameraPhotoOpenFailed: 'चुनी गई फ़ोटो खोली नहीं जा सकी।',
+  recognitionNoMatch:
+    'हम इस दवा का सत्यापित दवा सूची से भरोसेमंद मिलान नहीं कर सके।',
+  recognitionRetake:
+    'दवा की पैकेजिंग की अधिक साफ़ फ़ोटो लें, दूसरी फ़ोटो चुनें या दवा की जानकारी स्वयं दर्ज करें।',
+  recognitionFailedSafe:
+    'पहचान सेवा अभी उपलब्ध नहीं है। कोई दवा बनाई या पुष्टि नहीं की गई।',
+  recognitionExpired:
+    'यह पहचान सत्र समाप्त हो गया है। फिर फ़ोटो लें या दूसरी फ़ोटो चुनें।',
+  recognitionQualityAdvisory:
+    'स्थिर फ़ोकस और बेहतर रोशनी से फ़ोटो की गुणवत्ता सुधर सकती है।',
+  recognitionRetakeAction: 'फिर फ़ोटो लें',
+  recognitionChooseAnotherAction: 'दूसरी फ़ोटो चुनें',
+  recognitionManualAction: 'दवा स्वयं दर्ज करें',
+  recognitionCancelAction: 'पहचान रद्द करें',
   caregiverAccessUnavailable: 'देखभालकर्ता पहुँच उपलब्ध नहीं है',
   caregiverAccessUnavailableMessage:
     'इस खाते में देखभालकर्ता पहुँच नहीं है। रोगी अनुभव उपलब्ध रहता है।',

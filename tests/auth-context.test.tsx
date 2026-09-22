@@ -23,10 +23,19 @@ function CaptureProbe() {
   return (
     <>
       <Text>{capture.imageUri ?? 'no transient image'}</Text>
+      <Text>{capture.recognitionResult?.kind ?? 'no recognition result'}</Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="set-capture"
-        onPress={() => capture.setImage('memory://synthetic-user-a')}
+        onPress={() => {
+          capture.setImage('memory://synthetic-user-a');
+          capture.setRecognitionResult({
+            kind: 'no_match',
+            captureId: '00000000-0000-4000-8000-000000000903',
+            qualityReasons: [],
+            failureCode: 'NO_SAFE_CANDIDATE',
+          });
+        }}
       >
         <Text>set-capture</Text>
       </Pressable>
@@ -89,7 +98,9 @@ test('logout clears transient OCR state before a subsequent user can authenticat
   await waitFor(() => expect(screen.getByText('authenticated')).toBeTruthy());
   await fireEvent.press(screen.getByRole('button', { name: 'set-capture' }));
   expect(screen.getByText('memory://synthetic-user-a')).toBeTruthy();
+  expect(screen.getByText('no_match')).toBeTruthy();
   await act(async () => fireEvent.press(screen.getByText('logout-probe')));
   await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy());
   expect(screen.getByText('no transient image')).toBeTruthy();
+  expect(screen.getByText('no recognition result')).toBeTruthy();
 });

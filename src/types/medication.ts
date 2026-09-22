@@ -16,7 +16,17 @@ export type ManualMedicationInput = Readonly<{
   name: string;
   strength?: string;
   dosageForm?: string;
+  activeIngredient?: string;
+  manufacturer?: string;
   notes?: string;
+}>;
+
+export type ReviewedMedicine = Readonly<{
+  medicineName: string;
+  strength: string;
+  dosageForm: string;
+  activeIngredient: string;
+  manufacturer: string;
 }>;
 
 export type OcrCandidate = Readonly<{
@@ -36,6 +46,23 @@ export type OcrCandidate = Readonly<{
   }>[];
   sourceStatus: 'development_fixture' | 'backend_candidate';
 }>;
+
+export type OcrTerminalOutcome = Readonly<{
+  captureId: string;
+  qualityReasons: readonly string[];
+  failureCode: string | null;
+}>;
+
+export type OcrRecognitionResult =
+  | Readonly<{
+      kind: 'review_ready';
+      captureId: string;
+      extractedMedicine: ReviewedMedicine;
+    }>
+  | (Readonly<{ kind: 'no_match' }> & OcrTerminalOutcome)
+  | (Readonly<{ kind: 'retake_required' }> & OcrTerminalOutcome)
+  | (Readonly<{ kind: 'failed_safe' }> & OcrTerminalOutcome)
+  | (Readonly<{ kind: 'expired' }> & OcrTerminalOutcome);
 
 export type CapturedMedicineImage = Readonly<{
   uri: string;

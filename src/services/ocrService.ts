@@ -1,14 +1,28 @@
 import { ApiError, type ApiClient } from '@/api/client';
+import { fetch as expoFetch } from 'expo/fetch';
 import { File } from 'expo-file-system';
+import { publicEnvironment } from '@/config/environment';
 import { IntegrationPendingError } from '@/services/integration';
-import type { CapturedMedicineImage, OcrCandidate } from '@/types/medication';
+import type {
+  CapturedMedicineImage,
+  OcrRecognitionResult,
+  ReviewedMedicine,
+} from '@/types/medication';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export type OcrWorkflowFailureCode =
   | 'local_file_unavailable'
+  | 'local_file_metadata_invalid'
+  | 'local_file_empty'
+  | 'local_file_too_large'
+  | 'local_file_read_failed'
   | 'local_file_read_timeout'
+  | 'binary_body_creation_failed'
   | 'capture_initiation_timeout'
+  | 'capture_initiation_failed'
+  | 'capture_idempotency_conflict'
+  | 'capture_already_advanced'
   | 'upload_timeout'
   | 'upload_failed'
   | 'completion_timeout'
@@ -39,20 +53,34 @@ const DEFAULT_TIMEOUTS: OcrTimeouts = {
 };
 
 export type OcrStage =
-  | 'local_file_metadata_start'
-  | 'local_file_metadata_complete'
-  | 'local_file_read_start'
-  | 'local_file_read_complete'
-  | 'capture_initiation_start'
-  | 'capture_initiation_complete'
-  | 'upload_start'
-  | 'upload_complete'
-  | 'completion_start'
-  | 'completion_complete'
-  | 'polling_start'
-  | 'polling_complete';
+  | 'local_file_check_started'
+  | 'local_file_exists'
+  | 'local_file_metadata_valid'
+  | 'local_file_read_started'
+  | 'local_file_read_completed'
+  | 'binary_body_created'
+  | 'capture_initiation_started'
+  | 'capture_initiation_completed'
+  | 'upload_started'
+  | 'upload_completed'
+  | 'completion_started'
+  | 'completion_completed'
+  | 'polling_started'
+  | 'review_ready'
+  | 'outcome:no_match'
+  | 'outcome:retake_required'
+  | 'outcome:failed_safe'
+  | 'outcome:expired'
+  | `failed:${OcrWorkflowFailureCode}`;
 
 const noStageReporting = (_stage: OcrStage): void => undefined;
+
+export const reportDevelopmentOcrStage = (stage: OcrStage): void => {
+  if (!publicEnvironment.developerDiagnostics) return;
+  // Stage is a closed non-sensitive union. Never add dynamic values here.
+  // eslint-disable-next-line no-console
+  console.info(`OCR_STAGE ${stage}`);
+};
 
 const throwIfAborted = (signal?: AbortSignal): void => {
   if (signal?.aborted) throw new OcrWorkflowError('cancelled');
@@ -114,27 +142,36 @@ type CaptureResult = {
   quality_reasons: string[];
   failure_code: string | null;
   candidates: BackendCandidate[];
+  extracted_medicine: {
+    medicine_name: string;
+    strength: string | null;
+    dosage_form: string | null;
+    active_ingredient: string | null;
+    manufacturer: string | null;
+  } | null;
 };
 
 export interface OcrService {
   recognize(
     image: CapturedMedicineImage,
     signal?: AbortSignal,
-  ): Promise<OcrCandidate>;
-  decide?(
-    candidate: OcrCandidate,
-    action: 'confirm' | 'none_of_these' | 'reject',
+  ): Promise<OcrRecognitionResult>;
+  decideOutcome?(
+    captureId: string,
+    action: 'none_of_these' | 'reject',
   ): Promise<void>;
+  confirmReview?(captureId: string, medicine: ReviewedMedicine): Promise<void>;
+  cancel?(captureId: string): Promise<void>;
 }
 
 export class PendingOcrService implements OcrService {
-  async recognize(): Promise<OcrCandidate> {
+  async recognize(): Promise<OcrRecognitionResult> {
     throw new IntegrationPendingError('Medicine OCR');
   }
 }
 
 export class DevelopmentOcrService implements OcrService {
-  async recognize(): Promise<OcrCandidate> {
+  async recognize(): Promise<OcrRecognitionResult> {
     throw new IntegrationPendingError(
       'Development OCR fixtures are isolated from real image capture',
     );
@@ -157,61 +194,120 @@ const wait = (milliseconds: number, signal?: AbortSignal) =>
     }, milliseconds);
     signal?.addEventListener('abort', onAbort, { once: true });
   });
+export type PreparedLocalImage = Readonly<{
+  bytes: Uint8Array<ArrayBuffer>;
+  size: number;
+}>;
+
 export const readLocalImage = async (
   image: CapturedMedicineImage,
   signal?: AbortSignal,
-): Promise<Blob> => {
+  reportStage: (stage: OcrStage) => void = noStageReporting,
+): Promise<PreparedLocalImage> => {
   throwIfAborted(signal);
+  reportStage('local_file_check_started');
   if (!['image/jpeg', 'image/png'].includes(image.mediaType))
+    throw new OcrWorkflowError('local_file_metadata_invalid');
+  if (
+    !image.uri.startsWith('file://') ||
+    !Number.isInteger(image.width) ||
+    !Number.isInteger(image.height) ||
+    image.width < 1 ||
+    image.height < 1 ||
+    !image.idempotencyKey
+  )
+    throw new OcrWorkflowError('local_file_metadata_invalid');
+  let file: File;
+  try {
+    file = new File(image.uri);
+  } catch {
     throw new OcrWorkflowError('local_file_unavailable');
-  const file = new File(image.uri);
+  }
   if (!file.exists) throw new OcrWorkflowError('local_file_unavailable');
+  reportStage('local_file_exists');
   const size = file.size;
-  if (size < 1 || size > MAX_IMAGE_BYTES)
-    throw new OcrWorkflowError('local_file_unavailable');
-  const bytes = await file.bytes();
+  if (!Number.isInteger(size) || size < 0)
+    throw new OcrWorkflowError('local_file_metadata_invalid');
+  if (size === 0) throw new OcrWorkflowError('local_file_empty');
+  if (size > MAX_IMAGE_BYTES)
+    throw new OcrWorkflowError('local_file_too_large');
+  reportStage('local_file_metadata_valid');
+  reportStage('local_file_read_started');
+  let bytes: Uint8Array<ArrayBuffer>;
+  try {
+    bytes = await file.bytes();
+  } catch {
+    throw new OcrWorkflowError('local_file_read_failed');
+  }
   throwIfAborted(signal);
+  if (!(bytes instanceof Uint8Array))
+    throw new OcrWorkflowError('binary_body_creation_failed');
   if (bytes.byteLength !== size)
-    throw new OcrWorkflowError('local_file_unavailable');
-  return new Blob([bytes], { type: image.mediaType });
+    throw new OcrWorkflowError('local_file_read_failed');
+  reportStage('local_file_read_completed');
+  reportStage('binary_body_created');
+  return { bytes, size };
 };
+
+type UploadFetcher = (
+  url: string,
+  init: RequestInit,
+) => Promise<Readonly<{ ok: boolean }>>;
 
 export class BackendOcrService implements OcrService {
   constructor(
     private readonly api: ApiClient,
-    private readonly fetcher: typeof fetch = fetch,
+    private readonly fetcher: UploadFetcher = expoFetch,
     private readonly pollDelayMs = 750,
     private readonly maxPolls = 40,
     private readonly localImageReader: (
       image: CapturedMedicineImage,
       signal?: AbortSignal,
-    ) => Promise<Blob> = readLocalImage,
+      reportStage?: (stage: OcrStage) => void,
+    ) => Promise<PreparedLocalImage> = readLocalImage,
     private readonly timeouts: OcrTimeouts = DEFAULT_TIMEOUTS,
     private readonly stageReporter: (
       stage: OcrStage,
-    ) => void = noStageReporting,
+    ) => void = reportDevelopmentOcrStage,
   ) {}
 
   async recognize(
     image: CapturedMedicineImage,
     signal?: AbortSignal,
-  ): Promise<OcrCandidate> {
-    throwIfAborted(signal);
-    let body: Blob;
+  ): Promise<OcrRecognitionResult> {
     try {
-      body = await runBounded(
-        (stageSignal) => this.localImageReader(image, stageSignal),
+      return await this.recognizeInternal(image, signal);
+    } catch (error) {
+      if (error instanceof OcrWorkflowError)
+        this.stageReporter(`failed:${error.code}`);
+      throw error;
+    }
+  }
+
+  private async recognizeInternal(
+    image: CapturedMedicineImage,
+    signal?: AbortSignal,
+  ): Promise<OcrRecognitionResult> {
+    throwIfAborted(signal);
+    let prepared: PreparedLocalImage;
+    try {
+      prepared = await runBounded(
+        (stageSignal) =>
+          this.localImageReader(image, stageSignal, this.stageReporter),
         this.timeouts.localReadMs,
         'local_file_read_timeout',
         signal,
       );
     } catch (error) {
       if (error instanceof OcrWorkflowError) throw error;
-      throw new OcrWorkflowError('local_file_unavailable');
+      throw new OcrWorkflowError('local_file_read_failed');
     }
-    if (body.size < 1 || body.size > MAX_IMAGE_BYTES)
-      throw new OcrWorkflowError('local_file_unavailable');
-    this.stageReporter('capture_initiation_start');
+    if (
+      !(prepared.bytes instanceof Uint8Array) ||
+      prepared.size !== prepared.bytes.byteLength
+    )
+      throw new OcrWorkflowError('binary_body_creation_failed');
+    this.stageReporter('capture_initiation_started');
     let initiated: InitiatedCapture;
     try {
       initiated = await runBounded(
@@ -224,7 +320,7 @@ export class BackendOcrService implements OcrService {
               body: JSON.stringify({
                 source: image.source,
                 media_type: image.mediaType,
-                size_bytes: body.size,
+                size_bytes: prepared.size,
                 width: image.width,
                 height: image.height,
                 idempotency_key: image.idempotencyKey,
@@ -237,25 +333,34 @@ export class BackendOcrService implements OcrService {
         signal,
       );
     } catch (error) {
-      if (
-        error instanceof OcrWorkflowError ||
-        !(error instanceof ApiError) ||
-        error.code !== 'REQUEST_TIMEOUT'
-      )
+      if (error instanceof OcrWorkflowError) throw error;
+      if (error instanceof ApiError && [401, 403].includes(error.status))
         throw error;
-      throw new OcrWorkflowError('capture_initiation_timeout');
+      if (error instanceof ApiError && error.code === 'REQUEST_TIMEOUT')
+        throw new OcrWorkflowError('capture_initiation_timeout');
+      if (
+        error instanceof ApiError &&
+        error.code === 'CAPTURE_IDEMPOTENCY_CONFLICT'
+      )
+        throw new OcrWorkflowError('capture_idempotency_conflict');
+      if (
+        error instanceof ApiError &&
+        error.code === 'CAPTURE_ALREADY_ADVANCED'
+      )
+        throw new OcrWorkflowError('capture_already_advanced');
+      throw new OcrWorkflowError('capture_initiation_failed');
     }
-    this.stageReporter('capture_initiation_complete');
+    this.stageReporter('capture_initiation_completed');
     try {
-      this.stageReporter('upload_start');
-      let uploaded: Response;
+      this.stageReporter('upload_started');
+      let uploaded: Readonly<{ ok: boolean }>;
       try {
         uploaded = await runBounded(
           (stageSignal) =>
             this.fetcher(initiated.upload_url, {
               method: 'PUT',
               headers: initiated.required_headers,
-              body,
+              body: prepared.bytes,
               signal: stageSignal,
             }),
           this.timeouts.uploadMs,
@@ -267,11 +372,11 @@ export class BackendOcrService implements OcrService {
         throw new OcrWorkflowError('upload_failed');
       }
       if (!uploaded.ok) throw new OcrWorkflowError('upload_failed');
-      this.stageReporter('upload_complete');
-      this.stageReporter('completion_start');
-      let result: CaptureResult;
+      this.stageReporter('upload_completed');
+      this.stageReporter('completion_started');
+      let completionResult: CaptureResult;
       try {
-        result = await runBounded(
+        completionResult = await runBounded(
           (stageSignal) =>
             this.requestResult(
               `/api/v1/medicine-captures/${encodeURIComponent(initiated.capture_id)}/complete`,
@@ -291,19 +396,28 @@ export class BackendOcrService implements OcrService {
           throw error;
         throw new OcrWorkflowError('completion_timeout');
       }
-      this.stageReporter('completion_complete');
-      this.stageReporter('polling_start');
-      const candidate = await runBounded(
+      this.stageReporter('completion_completed');
+      this.stageReporter('polling_started');
+      const recognitionResult = await runBounded(
         (stageSignal) =>
-          this.pollForCandidate(initiated.capture_id, result, stageSignal),
+          this.pollForCandidate(
+            initiated.capture_id,
+            completionResult,
+            stageSignal,
+          ),
         this.timeouts.processingMs,
         'processing_timeout',
         signal,
       );
-      this.stageReporter('polling_complete');
-      return candidate;
+      this.stageReporter(
+        recognitionResult.kind === 'review_ready'
+          ? 'review_ready'
+          : `outcome:${recognitionResult.kind}`,
+      );
+      return recognitionResult;
     } catch (error) {
-      await this.cancelCapture(initiated.capture_id);
+      if (error instanceof OcrWorkflowError && error.code === 'cancelled')
+        await this.cancelCapture(initiated.capture_id);
       if (error instanceof OcrWorkflowError) throw error;
       throw error;
     }
@@ -313,17 +427,45 @@ export class BackendOcrService implements OcrService {
     captureId: string,
     initial: CaptureResult,
     signal: AbortSignal,
-  ): Promise<OcrCandidate> {
+  ): Promise<OcrRecognitionResult> {
     let result = initial;
     for (let count = 0; count <= this.maxPolls; count += 1) {
       throwIfAborted(signal);
-      if (result.state === 'candidates_ready') return this.toCandidate(result);
+      if (result.state === 'review_ready') {
+        if (!result.extracted_medicine)
+          throw new IntegrationPendingError(
+            'Extracted medicine fields are unavailable',
+          );
+        return {
+          kind: 'review_ready',
+          captureId: result.capture_id,
+          extractedMedicine: {
+            medicineName: result.extracted_medicine.medicine_name,
+            strength: result.extracted_medicine.strength ?? '',
+            dosageForm: result.extracted_medicine.dosage_form ?? '',
+            activeIngredient: result.extracted_medicine.active_ingredient ?? '',
+            manufacturer: result.extracted_medicine.manufacturer ?? '',
+          },
+        };
+      }
       if (
-        ['no_match', 'retake_required', 'failed_safe', 'expired'].includes(
-          result.state,
-        )
+        result.state === 'no_match' ||
+        result.state === 'retake_required' ||
+        result.state === 'failed_safe'
       )
-        throw new IntegrationPendingError(result.failure_code ?? result.state);
+        return {
+          kind: result.state,
+          captureId: result.capture_id,
+          qualityReasons: [...result.quality_reasons],
+          failureCode: result.failure_code,
+        };
+      if (result.state === 'expired')
+        return {
+          kind: 'expired',
+          captureId: result.capture_id,
+          qualityReasons: [...result.quality_reasons],
+          failureCode: result.failure_code,
+        };
       if (count === this.maxPolls) break;
       await wait(this.pollDelayMs, signal);
       result = await this.requestResult(
@@ -335,52 +477,64 @@ export class BackendOcrService implements OcrService {
     throw new OcrWorkflowError('processing_timeout');
   }
 
-  async decide(
-    candidate: OcrCandidate,
-    action: 'confirm' | 'none_of_these' | 'reject',
+  async decideOutcome(
+    captureId: string,
+    action: 'none_of_these' | 'reject',
   ): Promise<void> {
-    if (!candidate.captureId)
-      throw new IntegrationPendingError(
-        'Recognition capture reference is unavailable',
-      );
+    await this.submitDecision(captureId, action, null);
+  }
+
+  async confirmReview(
+    captureId: string,
+    medicine: ReviewedMedicine,
+  ): Promise<void> {
     await this.api.request(
-      `/api/v1/medicine-captures/${encodeURIComponent(candidate.captureId)}/decision`,
+      `/api/v1/medicine-captures/${encodeURIComponent(captureId)}/decision`,
       {
         method: 'POST',
         body: JSON.stringify({
-          action,
-          candidate_id: action === 'confirm' ? candidate.candidateId : null,
-          idempotency_key: `${candidate.captureId}:${action}`,
+          action: 'confirm',
+          reviewed_medicine: {
+            medicine_name: medicine.medicineName,
+            strength: medicine.strength || null,
+            dosage_form: medicine.dosageForm || null,
+            active_ingredient: medicine.activeIngredient || null,
+            manufacturer: medicine.manufacturer || null,
+          },
+          idempotency_key: `${captureId}:confirm`,
         }),
       },
       true,
     );
   }
 
-  private toCandidate(result: CaptureResult): OcrCandidate {
-    const [candidate, ...alternatives] = result.candidates;
-    if (!candidate)
-      throw new IntegrationPendingError('No medicine candidate is available');
-    return {
-      captureId: result.capture_id,
-      candidateId: candidate.candidate_id,
-      name: candidate.name,
-      strength: candidate.strengths.join(' + '),
-      dosageForm: candidate.dosage_form ?? '',
-      confidence: candidate.confidence,
-      alternatives: alternatives.map((item) => item.name),
-      alternativeCandidates: alternatives.map((item) => ({
-        candidateId: item.candidate_id,
-        name: item.name,
-        strength: item.strengths.join(' + '),
-        dosageForm: item.dosage_form ?? '',
-        confidence: item.confidence,
-      })),
-      sourceStatus: 'backend_candidate',
-    };
+  async cancel(captureId: string): Promise<void> {
+    await this.cancelCapture(captureId, false);
   }
 
-  private async cancelCapture(captureId: string): Promise<void> {
+  private async submitDecision(
+    captureId: string,
+    action: 'none_of_these' | 'reject',
+    candidateId: string | null,
+  ): Promise<void> {
+    await this.api.request(
+      `/api/v1/medicine-captures/${encodeURIComponent(captureId)}/decision`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          action,
+          candidate_id: candidateId,
+          idempotency_key: `${captureId}:${action}`,
+        }),
+      },
+      true,
+    );
+  }
+
+  private async cancelCapture(
+    captureId: string,
+    bestEffort = true,
+  ): Promise<void> {
     try {
       await runBounded(
         (signal) =>
@@ -392,8 +546,9 @@ export class BackendOcrService implements OcrService {
         5_000,
         'cancelled',
       );
-    } catch {
+    } catch (error) {
       // Best-effort cleanup must not replace the original safe upload failure.
+      if (!bestEffort) throw error;
     }
   }
 
@@ -420,21 +575,3 @@ export class BackendOcrService implements OcrService {
 
 export const buildOcrService = (api: ApiClient): OcrService =>
   new BackendOcrService(api);
-
-export const isUneditedPresentedCandidate = (
-  presented: OcrCandidate,
-  selected: OcrCandidate,
-): boolean => {
-  const source =
-    selected.candidateId === presented.candidateId
-      ? presented
-      : presented.alternativeCandidates?.find(
-          (item) => item.candidateId === selected.candidateId,
-        );
-  return Boolean(
-    source &&
-    source.name === selected.name &&
-    source.strength === selected.strength &&
-    source.dosageForm === selected.dosageForm,
-  );
-};

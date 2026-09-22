@@ -12,6 +12,7 @@ export * from './MedicationCard';
 export * from './MedicineList';
 export * from './ManualMedicationForm';
 export * from './OcrConfirmationForm';
+export * from './OcrOutcomePanel';
 export * from './PatientDashboard';
 export * from './StatusCard';
 export * from './ReminderAlert';

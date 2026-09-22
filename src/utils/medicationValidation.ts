@@ -10,6 +10,8 @@ export function validateManualMedication(
     name: bounded(input.name, 120),
     strength: bounded(input.strength ?? '', 40),
     dosageForm: bounded(input.dosageForm ?? '', 60),
+    activeIngredient: bounded(input.activeIngredient ?? '', 160),
+    manufacturer: bounded(input.manufacturer ?? '', 160),
     notes: bounded(input.notes ?? '', 500),
   };
   const errors: Record<string, string> = {};

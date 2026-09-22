@@ -5,26 +5,30 @@ const mockPush = jest.fn();
 const mockBack = jest.fn();
 const mockRecognize = jest.fn();
 const mockLaunchImageLibraryAsync = jest.fn();
+const mockRandomUUID = jest.fn();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, back: mockBack }),
+  useLocalSearchParams: () => ({}),
 }));
 
 jest.mock('expo-camera', () => {
   const React = require('react');
   const { View } = require('react-native');
+  const CameraView = React.forwardRef(
+    (
+      props: Record<string, unknown>,
+      ref: { current: unknown } | ((value: unknown) => void),
+    ) => {
+      React.useImperativeHandle(ref, () => ({
+        takePictureAsync: mockTakePictureAsync,
+      }));
+      return React.createElement(View, props);
+    },
+  );
+  CameraView.displayName = 'MockCameraView';
   return {
-    CameraView: React.forwardRef(
-      (
-        props: Record<string, unknown>,
-        ref: { current: unknown } | ((value: unknown) => void),
-      ) => {
-        React.useImperativeHandle(ref, () => ({
-          takePictureAsync: mockTakePictureAsync,
-        }));
-        return React.createElement(View, props);
-      },
-    ),
+    CameraView,
     useCameraPermissions: () => [
       { granted: true, canAskAgain: true },
       jest.fn(),
@@ -41,7 +45,7 @@ jest.mock('expo-image', () => {
 });
 
 jest.mock('expo-crypto', () => ({
-  randomUUID: () => '00000000-0000-4000-8000-000000000123',
+  randomUUID: () => mockRandomUUID(),
 }));
 jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: (...args: unknown[]) =>
@@ -52,7 +56,10 @@ jest.mock('@/services/registry', () => ({
   ocrService: { recognize: (...args: unknown[]) => mockRecognize(...args) },
 }));
 
-import MedicineCameraScreen from '@/app/(app)/medicine-camera';
+import MedicineCameraScreen, {
+  recognitionFailureMessage,
+} from '@/app/(app)/medicine-camera';
+import { OcrWorkflowError } from '@/services/ocrService';
 import { CaptureProvider } from '@/state/CaptureContext';
 import { PreferencesProvider } from '@/state/PreferencesContext';
 import { SingleFlight } from '@/utils/singleFlight';
@@ -73,15 +80,19 @@ const readyCamera = async (
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockRandomUUID.mockReturnValue('00000000-0000-4000-8000-000000000123');
   mockRecognize.mockReset();
   mockRecognize.mockResolvedValue({
-    captureId: '00000000-0000-4000-8000-000000000456',
-    candidateId: '00000000-0000-4000-8000-000000000789',
-    name: 'Synthetic candidate',
-    strength: '',
-    dosageForm: '',
-    alternatives: [],
-    sourceStatus: 'development_fixture',
+    kind: 'candidates_ready',
+    candidate: {
+      captureId: '00000000-0000-4000-8000-000000000456',
+      candidateId: '00000000-0000-4000-8000-000000000789',
+      name: 'Synthetic candidate',
+      strength: '',
+      dosageForm: '',
+      alternatives: [],
+      sourceStatus: 'development_fixture',
+    },
   });
 });
 
@@ -200,6 +211,68 @@ test('gallery selection remains local until explicit Continue', async () => {
   );
 });
 
+test('Retake and a replacement photo receive a new idempotency key', async () => {
+  mockRandomUUID
+    .mockReturnValueOnce('00000000-0000-4000-8000-000000000123')
+    .mockReturnValueOnce('00000000-0000-4000-8000-000000000124');
+  mockTakePictureAsync.mockResolvedValue({
+    uri: 'file:///temporary/synthetic-image.jpg',
+    width: 800,
+    height: 600,
+  });
+  const screen = await render(view());
+  await readyCamera(screen);
+  await fireEvent.press(screen.getByRole('button', { name: 'Take photo' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Retake photo' }));
+  await readyCamera(screen);
+  await fireEvent.press(screen.getByRole('button', { name: 'Take photo' }));
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Continue to recognition review' }),
+  );
+  await waitFor(() => expect(mockRecognize).toHaveBeenCalledTimes(1));
+  expect(mockRecognize.mock.calls[0][0].idempotencyKey).toBe(
+    '00000000-0000-4000-8000-000000000124',
+  );
+});
+
+test('gallery replacement receives a new idempotency key', async () => {
+  mockRandomUUID
+    .mockReturnValueOnce('00000000-0000-4000-8000-000000000123')
+    .mockReturnValueOnce('00000000-0000-4000-8000-000000000125');
+  mockTakePictureAsync.mockResolvedValue({
+    uri: 'file:///temporary/synthetic-image.jpg',
+    width: 800,
+    height: 600,
+  });
+  mockLaunchImageLibraryAsync.mockResolvedValue({
+    canceled: false,
+    assets: [
+      {
+        uri: 'file:///temporary/replacement.png',
+        width: 640,
+        height: 480,
+        mimeType: 'image/png',
+      },
+    ],
+  });
+  const screen = await render(view());
+  await readyCamera(screen);
+  await fireEvent.press(screen.getByRole('button', { name: 'Take photo' }));
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Choose another photo' }),
+  );
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Continue to recognition review' }),
+  );
+  await waitFor(() => expect(mockRecognize).toHaveBeenCalledTimes(1));
+  expect(mockRecognize.mock.calls[0][0]).toEqual(
+    expect.objectContaining({
+      source: 'gallery',
+      idempotencyKey: '00000000-0000-4000-8000-000000000125',
+    }),
+  );
+});
+
 test('double Continue starts exactly one recognition operation', async () => {
   mockTakePictureAsync.mockResolvedValue({
     uri: 'file:///temporary/synthetic-image.jpg',
@@ -225,13 +298,16 @@ test('double Continue starts exactly one recognition operation', async () => {
   expect(mockRecognize).toHaveBeenCalledTimes(1);
   await act(async () => {
     resolveRecognition({
-      captureId: '00000000-0000-4000-8000-000000000456',
-      candidateId: '00000000-0000-4000-8000-000000000789',
-      name: 'Synthetic candidate',
-      strength: '',
-      dosageForm: '',
-      alternatives: [],
-      sourceStatus: 'backend_candidate',
+      kind: 'candidates_ready',
+      candidate: {
+        captureId: '00000000-0000-4000-8000-000000000456',
+        candidateId: '00000000-0000-4000-8000-000000000789',
+        name: 'Synthetic candidate',
+        strength: '',
+        dosageForm: '',
+        alternatives: [],
+        sourceStatus: 'backend_candidate',
+      },
     });
     await Promise.resolve();
   });
@@ -297,4 +373,43 @@ test('Retake aborts pending recognition and clears the transient image', async (
   expect(recognitionSignal?.aborted).toBe(true);
   await screen.findByTestId('medicine-camera-preview');
   expect(mockPush).not.toHaveBeenCalled();
+});
+
+test('actual screen unmount aborts pending recognition', async () => {
+  mockTakePictureAsync.mockResolvedValue({
+    uri: 'file:///temporary/synthetic-image.jpg',
+    width: 800,
+    height: 600,
+  });
+  let recognitionSignal: AbortSignal | undefined;
+  mockRecognize.mockImplementationOnce(
+    (_image, signal: AbortSignal) =>
+      new Promise((_resolve, reject) => {
+        recognitionSignal = signal;
+        signal.addEventListener('abort', () => reject(new Error('cancelled')), {
+          once: true,
+        });
+      }),
+  );
+  const screen = await render(view());
+  await readyCamera(screen);
+  await fireEvent.press(screen.getByRole('button', { name: 'Take photo' }));
+  fireEvent.press(
+    await screen.findByRole('button', {
+      name: 'Continue to recognition review',
+    }),
+  );
+  await waitFor(() => expect(mockRecognize).toHaveBeenCalledTimes(1));
+  await screen.unmount();
+  expect(recognitionSignal?.aborted).toBe(true);
+});
+
+test('diagnostic error copy exposes only a bounded code in Development', () => {
+  const failure = new OcrWorkflowError('local_file_read_failed');
+  expect(recognitionFailureMessage(failure, true)).toBe(
+    'Recognition unavailable [local_file_read_failed]',
+  );
+  expect(recognitionFailureMessage(failure, false)).toBe(
+    'Recognition could not produce a safe candidate. Retake the image or enter the medicine manually.',
+  );
 });
