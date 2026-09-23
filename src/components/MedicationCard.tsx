@@ -1,5 +1,6 @@
 import { AppButton, AppCard, AppText } from '@/components/primitives';
 import type { MedicationSummary } from '@/types/medication';
+import { formatDecimalQuantity } from '@/utils/quantityFormat';
 
 const status: Record<MedicationSummary['reviewStatus'], string> = {
   approved: 'Reviewed medication catalog entry',
@@ -20,9 +21,13 @@ const unitLabels = {
 export function MedicationCard({
   medication,
   onSchedule,
+  onEdit,
+  onDelete,
 }: {
   medication: MedicationSummary;
   onSchedule?: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   return (
     <AppCard
@@ -39,7 +44,7 @@ export function MedicationCard({
         {medication.scheduleSummary ?? 'No schedule summary available'}
       </AppText>
       {medication.remainingQuantity && medication.quantityUnit ? (
-        <AppText>{`${medication.remainingQuantity} ${unitLabels[medication.quantityUnit]} remaining`}</AppText>
+        <AppText>{`${formatDecimalQuantity(medication.remainingQuantity)} ${unitLabels[medication.quantityUnit]} remaining`}</AppText>
       ) : null}
       <AppText variant="caption">
         {status[medication.reviewStatus]} •{' '}
@@ -50,6 +55,20 @@ export function MedicationCard({
           variant="secondary"
           label={`Create schedule for ${medication.canonicalName}`}
           onPress={() => onSchedule(medication.id)}
+        />
+      ) : null}
+      {onEdit ? (
+        <AppButton
+          variant="secondary"
+          label={`Edit ${medication.canonicalName}`}
+          onPress={() => onEdit(medication.id)}
+        />
+      ) : null}
+      {onDelete ? (
+        <AppButton
+          variant="secondary"
+          label={`Delete ${medication.canonicalName}`}
+          onPress={() => onDelete(medication.id)}
         />
       ) : null}
     </AppCard>

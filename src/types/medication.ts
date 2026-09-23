@@ -55,6 +55,18 @@ export type PatientMedication = Readonly<{
   }>;
 }>;
 
+export type PatientMedicationUpdate = Readonly<{
+  name: string;
+  strength?: string;
+  dosageForm?: string;
+  activeIngredient?: string;
+  manufacturer?: string;
+  notes?: string;
+  remainingQuantity: string;
+  quantityUnit: InventoryQuantityUnit;
+  revision: number;
+}>;
+
 export type ReviewedMedicine = Readonly<{
   medicineName: string;
   strength: string;

@@ -19,6 +19,8 @@ test('medicine list renders review status and supports refresh, add, and schedul
   const refresh = jest.fn();
   const add = jest.fn();
   const schedule = jest.fn();
+  const edit = jest.fn();
+  const remove = jest.fn();
   const screen = await render(
     <MedicineList
       medicines={[medicine]}
@@ -27,14 +29,22 @@ test('medicine list renders review status and supports refresh, add, and schedul
       onRefresh={refresh}
       onAdd={add}
       onSchedule={schedule}
+      onEdit={edit}
+      onDelete={remove}
     />,
   );
   expect(
     screen.getByLabelText(/User-entered; not clinically reviewed/),
   ).toBeTruthy();
-  expect(screen.getByText('20.0000 Tablets remaining')).toBeTruthy();
+  expect(screen.getByText('20 Tablets remaining')).toBeTruthy();
   await fireEvent.press(
     screen.getByRole('button', { name: 'Refresh medicines' }),
+  );
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Edit Synthetic Test Medicine' }),
+  );
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Delete Synthetic Test Medicine' }),
   );
   await fireEvent.press(screen.getByRole('button', { name: 'Add medicine' }));
   await fireEvent.press(
@@ -45,6 +55,8 @@ test('medicine list renders review status and supports refresh, add, and schedul
   expect(refresh).toHaveBeenCalled();
   expect(add).toHaveBeenCalled();
   expect(schedule).toHaveBeenCalledWith('stable-med-id');
+  expect(edit).toHaveBeenCalledWith('stable-med-id');
+  expect(remove).toHaveBeenCalledWith('stable-med-id');
 });
 
 test('medicine list has loading, empty, and safe error states', async () => {

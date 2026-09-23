@@ -106,6 +106,56 @@ test('patient medication list uses its own authenticated source of truth', async
   );
 });
 
+test('patient medication update and delete use bounded authenticated routes', async () => {
+  const api = client();
+  jest.mocked(api.request).mockResolvedValue({
+    id: 'pm-1',
+    name: 'Synthetic',
+    strength: null,
+    dosage_form: 'Tablet',
+    active_ingredient: null,
+    manufacturer: null,
+    notes: null,
+    source: 'ocr_assisted',
+    medicine_capture_id: 'capture-1',
+    is_active: true,
+    created_at: '2026-09-23T00:00:00Z',
+    inventory: {
+      id: 'inv-1',
+      initial_quantity: '10.0000',
+      remaining_quantity: '8.0000',
+      quantity_unit: 'tablet',
+      low_stock_threshold: null,
+      revision: 2,
+    },
+  });
+  const service = new BackendPatientMedicationService(api);
+  await service.update('pm-1', {
+    name: 'Synthetic',
+    dosageForm: 'Tablet',
+    remainingQuantity: '8',
+    quantityUnit: 'tablet',
+    revision: 1,
+  });
+  const body = JSON.parse(
+    jest.mocked(api.request).mock.calls[0][1]!.body as string,
+  );
+  expect(body.inventory).toEqual({
+    remaining_quantity: '8',
+    quantity_unit: 'tablet',
+    revision: 1,
+  });
+  expect(body).not.toHaveProperty('source');
+  expect(body).not.toHaveProperty('medicine_capture_id');
+  expect(body).not.toHaveProperty('initial_quantity');
+  await service.remove('pm-1');
+  expect(api.request).toHaveBeenLastCalledWith(
+    '/api/v1/patient-medications/pm-1',
+    { method: 'DELETE' },
+    true,
+  );
+});
+
 test('schedule DTO targets the real authenticated schedule endpoint', async () => {
   const api = client();
   jest.mocked(api.request).mockResolvedValue({

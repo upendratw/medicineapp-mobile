@@ -4,6 +4,7 @@ import type {
   ManualMedicationInput,
   MedicationSummary,
   PatientMedication,
+  PatientMedicationUpdate,
 } from '@/types/medication';
 
 type BackendMedication = {
@@ -25,6 +26,12 @@ export interface MedicationCatalogService {
 export interface PatientMedicationService {
   list(signal?: AbortSignal): Promise<readonly MedicationSummary[]>;
   create(input: ManualMedicationInput): Promise<PatientMedication>;
+  get(id: string): Promise<PatientMedication>;
+  update(
+    id: string,
+    input: PatientMedicationUpdate,
+  ): Promise<PatientMedication>;
+  remove(id: string): Promise<void>;
   readonly integrationPending: boolean;
 }
 
@@ -67,6 +74,15 @@ export class PendingPatientMedicationService implements PatientMedicationService
   async create(): Promise<PatientMedication> {
     throw new IntegrationPendingError('Patient medication creation');
   }
+  async get(): Promise<PatientMedication> {
+    throw new IntegrationPendingError('Patient medication retrieval');
+  }
+  async update(): Promise<PatientMedication> {
+    throw new IntegrationPendingError('Patient medication update');
+  }
+  async remove(): Promise<void> {
+    throw new IntegrationPendingError('Patient medication deletion');
+  }
 }
 
 export class DevelopmentPatientMedicationService implements PatientMedicationService {
@@ -76,6 +92,15 @@ export class DevelopmentPatientMedicationService implements PatientMedicationSer
   }
   async create(_input: ManualMedicationInput): Promise<PatientMedication> {
     throw new IntegrationPendingError('Patient medication creation');
+  }
+  async get(): Promise<PatientMedication> {
+    throw new IntegrationPendingError('Patient medication retrieval');
+  }
+  async update(): Promise<PatientMedication> {
+    throw new IntegrationPendingError('Patient medication update');
+  }
+  async remove(): Promise<void> {
+    throw new IntegrationPendingError('Patient medication deletion');
   }
 }
 
@@ -100,6 +125,30 @@ type BackendPatientMedication = {
     revision: number;
   };
 };
+
+const mapPatientMedication = (
+  row: BackendPatientMedication,
+): PatientMedication => ({
+  id: row.id,
+  name: row.name,
+  strength: row.strength,
+  dosageForm: row.dosage_form,
+  activeIngredient: row.active_ingredient,
+  manufacturer: row.manufacturer,
+  notes: row.notes,
+  source: row.source,
+  medicineCaptureId: row.medicine_capture_id,
+  isActive: row.is_active,
+  createdAt: row.created_at,
+  inventory: {
+    id: row.inventory.id,
+    initialQuantity: row.inventory.initial_quantity,
+    remainingQuantity: row.inventory.remaining_quantity,
+    quantityUnit: row.inventory.quantity_unit,
+    lowStockThreshold: row.inventory.low_stock_threshold,
+    revision: row.inventory.revision,
+  },
+});
 
 export class BackendPatientMedicationService implements PatientMedicationService {
   readonly integrationPending = false;
@@ -146,27 +195,48 @@ export class BackendPatientMedicationService implements PatientMedicationService
       },
       true,
     );
-    return {
-      id: row.id,
-      name: row.name,
-      strength: row.strength,
-      dosageForm: row.dosage_form,
-      activeIngredient: row.active_ingredient,
-      manufacturer: row.manufacturer,
-      notes: row.notes,
-      source: row.source,
-      medicineCaptureId: row.medicine_capture_id,
-      isActive: row.is_active,
-      createdAt: row.created_at,
-      inventory: {
-        id: row.inventory.id,
-        initialQuantity: row.inventory.initial_quantity,
-        remainingQuantity: row.inventory.remaining_quantity,
-        quantityUnit: row.inventory.quantity_unit,
-        lowStockThreshold: row.inventory.low_stock_threshold,
-        revision: row.inventory.revision,
+    return mapPatientMedication(row);
+  }
+  async get(id: string): Promise<PatientMedication> {
+    const row = await this.client.request<BackendPatientMedication>(
+      `/api/v1/patient-medications/${encodeURIComponent(id)}`,
+      {},
+      true,
+    );
+    return mapPatientMedication(row);
+  }
+  async update(
+    id: string,
+    input: PatientMedicationUpdate,
+  ): Promise<PatientMedication> {
+    const row = await this.client.request<BackendPatientMedication>(
+      `/api/v1/patient-medications/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: input.name,
+          strength: input.strength || null,
+          dosage_form: input.dosageForm || null,
+          active_ingredient: input.activeIngredient || null,
+          manufacturer: input.manufacturer || null,
+          notes: input.notes || null,
+          inventory: {
+            remaining_quantity: input.remainingQuantity,
+            quantity_unit: input.quantityUnit,
+            revision: input.revision,
+          },
+        }),
       },
-    };
+      true,
+    );
+    return mapPatientMedication(row);
+  }
+  async remove(id: string): Promise<void> {
+    await this.client.request(
+      `/api/v1/patient-medications/${encodeURIComponent(id)}`,
+      { method: 'DELETE' },
+      true,
+    );
   }
 }
 

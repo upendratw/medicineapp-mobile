@@ -15,6 +15,8 @@ type Props = {
   onRefresh(): void;
   onAdd(): void;
   onSchedule?(id: string): void;
+  onEdit?(id: string): void;
+  onDelete?(id: string): void;
 };
 export function MedicineList({
   medicines,
@@ -23,6 +25,8 @@ export function MedicineList({
   onRefresh,
   onAdd,
   onSchedule,
+  onEdit,
+  onDelete,
 }: Props) {
   if (loading) return <LoadingIndicator label="Loading medicines" />;
   if (error)
@@ -48,6 +52,8 @@ export function MedicineList({
             key={item.id}
             medication={item}
             onSchedule={onSchedule}
+            onEdit={onEdit}
+            onDelete={onDelete}
           />
         ))
       )}
