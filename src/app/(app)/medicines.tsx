@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { RefreshControl } from 'react-native';
 import { AppHeader, AppScreen, MedicineList } from '@/components';
@@ -9,6 +9,12 @@ export default function MedicinesScreen() {
   const router = useRouter();
   const load = useCallback(() => patientMedicationService.list(), []);
   const state = useAsyncResource(load);
+  const refresh = state.refresh;
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
   return (
     <AppScreen
       refreshControl={
@@ -29,9 +35,6 @@ export default function MedicinesScreen() {
         error={state.error}
         onRefresh={state.refresh}
         onAdd={() => router.push('/add-medicine')}
-        onSchedule={(medicationId) =>
-          router.push({ pathname: '/schedule', params: { medicationId } })
-        }
       />
     </AppScreen>
   );

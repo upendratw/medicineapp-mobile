@@ -11,6 +11,8 @@ const medicine: MedicationSummary = {
   reviewStatus: 'user_entered_unreviewed',
   isActive: true,
   source: 'user_entered',
+  remainingQuantity: '20.0000',
+  quantityUnit: 'tablet',
 };
 
 test('medicine list renders review status and supports refresh, add, and schedule actions', async () => {
@@ -30,6 +32,7 @@ test('medicine list renders review status and supports refresh, add, and schedul
   expect(
     screen.getByLabelText(/User-entered; not clinically reviewed/),
   ).toBeTruthy();
+  expect(screen.getByText('20.0000 Tablets remaining')).toBeTruthy();
   await fireEvent.press(
     screen.getByRole('button', { name: 'Refresh medicines' }),
   );

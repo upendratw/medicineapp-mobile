@@ -7,6 +7,16 @@ const status: Record<MedicationSummary['reviewStatus'], string> = {
   rejected: 'Not approved for application use',
   user_entered_unreviewed: 'User-entered; not clinically reviewed',
 };
+const unitLabels = {
+  tablet: 'Tablets',
+  capsule: 'Capsules',
+  ml: 'mL',
+  drop: 'Drops',
+  puff: 'Puffs',
+  sachet: 'Sachets',
+  patch: 'Patches',
+  unit: 'Units',
+} as const;
 export function MedicationCard({
   medication,
   onSchedule,
@@ -28,6 +38,9 @@ export function MedicationCard({
       <AppText>
         {medication.scheduleSummary ?? 'No schedule summary available'}
       </AppText>
+      {medication.remainingQuantity && medication.quantityUnit ? (
+        <AppText>{`${medication.remainingQuantity} ${unitLabels[medication.quantityUnit]} remaining`}</AppText>
+      ) : null}
       <AppText variant="caption">
         {status[medication.reviewStatus]} •{' '}
         {medication.isActive ? 'Active' : 'Inactive'}

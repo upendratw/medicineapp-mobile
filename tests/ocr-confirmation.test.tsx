@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { OcrConfirmationForm } from '@/components';
 
 const extracted = {
@@ -8,53 +8,121 @@ const extracted = {
   activeIngredient: 'Paracetamol',
   manufacturer: 'Micro Labs Limited',
 };
+const saved = {
+  id: 'patient-medication-1',
+  name: 'Dolo 650',
+  strength: '650 mg',
+  dosageForm: 'Tablet',
+  activeIngredient: 'Paracetamol',
+  manufacturer: 'Micro Labs Limited',
+  notes: null,
+  source: 'ocr_assisted' as const,
+  medicineCaptureId: 'capture-1',
+  isActive: true,
+  inventory: {
+    id: 'inventory-1',
+    initialQuantity: '7.0000',
+    remainingQuantity: '7.0000',
+    quantityUnit: 'tablet' as const,
+    lowStockThreshold: null,
+    revision: 1,
+  },
+};
 
-test('structured OCR fields remain editable and require explicit confirmation', async () => {
-  const confirm = jest.fn();
-  const retake = jest.fn();
-  const screen = await render(
-    <OcrConfirmationForm
-      extracted={extracted}
-      onConfirm={confirm}
-      onRetake={retake}
-    />,
-  );
-  expect(screen.getByText(/Please check and correct it/)).toBeTruthy();
+const setup = (
+  overrides: Partial<React.ComponentProps<typeof OcrConfirmationForm>> = {},
+) => {
+  const props = {
+    extracted,
+    captureId: 'capture-1',
+    confirmCapture: jest.fn().mockResolvedValue(undefined),
+    createMedication: jest.fn().mockResolvedValue(saved),
+    onSaved: jest.fn(),
+    onRetake: jest.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+  return { props, screen: render(<OcrConfirmationForm {...props} />) };
+};
+
+test('shows one editable review with empty user quantity and adds in sequence', async () => {
+  const { props, screen: pending } = setup();
+  const screen = await pending;
+  expect(screen.getByDisplayValue('Dolo 650')).toBeTruthy();
+  expect(screen.getByDisplayValue('650 mg')).toBeTruthy();
+  expect(screen.getByDisplayValue('Tablet')).toBeTruthy();
+  expect(screen.getByDisplayValue('Paracetamol')).toBeTruthy();
+  expect(screen.getByDisplayValue('Micro Labs Limited')).toBeTruthy();
+  expect(screen.getByLabelText('Current Quantity').props.value).toBe('');
+  expect(
+    screen.getByRole('button', { name: 'Quantity Unit: Tablets' }),
+  ).toBeTruthy();
   await fireEvent.changeText(
     screen.getByLabelText('Medicine Name'),
     'Corrected Dolo',
   );
-  await fireEvent.changeText(
-    screen.getByLabelText('Active Ingredient'),
-    'Corrected Ingredient',
+  await fireEvent.changeText(screen.getByLabelText('Current Quantity'), '7');
+  await fireEvent.press(screen.getByRole('button', { name: 'Add Medicine' }));
+  await waitFor(() => expect(props.onSaved).toHaveBeenCalledTimes(1));
+  expect(props.confirmCapture).toHaveBeenCalledWith(
+    expect.objectContaining({ medicineName: 'Corrected Dolo' }),
   );
-  await fireEvent.press(
-    screen.getByRole('button', { name: 'Confirm Medicine' }),
-  );
-  expect(confirm).toHaveBeenCalledWith(
+  expect(props.createMedication).toHaveBeenCalledWith(
     expect.objectContaining({
-      medicineName: 'Corrected Dolo',
-      activeIngredient: 'Corrected Ingredient',
+      name: 'Corrected Dolo',
+      initialQuantity: '7',
+      quantityUnit: 'tablet',
+      source: 'ocr_assisted',
+      medicineCaptureId: 'capture-1',
     }),
+  );
+  expect(
+    (props.confirmCapture as jest.Mock).mock.invocationCallOrder[0],
+  ).toBeLessThan(
+    (props.createMedication as jest.Mock).mock.invocationCallOrder[0],
   );
 });
 
-test('medicine name is required and retake remains explicit', async () => {
-  const confirm = jest.fn();
-  const retake = jest.fn();
-  const screen = await render(
-    <OcrConfirmationForm
-      extracted={extracted}
-      onConfirm={confirm}
-      onRetake={retake}
-    />,
-  );
-  await fireEvent.changeText(screen.getByLabelText('Medicine Name'), ' ');
-  expect(
-    screen.getByRole('button', { name: 'Confirm Medicine' }).props
-      .accessibilityState.disabled,
-  ).toBe(true);
+test('requires quantity and keeps retake explicit before confirmation', async () => {
+  const { props, screen: pending } = setup();
+  const screen = await pending;
+  await fireEvent.press(screen.getByRole('button', { name: 'Add Medicine' }));
+  expect(screen.getByText(/Enter the current quantity/)).toBeTruthy();
+  expect(props.confirmCapture).not.toHaveBeenCalled();
   await fireEvent.press(screen.getByRole('button', { name: 'Retake' }));
-  expect(retake).toHaveBeenCalled();
-  expect(confirm).not.toHaveBeenCalled();
+  expect(props.onRetake).toHaveBeenCalledTimes(1);
+});
+
+test('confirmation failure never creates a patient medication', async () => {
+  const confirmCapture = jest.fn().mockRejectedValue(new Error('private'));
+  const { props, screen: pending } = setup({ confirmCapture });
+  const screen = await pending;
+  await fireEvent.changeText(screen.getByLabelText('Current Quantity'), '7');
+  await fireEvent.press(screen.getByRole('button', { name: 'Add Medicine' }));
+  await waitFor(() =>
+    expect(screen.getByText(/could not be added/)).toBeTruthy(),
+  );
+  expect(props.createMedication).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('Current Quantity').props.value).toBe('7');
+});
+
+test('creation failure preserves state and retry skips reconfirm with same key', async () => {
+  const createMedication = jest
+    .fn()
+    .mockRejectedValueOnce(new Error('private'))
+    .mockResolvedValueOnce(saved);
+  const { props, screen: pending } = setup({ createMedication });
+  const screen = await pending;
+  await fireEvent.changeText(screen.getByLabelText('Current Quantity'), '7');
+  await fireEvent.press(screen.getByRole('button', { name: 'Add Medicine' }));
+  await waitFor(() =>
+    expect(screen.getByText(/details are confirmed/)).toBeTruthy(),
+  );
+  expect(screen.getByLabelText('Current Quantity').props.value).toBe('7');
+  await fireEvent.press(screen.getByRole('button', { name: 'Add Medicine' }));
+  await waitFor(() => expect(props.onSaved).toHaveBeenCalledTimes(1));
+  expect(props.confirmCapture).toHaveBeenCalledTimes(1);
+  expect(props.createMedication).toHaveBeenCalledTimes(2);
+  expect(
+    (props.createMedication as jest.Mock).mock.calls[0][0].idempotencyKey,
+  ).toBe((props.createMedication as jest.Mock).mock.calls[1][0].idempotencyKey);
 });

@@ -65,6 +65,47 @@ test('patient medication creation uses the authenticated durable endpoint', asyn
   });
 });
 
+test('patient medication list uses its own authenticated source of truth', async () => {
+  const api = client();
+  jest.mocked(api.request).mockResolvedValue([
+    {
+      id: 'pm-1',
+      name: 'Synthetic',
+      strength: null,
+      dosage_form: 'Tablet',
+      active_ingredient: null,
+      manufacturer: null,
+      notes: null,
+      source: 'manual',
+      medicine_capture_id: null,
+      is_active: true,
+      created_at: '2026-09-23T00:00:00Z',
+      inventory: {
+        id: 'inv-1',
+        initial_quantity: '20.0000',
+        remaining_quantity: '20.0000',
+        quantity_unit: 'tablet',
+        low_stock_threshold: null,
+        revision: 1,
+      },
+    },
+  ]);
+  const result = await new BackendPatientMedicationService(api).list();
+  expect(api.request).toHaveBeenCalledWith(
+    '/api/v1/patient-medications',
+    {},
+    true,
+  );
+  expect(result[0]).toMatchObject({
+    canonicalName: 'Synthetic',
+    remainingQuantity: '20.0000',
+    quantityUnit: 'tablet',
+  });
+  expect(JSON.stringify(jest.mocked(api.request).mock.calls)).not.toContain(
+    '/medication-schedules',
+  );
+});
+
 test('schedule DTO targets the real authenticated schedule endpoint', async () => {
   const api = client();
   jest.mocked(api.request).mockResolvedValue({

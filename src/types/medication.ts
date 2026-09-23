@@ -10,6 +10,8 @@ export type MedicationSummary = Readonly<{
   reviewStatus: ReviewStatus;
   isActive: boolean;
   source: 'backend_catalog' | 'user_entered';
+  remainingQuantity?: string | null;
+  quantityUnit?: InventoryQuantityUnit | null;
 }>;
 
 export type InventoryQuantityUnit =
@@ -42,6 +44,7 @@ export type PatientMedication = Readonly<{
   source: PatientMedicationSource;
   medicineCaptureId: string | null;
   isActive: boolean;
+  createdAt?: string;
   inventory: Readonly<{
     id: string;
     initialQuantity: string;

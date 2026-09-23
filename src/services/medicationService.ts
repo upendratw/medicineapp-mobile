@@ -90,6 +90,7 @@ type BackendPatientMedication = {
   source: PatientMedication['source'];
   medicine_capture_id: string | null;
   is_active: boolean;
+  created_at: string;
   inventory: {
     id: string;
     initial_quantity: string;
@@ -104,7 +105,23 @@ export class BackendPatientMedicationService implements PatientMedicationService
   readonly integrationPending = false;
   constructor(private readonly client: ApiClient) {}
   async list(): Promise<readonly MedicationSummary[]> {
-    return [];
+    const rows = await this.client.request<BackendPatientMedication[]>(
+      '/api/v1/patient-medications',
+      {},
+      true,
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      canonicalName: row.name,
+      dosageForm: row.dosage_form,
+      strength: row.strength,
+      scheduleSummary: null,
+      reviewStatus: 'user_entered_unreviewed',
+      isActive: row.is_active,
+      source: 'user_entered',
+      remainingQuantity: row.inventory.remaining_quantity,
+      quantityUnit: row.inventory.quantity_unit,
+    }));
   }
   async create(input: ManualMedicationInput): Promise<PatientMedication> {
     const row = await this.client.request<BackendPatientMedication>(
@@ -140,6 +157,7 @@ export class BackendPatientMedicationService implements PatientMedicationService
       source: row.source,
       medicineCaptureId: row.medicine_capture_id,
       isActive: row.is_active,
+      createdAt: row.created_at,
       inventory: {
         id: row.inventory.id,
         initialQuantity: row.inventory.initial_quantity,

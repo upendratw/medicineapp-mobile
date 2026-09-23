@@ -87,6 +87,9 @@ const en = {
   quantityGreaterThanZero: 'Current quantity must be greater than zero.',
   quantityInvalid: 'Enter a valid quantity with up to 4 decimal places.',
   quantityUnitRequired: 'Select a quantity unit.',
+  addMedicine: 'Add Medicine',
+  captureConfirmedRetry:
+    'Medicine details are confirmed. Retry will save this same reviewed medicine without confirming the image again.',
   cameraTakePhoto: 'Take photo',
   cameraTakePhotoHint:
     'Captures the medicine packaging for your review. It is not uploaded automatically.',
@@ -204,6 +207,9 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   quantityGreaterThanZero: 'वर्तमान मात्रा शून्य से अधिक होनी चाहिए।',
   quantityInvalid: 'अधिकतम 4 दशमलव स्थानों वाली मान्य मात्रा दर्ज करें।',
   quantityUnitRequired: 'मात्रा की इकाई चुनें।',
+  addMedicine: 'दवा जोड़ें',
+  captureConfirmedRetry:
+    'दवा की जानकारी की पुष्टि हो चुकी है। फिर प्रयास करने पर चित्र की दोबारा पुष्टि किए बिना यही समीक्षा की गई दवा सहेजी जाएगी।',
   cameraTakePhoto: 'फ़ोटो लें',
   cameraTakePhotoHint:
     'आपकी समीक्षा के लिए दवा की पैकेजिंग की फ़ोटो लेता है। यह अपने आप अपलोड नहीं होती।',

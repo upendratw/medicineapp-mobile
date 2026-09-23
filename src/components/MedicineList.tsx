@@ -14,7 +14,7 @@ type Props = {
   error: boolean;
   onRefresh(): void;
   onAdd(): void;
-  onSchedule(id: string): void;
+  onSchedule?(id: string): void;
 };
 export function MedicineList({
   medicines,

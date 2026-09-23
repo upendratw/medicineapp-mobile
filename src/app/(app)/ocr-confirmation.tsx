@@ -7,12 +7,12 @@ import {
   OcrConfirmationForm,
   OcrOutcomePanel,
 } from '@/components';
-import { ocrService } from '@/services/registry';
+import { ocrService, patientMedicationService } from '@/services/registry';
 import { useCapture } from '@/state/CaptureContext';
 
 export default function OcrConfirmationScreen() {
   const router = useRouter();
-  const { recognitionResult, clear, setReviewedMedicine } = useCapture();
+  const { recognitionResult, clear } = useCapture();
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
   if (recognitionResult?.kind === 'review_ready') {
@@ -24,13 +24,14 @@ export default function OcrConfirmationScreen() {
         />
         <OcrConfirmationForm
           extracted={recognitionResult.extractedMedicine}
-          onConfirm={async (medicine) => {
-            await ocrService.confirmReview?.(
-              recognitionResult.captureId,
-              medicine,
-            );
-            setReviewedMedicine(medicine);
-            router.push('/add-medicine');
+          captureId={recognitionResult.captureId}
+          confirmCapture={(medicine) =>
+            ocrService.confirmReview!(recognitionResult.captureId, medicine)
+          }
+          createMedication={(input) => patientMedicationService.create(input)}
+          onSaved={() => {
+            clear();
+            router.replace('/medicines');
           }}
           onRetake={async () => {
             await ocrService.cancel?.(recognitionResult.captureId);
