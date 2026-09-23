@@ -28,7 +28,7 @@ import {
 } from '@/services/reminderService';
 
 const api = new ApiClient(undefined, undefined, secureTokenStore);
-export const patientMedicationService = buildPatientMedicationService();
+export const patientMedicationService = buildPatientMedicationService(api);
 export const scheduleService = new ScheduleService(api);
 export const medicationCatalogService = new BackendMedicationCatalogService(
   api,

@@ -3,6 +3,7 @@ import { BackendCaregiverService } from '@/services/caregiverService';
 import {
   BackendMedicationCatalogService,
   PendingPatientMedicationService,
+  BackendPatientMedicationService,
 } from '@/services/medicationService';
 import { PendingOcrService } from '@/services/ocrService';
 import { ScheduleService } from '@/services/scheduleService';
@@ -18,6 +19,50 @@ test('medication catalog uses the real authenticated backend search route', asyn
     {},
     true,
   );
+});
+
+test('patient medication creation uses the authenticated durable endpoint', async () => {
+  const api = client();
+  jest.mocked(api.request).mockResolvedValue({
+    id: 'pm-1',
+    name: 'Synthetic',
+    strength: null,
+    dosage_form: 'Tablet',
+    active_ingredient: null,
+    manufacturer: null,
+    notes: null,
+    source: 'manual',
+    medicine_capture_id: null,
+    is_active: true,
+    inventory: {
+      id: 'inv-1',
+      initial_quantity: '2.5000',
+      remaining_quantity: '2.5000',
+      quantity_unit: 'tablet',
+      low_stock_threshold: null,
+      revision: 1,
+    },
+  });
+  await new BackendPatientMedicationService(api).create({
+    name: 'Synthetic',
+    dosageForm: 'Tablet',
+    initialQuantity: '2.5000',
+    quantityUnit: 'tablet',
+    source: 'manual',
+    idempotencyKey: 'stable-key-123',
+  });
+  expect(api.request).toHaveBeenCalledWith(
+    '/api/v1/patient-medications',
+    expect.objectContaining({ method: 'POST' }),
+    true,
+  );
+  expect(
+    JSON.parse(jest.mocked(api.request).mock.calls[0][1]!.body as string),
+  ).toMatchObject({
+    inventory: { initial_quantity: '2.5000', quantity_unit: 'tablet' },
+    source: 'manual',
+    idempotency_key: 'stable-key-123',
+  });
 });
 
 test('schedule DTO targets the real authenticated schedule endpoint', async () => {

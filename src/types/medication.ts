@@ -12,6 +12,11 @@ export type MedicationSummary = Readonly<{
   source: 'backend_catalog' | 'user_entered';
 }>;
 
+export type InventoryQuantityUnit =
+  'tablet' | 'capsule' | 'ml' | 'drop' | 'puff' | 'sachet' | 'patch' | 'unit';
+
+export type PatientMedicationSource = 'manual' | 'ocr_assisted';
+
 export type ManualMedicationInput = Readonly<{
   name: string;
   strength?: string;
@@ -19,6 +24,32 @@ export type ManualMedicationInput = Readonly<{
   activeIngredient?: string;
   manufacturer?: string;
   notes?: string;
+  initialQuantity: string;
+  quantityUnit: InventoryQuantityUnit;
+  source: PatientMedicationSource;
+  medicineCaptureId?: string;
+  idempotencyKey: string;
+}>;
+
+export type PatientMedication = Readonly<{
+  id: string;
+  name: string;
+  strength: string | null;
+  dosageForm: string | null;
+  activeIngredient: string | null;
+  manufacturer: string | null;
+  notes: string | null;
+  source: PatientMedicationSource;
+  medicineCaptureId: string | null;
+  isActive: boolean;
+  inventory: Readonly<{
+    id: string;
+    initialQuantity: string;
+    remainingQuantity: string;
+    quantityUnit: InventoryQuantityUnit;
+    lowStockThreshold: string | null;
+    revision: number;
+  }>;
 }>;
 
 export type ReviewedMedicine = Readonly<{

@@ -1,7 +1,40 @@
-import type { ManualMedicationInput } from '@/types/medication';
+import type {
+  InventoryQuantityUnit,
+  ManualMedicationInput,
+} from '@/types/medication';
 
 export type ValidationResult<T> = { value?: T; errors: Record<string, string> };
 const bounded = (value: string, max: number) => value.trim().slice(0, max);
+export const inventoryQuantityUnits: readonly InventoryQuantityUnit[] = [
+  'tablet',
+  'capsule',
+  'ml',
+  'drop',
+  'puff',
+  'sachet',
+  'patch',
+  'unit',
+];
+const QUANTITY = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,4})?$/;
+
+export const defaultQuantityUnit = (
+  dosageForm: string,
+): InventoryQuantityUnit | null => {
+  const value = dosageForm.trim().toLowerCase();
+  if (value.includes('tablet')) return 'tablet';
+  if (value.includes('capsule')) return 'capsule';
+  if (
+    ['syrup', 'solution', 'suspension', 'liquid'].some((item) =>
+      value.includes(item),
+    )
+  )
+    return 'ml';
+  if (value.includes('drop')) return 'drop';
+  if (value.includes('inhaler') || value.includes('puff')) return 'puff';
+  if (value.includes('sachet')) return 'sachet';
+  if (value.includes('patch')) return 'patch';
+  return null;
+};
 
 export function validateManualMedication(
   input: ManualMedicationInput,
@@ -13,10 +46,24 @@ export function validateManualMedication(
     activeIngredient: bounded(input.activeIngredient ?? '', 160),
     manufacturer: bounded(input.manufacturer ?? '', 160),
     notes: bounded(input.notes ?? '', 500),
+    initialQuantity: input.initialQuantity.trim(),
+    quantityUnit: input.quantityUnit,
+    source: input.source,
+    medicineCaptureId: input.medicineCaptureId,
+    idempotencyKey: input.idempotencyKey,
   };
   const errors: Record<string, string> = {};
   if (value.name.length < 2)
     errors.name = 'Enter a medication name of at least 2 characters.';
+  if (!value.initialQuantity)
+    errors.initialQuantity = 'Enter the current quantity.';
+  else if (!QUANTITY.test(value.initialQuantity))
+    errors.initialQuantity =
+      'Enter a valid quantity with up to 4 decimal places.';
+  else if (/^0(?:\.0{1,4})?$/.test(value.initialQuantity))
+    errors.initialQuantity = 'Current quantity must be greater than zero.';
+  if (!inventoryQuantityUnits.includes(value.quantityUnit))
+    errors.quantityUnit = 'Select a quantity unit.';
   return { value: Object.keys(errors).length ? undefined : value, errors };
 }
 

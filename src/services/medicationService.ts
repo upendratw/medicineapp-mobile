@@ -1,9 +1,9 @@
 import { ApiClient } from '@/api/client';
-import { publicEnvironment } from '@/config/environment';
 import { IntegrationPendingError } from '@/services/integration';
 import type {
   ManualMedicationInput,
   MedicationSummary,
+  PatientMedication,
 } from '@/types/medication';
 
 type BackendMedication = {
@@ -24,7 +24,7 @@ export interface MedicationCatalogService {
 
 export interface PatientMedicationService {
   list(signal?: AbortSignal): Promise<readonly MedicationSummary[]>;
-  create(input: ManualMedicationInput): Promise<MedicationSummary>;
+  create(input: ManualMedicationInput): Promise<PatientMedication>;
   readonly integrationPending: boolean;
 }
 
@@ -64,34 +64,94 @@ export class PendingPatientMedicationService implements PatientMedicationService
   async list(): Promise<readonly MedicationSummary[]> {
     return [];
   }
-  async create(): Promise<MedicationSummary> {
+  async create(): Promise<PatientMedication> {
     throw new IntegrationPendingError('Patient medication creation');
   }
 }
 
 export class DevelopmentPatientMedicationService implements PatientMedicationService {
   readonly integrationPending = true;
-  private readonly items: MedicationSummary[] = [];
   async list(): Promise<readonly MedicationSummary[]> {
-    return [...this.items];
+    return [];
   }
-  async create(input: ManualMedicationInput): Promise<MedicationSummary> {
-    const item: MedicationSummary = {
-      id: `local-${this.items.length + 1}`,
-      canonicalName: input.name,
-      dosageForm: input.dosageForm ?? null,
-      strength: input.strength ?? null,
-      scheduleSummary: null,
-      reviewStatus: 'user_entered_unreviewed',
-      isActive: true,
-      source: 'user_entered',
-    };
-    this.items.push(item);
-    return item;
+  async create(_input: ManualMedicationInput): Promise<PatientMedication> {
+    throw new IntegrationPendingError('Patient medication creation');
   }
 }
 
-export const buildPatientMedicationService = (): PatientMedicationService =>
-  publicEnvironment.appEnvironment === 'development'
-    ? new DevelopmentPatientMedicationService()
-    : new PendingPatientMedicationService();
+type BackendPatientMedication = {
+  id: string;
+  name: string;
+  strength: string | null;
+  dosage_form: string | null;
+  active_ingredient: string | null;
+  manufacturer: string | null;
+  notes: string | null;
+  source: PatientMedication['source'];
+  medicine_capture_id: string | null;
+  is_active: boolean;
+  inventory: {
+    id: string;
+    initial_quantity: string;
+    remaining_quantity: string;
+    quantity_unit: PatientMedication['inventory']['quantityUnit'];
+    low_stock_threshold: string | null;
+    revision: number;
+  };
+};
+
+export class BackendPatientMedicationService implements PatientMedicationService {
+  readonly integrationPending = false;
+  constructor(private readonly client: ApiClient) {}
+  async list(): Promise<readonly MedicationSummary[]> {
+    return [];
+  }
+  async create(input: ManualMedicationInput): Promise<PatientMedication> {
+    const row = await this.client.request<BackendPatientMedication>(
+      '/api/v1/patient-medications',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          name: input.name,
+          strength: input.strength || null,
+          dosage_form: input.dosageForm || null,
+          active_ingredient: input.activeIngredient || null,
+          manufacturer: input.manufacturer || null,
+          notes: input.notes || null,
+          source: input.source,
+          medicine_capture_id: input.medicineCaptureId ?? null,
+          inventory: {
+            initial_quantity: input.initialQuantity,
+            quantity_unit: input.quantityUnit,
+          },
+          idempotency_key: input.idempotencyKey,
+        }),
+      },
+      true,
+    );
+    return {
+      id: row.id,
+      name: row.name,
+      strength: row.strength,
+      dosageForm: row.dosage_form,
+      activeIngredient: row.active_ingredient,
+      manufacturer: row.manufacturer,
+      notes: row.notes,
+      source: row.source,
+      medicineCaptureId: row.medicine_capture_id,
+      isActive: row.is_active,
+      inventory: {
+        id: row.inventory.id,
+        initialQuantity: row.inventory.initial_quantity,
+        remainingQuantity: row.inventory.remaining_quantity,
+        quantityUnit: row.inventory.quantity_unit,
+        lowStockThreshold: row.inventory.low_stock_threshold,
+        revision: row.inventory.revision,
+      },
+    };
+  }
+}
+
+export const buildPatientMedicationService = (
+  client: ApiClient,
+): PatientMedicationService => new BackendPatientMedicationService(client);

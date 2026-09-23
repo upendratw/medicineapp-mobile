@@ -4,7 +4,8 @@ import { patientMedicationService } from '@/services/registry';
 import { useCapture } from '@/state/CaptureContext';
 export default function AddMedicineScreen() {
   const router = useRouter();
-  const { candidate, reviewedMedicine, clear } = useCapture();
+  const { candidate, reviewedMedicine, recognitionResult, clear } =
+    useCapture();
   return (
     <AppScreen>
       <AppHeader
@@ -30,6 +31,12 @@ export default function AddMedicineScreen() {
               : undefined
         }
         submit={(input) => patientMedicationService.create(input)}
+        source={reviewedMedicine ? 'ocr_assisted' : 'manual'}
+        medicineCaptureId={
+          reviewedMedicine && recognitionResult?.kind === 'review_ready'
+            ? recognitionResult.captureId
+            : undefined
+        }
         onSaved={clear}
         onCamera={() => router.push('/medicine-camera')}
       />
