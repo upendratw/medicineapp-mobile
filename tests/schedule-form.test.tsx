@@ -33,7 +33,7 @@ test('creates a timezone-aware schedule with multiple daily times', async () => 
   );
   expect(submit).toHaveBeenCalledWith(
     expect.objectContaining({
-      medication_id: 'medicine-id',
+      patient_medication_id: 'medicine-id',
       timezone: 'Asia/Kolkata',
       activate: true,
       rules: [expect.objectContaining({ times_of_day: ['08:00', '20:00'] })],
@@ -42,6 +42,35 @@ test('creates a timezone-aware schedule with multiple daily times', async () => 
   expect(
     screen.getByText(/does not recommend medication timing or dosage/),
   ).toBeTruthy();
+});
+
+test('submits explicit dose evidence for linked inventory consumption', async () => {
+  const submit = jest.fn().mockResolvedValue(saved);
+  const screen = await render(
+    <ScheduleForm
+      medicationId="patient-medication-id"
+      timezone="Asia/Kolkata"
+      submit={submit}
+    />,
+  );
+  await fireEvent.changeText(
+    screen.getByLabelText('Dose quantity (optional)'),
+    '0.5',
+  );
+  await fireEvent.changeText(
+    screen.getByLabelText('Dose unit (optional)'),
+    'tablet',
+  );
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Create schedule' }),
+  );
+  expect(submit).toHaveBeenCalledWith(
+    expect.objectContaining({
+      patient_medication_id: 'patient-medication-id',
+      dose_quantity: '0.5',
+      dose_unit: 'tablet',
+    }),
+  );
 });
 
 test('edit mode uses existing values and an explicit update action', async () => {

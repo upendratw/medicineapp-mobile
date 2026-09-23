@@ -8,12 +8,15 @@ export type ScheduleRuleInput = Readonly<{
 }>;
 
 export type ScheduleInput = Readonly<{
-  medication_id: string;
+  medication_id?: string;
+  patient_medication_id?: string;
   patient_user_id?: string;
   timezone: string;
   start_date: string;
   end_date?: string;
   food_instruction: 'none';
+  dose_quantity?: string;
+  dose_unit?: string;
   instructions_text?: string;
   medication_choice_confirmed: boolean;
   rules: readonly ScheduleRuleInput[];
@@ -23,6 +26,7 @@ export type ScheduleInput = Readonly<{
 export type MedicationSchedule = Readonly<{
   id: string;
   medicationId: string;
+  patientMedicationId?: string | null;
   status: 'draft' | 'active' | 'paused' | 'cancelled';
   timezone: string;
   startDate: string;

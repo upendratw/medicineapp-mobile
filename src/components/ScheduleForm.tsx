@@ -29,6 +29,8 @@ export function ScheduleForm({
   const [endDate, setEndDate] = useState(initial?.endDate ?? '');
   const [times, setTimes] = useState(initial?.times.join(', ') ?? '08:00');
   const [instructions, setInstructions] = useState('');
+  const [doseQuantity, setDoseQuantity] = useState('');
+  const [doseUnit, setDoseUnit] = useState('');
   const [active, setActive] = useState(initial?.status === 'active');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,8 +39,14 @@ export function ScheduleForm({
     const dateError = validateScheduleDates(startDate, endDate);
     const timeResult = normalizeScheduleTimes(times.split(','));
     const validationError = dateError ?? timeResult.errors.times;
-    if (validationError) {
-      setError(validationError);
+    const doseError =
+      Boolean(doseQuantity) !== Boolean(doseUnit)
+        ? 'Dose quantity and unit must be entered together.'
+        : doseQuantity && !/^(?:0\.)?\d{1,8}(?:\.\d{1,4})?$/.test(doseQuantity)
+          ? 'Enter a positive dose quantity with up to 4 decimal places.'
+          : null;
+    if (validationError || doseError) {
+      setError(validationError ?? doseError!);
       return;
     }
     setError('');
@@ -46,11 +54,13 @@ export function ScheduleForm({
     setLoading(true);
     try {
       await submit({
-        medication_id: medicationId,
+        patient_medication_id: medicationId,
         timezone,
         start_date: startDate,
         end_date: endDate || undefined,
         food_instruction: 'none',
+        dose_quantity: doseQuantity || undefined,
+        dose_unit: doseUnit || undefined,
         instructions_text: instructions.trim() || undefined,
         medication_choice_confirmed: true,
         rules: [
@@ -100,6 +110,21 @@ export function ScheduleForm({
         placeholder="08:00, 20:00"
       />
       <AppText>Timezone: {timezone}</AppText>
+      <AppTextInput
+        label="Dose quantity (optional)"
+        accessibilityHint="Used for exact inventory consumption when a dose is marked taken"
+        value={doseQuantity}
+        onChangeText={setDoseQuantity}
+        keyboardType="decimal-pad"
+        maxLength={13}
+      />
+      <AppTextInput
+        label="Dose unit (optional)"
+        accessibilityHint="Must match the inventory unit, such as tablet or ml"
+        value={doseUnit}
+        onChangeText={setDoseUnit}
+        maxLength={32}
+      />
       <AppTextInput
         label="User instructions (optional)"
         value={instructions}

@@ -8,7 +8,8 @@ type BackendRule = {
 };
 type BackendSchedule = {
   id: string;
-  medication_id: string;
+  medication_id: string | null;
+  patient_medication_id: string | null;
   status: MedicationSchedule['status'];
   timezone: string;
   start_date: string;
@@ -19,7 +20,8 @@ type BackendSchedule = {
 
 const mapSchedule = (row: BackendSchedule): MedicationSchedule => ({
   id: row.id,
-  medicationId: row.medication_id,
+  medicationId: row.medication_id ?? row.patient_medication_id ?? '',
+  patientMedicationId: row.patient_medication_id,
   status: row.status,
   timezone: row.timezone,
   startDate: row.start_date,
