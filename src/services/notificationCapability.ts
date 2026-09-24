@@ -4,6 +4,7 @@ export type NotificationRuntimeStatus =
   'supported' | 'unsupported_runtime' | 'unsupported_personal_team';
 export type NotificationPermission = 'granted' | 'denied' | 'undetermined';
 export type NotificationSubscription = Readonly<{ remove(): void }>;
+export type NotificationData = Readonly<Record<string, unknown>>;
 
 type NotificationsModule = typeof import('expo-notifications');
 type NotificationsLoader = () => Promise<NotificationsModule>;
@@ -71,13 +72,30 @@ export class ExpoNotificationCapability {
   }
 
   async addResponseListener(
-    listener: (route: unknown) => void,
+    listener: (data: NotificationData) => void,
   ): Promise<NotificationSubscription | null> {
     const notifications = await this.load();
     if (!notifications) return null;
     return notifications.addNotificationResponseReceivedListener((response) =>
-      listener(response.notification.request.content.data?.route),
+      listener(response.notification.request.content.data ?? {}),
     );
+  }
+
+  async lastResponseData(): Promise<NotificationData | null> {
+    const notifications = await this.load();
+    if (!notifications) return null;
+    const response = await notifications.getLastNotificationResponseAsync();
+    if (!response) return null;
+    await notifications.clearLastNotificationResponseAsync();
+    return response.notification.request.content.data ?? {};
+  }
+
+  async addPushTokenListener(
+    listener: () => void,
+  ): Promise<NotificationSubscription | null> {
+    const notifications = await this.load();
+    if (!notifications) return null;
+    return notifications.addPushTokenListener(() => listener());
   }
 }
 

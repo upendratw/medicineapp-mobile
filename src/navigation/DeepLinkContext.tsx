@@ -10,33 +10,41 @@ import {
 } from 'react';
 import {
   resolveDeepLink,
-  resolveNotificationDestination,
+  parseNotificationIntent,
+  type ReminderNotificationIntent,
   type SafeDestination,
 } from '@/navigation/DeepLinkService';
+import { sessionEvents } from '@/security/SessionEvents';
 type Value = {
   pending: SafeDestination | null;
+  pendingReminder: ReminderNotificationIntent | null;
   acceptUrl(url: string): void;
   acceptNotification(value: unknown): void;
   clear(): void;
 };
 const Context = createContext<Value>({
   pending: null,
+  pendingReminder: null,
   acceptUrl() {},
   acceptNotification() {},
   clear() {},
 });
 export function DeepLinkProvider({ children }: PropsWithChildren) {
   const [pending, setPending] = useState<SafeDestination | null>(null);
+  const [pendingReminder, setPendingReminder] =
+    useState<ReminderNotificationIntent | null>(null);
   const acceptUrl = useCallback(
     (url: string) => setPending(resolveDeepLink(url).destination),
     [],
   );
   const acceptNotification = useCallback(
-    (value: unknown) =>
-      setPending(resolveNotificationDestination(value).destination),
+    (value: unknown) => setPendingReminder(parseNotificationIntent(value)),
     [],
   );
-  const clear = useCallback(() => setPending(null), []);
+  const clear = useCallback(() => {
+    setPending(null);
+    setPendingReminder(null);
+  }, []);
   useEffect(() => {
     Linking.getInitialURL().then((url) => {
       if (url) acceptUrl(url);
@@ -46,9 +54,10 @@ export function DeepLinkProvider({ children }: PropsWithChildren) {
     );
     return () => subscription.remove();
   }, [acceptUrl]);
+  useEffect(() => sessionEvents.subscribe(clear), [clear]);
   const value = useMemo(
-    () => ({ pending, acceptUrl, acceptNotification, clear }),
-    [acceptNotification, acceptUrl, clear, pending],
+    () => ({ pending, pendingReminder, acceptUrl, acceptNotification, clear }),
+    [acceptNotification, acceptUrl, clear, pending, pendingReminder],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

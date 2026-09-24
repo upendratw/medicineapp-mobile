@@ -23,6 +23,9 @@ const module = () => ({
   addNotificationResponseReceivedListener: jest.fn(() => ({
     remove: jest.fn(),
   })),
+  getLastNotificationResponseAsync: jest.fn().mockResolvedValue(null),
+  clearLastNotificationResponseAsync: jest.fn().mockResolvedValue(undefined),
+  addPushTokenListener: jest.fn(() => ({ remove: jest.fn() })),
 });
 
 test('Expo Go capability never loads unsupported notification module', async () => {
@@ -73,6 +76,8 @@ test('development and standalone builds retain lazy notification behavior', asyn
   ).resolves.toBe(true);
   const listener = jest.fn();
   await expect(capability.addResponseListener(listener)).resolves.toBeTruthy();
+  await expect(capability.lastResponseData()).resolves.toBeNull();
+  await expect(capability.addPushTokenListener(listener)).resolves.toBeTruthy();
   expect(loader).toHaveBeenCalled();
   expect(notifications.getExpoPushTokenAsync).toHaveBeenCalledWith({
     projectId: 'project',

@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { ApiClient } from '@/api/client';
 import { secureTokenStore } from '@/security/SecureTokenStore';
+import { publicEnvironment } from '@/config/environment';
 import {
   notificationCapability,
   type ExpoNotificationCapability,
@@ -45,6 +46,7 @@ export interface PushRegistrationService {
     pushToken: string;
     platform: PushPlatform;
     appVersion: string | null;
+    appEnvironment: 'development' | 'test' | 'staging' | 'production';
   }): Promise<{ deviceId: string }>;
   unregister(deviceId: string): Promise<void>;
 }
@@ -93,6 +95,7 @@ export class BackendPushRegistrationService implements PushRegistrationService {
     pushToken: string;
     platform: PushPlatform;
     appVersion: string | null;
+    appEnvironment: 'development' | 'test' | 'staging' | 'production';
   }): Promise<{ deviceId: string }> {
     const data = await this.client.request<{
       device_id: string;
@@ -106,6 +109,8 @@ export class BackendPushRegistrationService implements PushRegistrationService {
           platform: input.platform,
           push_token: input.pushToken,
           app_version: input.appVersion,
+          push_provider: 'expo',
+          app_environment: input.appEnvironment,
         }),
       },
       true,
@@ -173,6 +178,7 @@ export class PushRegistrationCoordinator {
       pushToken,
       platform,
       appVersion: Constants.expoConfig?.version ?? null,
+      appEnvironment: publicEnvironment.appEnvironment,
     });
     await this.store.writeRegistrationId(result.deviceId);
     return { status: 'registered', deviceId: result.deviceId };

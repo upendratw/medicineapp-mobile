@@ -1,6 +1,4 @@
 import { ApiClient } from '@/api/client';
-import { publicEnvironment } from '@/config/environment';
-import { IntegrationPendingError } from '@/services/integration';
 import type {
   ReminderAction,
   ReminderActionResult,
@@ -8,28 +6,43 @@ import type {
 } from '@/types/reminder';
 
 export interface ReminderContextService {
-  get(reminderId: string, medicationId: string): Promise<ReminderContext>;
+  get(reminderId: string): Promise<ReminderContext>;
 }
 
-export class PendingReminderContextService implements ReminderContextService {
-  async get(): Promise<ReminderContext> {
-    throw new IntegrationPendingError('Production reminder delivery context');
-  }
-}
+type ReminderContextDto = {
+  reminder_id: string;
+  medication_name: string;
+  scheduled_local_time: string;
+  scheduled_utc_time: string;
+  dose_quantity: string | null;
+  dose_unit: string | null;
+  status: string;
+  status_text: string;
+  schedule_revision: number;
+  allowed_actions: ('TAKEN' | 'SNOOZE' | 'SKIPPED')[];
+  instructions: string | null;
+};
 
-export class DevelopmentReminderContextService implements ReminderContextService {
-  async get(
-    reminderId: string,
-    medicationId: string,
-  ): Promise<ReminderContext> {
+export class BackendReminderContextService implements ReminderContextService {
+  constructor(private readonly client: ApiClient) {}
+  async get(reminderId: string): Promise<ReminderContext> {
+    const data = await this.client.request<ReminderContextDto>(
+      `/api/v1/reminders/${encodeURIComponent(reminderId)}`,
+      {},
+      true,
+    );
     return {
-      reminderId,
-      medicationId,
-      medicationName: 'Development reminder',
-      scheduledFor: new Date().toISOString(),
-      statusText: 'Development-only reminder context',
-      instructions: null,
-      scheduleRevision: null,
+      reminderId: data.reminder_id,
+      medicationName: data.medication_name,
+      scheduledLocalTime: data.scheduled_local_time,
+      scheduledUtcTime: data.scheduled_utc_time,
+      doseQuantity: data.dose_quantity,
+      doseUnit: data.dose_unit,
+      status: data.status,
+      statusText: data.status_text,
+      scheduleRevision: data.schedule_revision,
+      allowedActions: data.allowed_actions,
+      instructions: data.instructions,
     };
   }
 }
@@ -81,8 +94,6 @@ export class ReminderService {
   }
 }
 
-export const buildReminderContextService = (): ReminderContextService =>
-  publicEnvironment.appEnvironment === 'development' &&
-  publicEnvironment.developerDiagnostics
-    ? new DevelopmentReminderContextService()
-    : new PendingReminderContextService();
+export const buildReminderContextService = (
+  client: ApiClient,
+): ReminderContextService => new BackendReminderContextService(client);

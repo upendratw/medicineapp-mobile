@@ -168,6 +168,7 @@ test('backend adapter uses only real authenticated device endpoints', async () =
     pushToken: 'private-token',
     platform: 'android',
     appVersion: '1.0.0',
+    appEnvironment: 'development',
   });
   expect(client.request).toHaveBeenCalledWith(
     '/api/v1/devices',

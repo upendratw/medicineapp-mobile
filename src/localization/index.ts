@@ -8,7 +8,7 @@ const en = {
   hindi: 'Hindi',
   save: 'Save',
   loading: 'Loading',
-  retry: 'Retry',
+  reminderRetry: 'Retry',
   error: 'Something went wrong',
   home: 'Home',
   medicines: 'Medicines',
@@ -69,6 +69,25 @@ const en = {
   notificationsUnsupportedPersonalTeam:
     'Push notifications are unavailable in this local Personal Team build. Other app features remain available.',
   openNotificationSettings: 'Open device notification settings',
+  medicineReminder: 'Medicine reminder',
+  reminderPushBody: "It's time to check your medicine schedule.",
+  taken: 'Taken',
+  snooze: 'Snooze',
+  skip: 'Skip',
+  markedAsTaken: 'Marked as taken',
+  doseSkipped: 'Dose skipped',
+  reminderSnoozed: 'Reminder snoozed',
+  loadingReminder: 'Loading reminder',
+  unableToLoadReminder:
+    'Unable to load reminder. No medication action was recorded.',
+  retry: 'Retry',
+  scheduledFor: 'Scheduled for',
+  dose: 'Dose',
+  reminderNoLongerUpdatable: 'This reminder can no longer be updated.',
+  reminderActionFailed:
+    'The reminder action could not be recorded. Please try again.',
+  reminderSafetyBoundary:
+    'These actions record your report or postpone this reminder only. They do not change your medication schedule or provide missed-dose advice.',
   medicineSaveSuccess:
     'User-entered medicine recorded. The form is ready for another medicine.',
   medicineOnHand: 'Medicine on hand',
@@ -157,7 +176,7 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   hindi: 'हिन्दी',
   save: 'सहेजें',
   loading: 'लोड हो रहा है',
-  retry: 'फिर प्रयास करें',
+  reminderRetry: 'फिर प्रयास करें',
   error: 'कुछ गलत हुआ',
   home: 'होम',
   medicines: 'दवाइयाँ',
@@ -218,6 +237,24 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   notificationsUnsupportedPersonalTeam:
     'इस स्थानीय Personal Team बिल्ड में पुश सूचनाएँ उपलब्ध नहीं हैं। ऐप की अन्य सुविधाएँ उपलब्ध रहती हैं।',
   openNotificationSettings: 'डिवाइस सूचना सेटिंग्स खोलें',
+  medicineReminder: 'दवा रिमाइंडर',
+  reminderPushBody: 'अपनी दवा की समय-सारणी देखने का समय है।',
+  taken: 'ले ली',
+  snooze: 'बाद में याद दिलाएँ',
+  skip: 'छोड़ें',
+  markedAsTaken: 'दवा ली गई के रूप में दर्ज किया गया',
+  doseSkipped: 'खुराक छोड़ी गई',
+  reminderSnoozed: 'रिमाइंडर बाद के लिए रखा गया',
+  loadingReminder: 'रिमाइंडर लोड हो रहा है',
+  unableToLoadReminder:
+    'रिमाइंडर लोड नहीं हो सका। कोई दवा कार्रवाई दर्ज नहीं हुई।',
+  retry: 'फिर प्रयास करें',
+  scheduledFor: 'निर्धारित समय',
+  dose: 'खुराक',
+  reminderNoLongerUpdatable: 'इस रिमाइंडर को अब अपडेट नहीं किया जा सकता।',
+  reminderActionFailed: 'रिमाइंडर कार्रवाई दर्ज नहीं हो सकी। फिर प्रयास करें।',
+  reminderSafetyBoundary:
+    'ये कार्रवाइयाँ केवल आपकी रिपोर्ट दर्ज करती हैं या रिमाइंडर को टालती हैं। ये दवा की समय-सारणी नहीं बदलतीं और छूटी खुराक की सलाह नहीं देतीं।',
   medicineSaveSuccess:
     'उपयोगकर्ता द्वारा दर्ज दवा सहेजी गई। फ़ॉर्म दूसरी दवा के लिए तैयार है।',
   medicineOnHand: 'उपलब्ध दवा',

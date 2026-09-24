@@ -74,6 +74,26 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
       remove?.();
     };
   }, [acceptNotification]);
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    let active = true;
+    let remove: (() => void) | undefined;
+    void notificationCapability.lastResponseData().then((data) => {
+      if (active && data) acceptNotification(data);
+    });
+    void notificationCapability
+      .addPushTokenListener(() => {
+        if (active) void run(false);
+      })
+      .then((subscription) => {
+        if (!active) subscription?.remove();
+        else remove = () => subscription?.remove();
+      });
+    return () => {
+      active = false;
+      remove?.();
+    };
+  }, [acceptNotification, run, status]);
   const register = useCallback(() => run(true), [run]);
   const value = useMemo(
     () => ({ result, loading, register }),

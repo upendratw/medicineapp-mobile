@@ -1,11 +1,15 @@
 export type ReminderContext = Readonly<{
   reminderId: string;
-  medicationId: string;
   medicationName: string;
-  scheduledFor: string;
+  scheduledLocalTime: string;
+  scheduledUtcTime: string;
+  doseQuantity: string | null;
+  doseUnit: string | null;
+  status: string;
   statusText: string;
   instructions: string | null;
-  scheduleRevision: number | null;
+  scheduleRevision: number;
+  allowedActions: readonly ('TAKEN' | 'SNOOZE' | 'SKIPPED')[];
 }>;
 
 export type ReminderAction = 'TAKEN' | 'SKIPPED';

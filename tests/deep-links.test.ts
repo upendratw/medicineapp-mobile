@@ -1,4 +1,5 @@
 import {
+  parseNotificationIntent,
   resolveDeepLink,
   resolveNotificationDestination,
 } from '@/navigation/DeepLinkService';
@@ -60,6 +61,41 @@ test('notification destinations use the same action-free protected whitelist', (
     destination: '/home',
     accepted: false,
   });
+});
+
+test('accepts only the bounded opaque reminder notification contract', () => {
+  const reminderId = '00000000-0000-4000-8000-000000000001';
+  expect(
+    parseNotificationIntent({
+      type: 'medicineapp.reminder.due',
+      schema_version: 1,
+      reminder_id: reminderId,
+    }),
+  ).toEqual({ type: 'reminder', reminderId });
+});
+
+test.each([
+  null,
+  '/reminder',
+  { type: 'medicineapp.reminder.due', schema_version: 1 },
+  {
+    type: 'medicineapp.reminder.due',
+    schema_version: 1,
+    reminder_id: 'not-a-uuid',
+  },
+  {
+    type: 'medicineapp.reminder.due',
+    schema_version: 2,
+    reminder_id: '00000000-0000-4000-8000-000000000001',
+  },
+  {
+    type: 'medicineapp.reminder.due',
+    schema_version: 1,
+    reminder_id: '00000000-0000-4000-8000-000000000001',
+    route: '/reminder?action=taken',
+  },
+])('rejects malformed or action-bearing notification payloads', (payload) => {
+  expect(parseNotificationIntent(payload)).toBeNull();
 });
 
 test('deep-link implementation does not persist payloads or accept arbitrary forwarding', () => {

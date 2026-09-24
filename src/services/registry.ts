@@ -40,7 +40,7 @@ export const dashboardService = new DashboardService(
 );
 export const ocrService = buildOcrService(api);
 export const reminderService = new ReminderService(api);
-export const reminderContextService = buildReminderContextService();
+export const reminderContextService = buildReminderContextService(api);
 export const medicationHistoryService = new MedicationHistoryService(api);
 export const drugInformationService = new DrugInformationService(api);
 export const interactionService = new PendingInteractionService();

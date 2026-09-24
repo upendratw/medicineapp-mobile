@@ -3,12 +3,16 @@ import { ReminderAlert } from '@/components';
 
 const reminder = {
   reminderId: 'reminder-id',
-  medicationId: 'medication-id',
   medicationName: 'Synthetic Medicine',
-  scheduledFor: '2026-09-14T20:00:00+05:30',
+  scheduledLocalTime: '2026-09-14T20:00:00+05:30',
+  scheduledUtcTime: '2026-09-14T14:30:00Z',
+  doseQuantity: '1',
+  doseUnit: 'tablet',
+  status: 'fired',
   statusText: 'Scheduled',
   instructions: 'User-entered instructions',
   scheduleRevision: 2,
+  allowedActions: ['TAKEN', 'SNOOZE', 'SKIPPED'] as const,
 };
 
 test('renders neutral reminder context and real action controls', async () => {
@@ -24,23 +28,15 @@ test('renders neutral reminder context and real action controls', async () => {
     />,
   );
   expect(screen.getByText('Synthetic Medicine')).toBeTruthy();
-  expect(
-    screen.getByRole('button', { name: 'Mark this dose as taken' }),
-  ).toBeTruthy();
-  expect(
-    screen.getByRole('button', { name: 'Remind me in 10 minutes' }),
-  ).toBeTruthy();
-  expect(
-    screen.getByRole('button', { name: 'Record as skipped' }),
-  ).toBeTruthy();
-  await fireEvent.press(
-    screen.getByRole('button', { name: 'Mark this dose as taken' }),
-  );
+  expect(screen.getByRole('button', { name: 'Taken' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Snooze' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Skip' })).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Taken' }));
   expect(acknowledge).toHaveBeenCalledWith(
     'TAKEN',
     expect.stringMatching(/^mobile-/),
   );
-  expect(screen.getByText(/based on your report/)).toBeTruthy();
+  expect(screen.getByText(/Marked as taken/)).toBeTruthy();
   expect(JSON.stringify(screen.toJSON())).not.toMatch(
     /double|catch-up|take it now/i,
   );
@@ -58,12 +54,8 @@ test('snooze and skip call bounded actions', async () => {
       onSnooze={snooze}
     />,
   );
-  await fireEvent.press(
-    screen.getByRole('button', { name: 'Remind me in 10 minutes' }),
-  );
-  await fireEvent.press(
-    screen.getByRole('button', { name: 'Record as skipped' }),
-  );
+  await fireEvent.press(screen.getByRole('button', { name: 'Snooze' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Skip' }));
   expect(snooze).toHaveBeenCalledWith(10, expect.stringMatching(/^mobile-/));
   expect(acknowledge).toHaveBeenCalledWith('SKIPPED', expect.any(String));
 });
@@ -102,9 +94,7 @@ test('has loading, unavailable, and sanitized failure states', async () => {
       onSnooze={jest.fn()}
     />,
   );
-  await fireEvent.press(
-    failed.getByRole('button', { name: 'Mark this dose as taken' }),
-  );
+  await fireEvent.press(failed.getByRole('button', { name: 'Taken' }));
   expect(failed.getByText(/could not be recorded/)).toBeTruthy();
   expect(JSON.stringify(failed.toJSON())).not.toContain('private');
 });

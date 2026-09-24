@@ -7,15 +7,19 @@ import { reminderContextService, reminderService } from '@/services/registry';
 export default function ReminderScreen() {
   const params = useLocalSearchParams<{
     reminderId?: string;
-    medicationId?: string;
   }>();
   const reminderId =
     typeof params.reminderId === 'string' ? params.reminderId : '';
-  const medicationId =
-    typeof params.medicationId === 'string' ? params.medicationId : '';
+  const validReminderId =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      reminderId,
+    );
   const load = useCallback(
-    () => reminderContextService.get(reminderId, medicationId),
-    [reminderId, medicationId],
+    () =>
+      validReminderId
+        ? reminderContextService.get(reminderId)
+        : Promise.reject(new Error('Invalid reminder identifier')),
+    [reminderId, validReminderId],
   );
   const state = useAsyncResource(load);
   const timezone =
@@ -29,7 +33,8 @@ export default function ReminderScreen() {
       <ReminderAlert
         reminder={state.data}
         loading={state.loading}
-        unavailable={state.error || !reminderId || !medicationId}
+        unavailable={state.error || !reminderId}
+        onRetry={() => void state.refresh()}
         onAcknowledge={(action, eventId) =>
           reminderService
             .acknowledge(

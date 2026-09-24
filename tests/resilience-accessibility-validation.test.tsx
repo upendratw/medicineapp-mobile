@@ -116,12 +116,16 @@ test('reminder actions and grouped medication state expose explicit TalkBack sem
     <ReminderAlert
       reminder={{
         reminderId: 'reminder',
-        medicationId: 'synthetic-medication',
         medicationName: 'Synthetic Medicine',
-        scheduledFor: '2026-09-14T10:00:00Z',
+        scheduledLocalTime: '2026-09-14T15:30:00+05:30',
+        scheduledUtcTime: '2026-09-14T10:00:00Z',
+        doseQuantity: '1',
+        doseUnit: 'tablet',
+        status: 'fired',
         statusText: 'Due',
         instructions: null,
         scheduleRevision: 1,
+        allowedActions: ['TAKEN', 'SNOOZE', 'SKIPPED'],
       }}
       loading={false}
       unavailable={false}
@@ -129,15 +133,9 @@ test('reminder actions and grouped medication state expose explicit TalkBack sem
       onSnooze={jest.fn()}
     />,
   );
-  expect(
-    screen.getByRole('button', { name: 'Mark this dose as taken' }),
-  ).toBeTruthy();
-  expect(
-    screen.getByRole('button', { name: 'Remind me in 10 minutes' }),
-  ).toBeTruthy();
-  expect(
-    screen.getByRole('button', { name: 'Record as skipped' }),
-  ).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Taken' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Snooze' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Skip' })).toBeTruthy();
   expect(screen.getByLabelText('Synthetic Medicine. Due')).toBeTruthy();
 });
 

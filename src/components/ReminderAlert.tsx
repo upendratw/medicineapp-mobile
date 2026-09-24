@@ -7,6 +7,7 @@ import {
   LoadingIndicator,
 } from '@/components/primitives';
 import type { ReminderAction, ReminderContext } from '@/types/reminder';
+import { useTranslation } from '@/localization';
 
 type Props = {
   reminder: ReminderContext | null;
@@ -14,6 +15,7 @@ type Props = {
   unavailable: boolean;
   onAcknowledge(action: ReminderAction, eventId: string): Promise<void>;
   onSnooze(minutes: 5 | 10 | 15 | 30, requestKey: string): Promise<void>;
+  onRetry?(): void;
 };
 const requestId = () =>
   `mobile-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -24,7 +26,9 @@ export function ReminderAlert({
   unavailable,
   onAcknowledge,
   onSnooze,
+  onRetry,
 }: Props) {
+  const { t } = useTranslation();
   const busy = useRef(false);
   const actionKeys = useRef({
     TAKEN: requestId(),
@@ -53,13 +57,15 @@ export function ReminderAlert({
       setSubmitting(false);
     }
   };
-  if (loading) return <LoadingIndicator label="Loading reminder" />;
+  if (loading) return <LoadingIndicator label={t('loadingReminder')} />;
   if (unavailable || !reminder)
     return (
-      <AppAlert
-        tone="warning"
-        message="Reminder details are unavailable. No medication action was recorded."
-      />
+      <>
+        <AppAlert tone="warning" message={t('unableToLoadReminder')} />
+        {onRetry ? (
+          <AppButton label={t('reminderRetry')} onPress={onRetry} />
+        ) : null}
+      </>
     );
   const completed = outcome === 'taken' || outcome === 'skipped';
   return (
@@ -70,66 +76,69 @@ export function ReminderAlert({
       >
         <AppText variant="heading">{reminder.medicationName}</AppText>
         <AppText>
-          Scheduled for{' '}
-          {new Date(reminder.scheduledFor).toLocaleTimeString([], {
+          {t('scheduledFor')}{' '}
+          {new Date(reminder.scheduledLocalTime).toLocaleTimeString([], {
             hour: 'numeric',
             minute: '2-digit',
           })}
         </AppText>
         <AppText>{reminder.statusText}</AppText>
+        {reminder.doseQuantity && reminder.doseUnit ? (
+          <AppText>{`${t('dose')}: ${reminder.doseQuantity} ${reminder.doseUnit}`}</AppText>
+        ) : null}
         {reminder.instructions ? (
           <AppText>{reminder.instructions}</AppText>
         ) : null}
       </AppCard>
       {outcome === 'taken' ? (
-        <AppAlert
-          tone="success"
-          message="Dose recorded as taken based on your report."
-        />
+        <AppAlert tone="success" message={t('markedAsTaken')} />
       ) : null}
       {outcome === 'skipped' ? (
-        <AppAlert
-          tone="success"
-          message="Dose recorded as skipped based on your report."
-        />
+        <AppAlert tone="success" message={t('doseSkipped')} />
       ) : null}
       {outcome === 'snoozed' ? (
-        <AppAlert tone="success" message="Reminder notification postponed." />
+        <AppAlert tone="success" message={t('reminderSnoozed')} />
       ) : null}
       {outcome === 'failure' ? (
-        <AppAlert
-          tone="error"
-          message="The reminder action could not be recorded. Please try again."
+        <AppAlert tone="error" message={t('reminderActionFailed')} />
+      ) : null}
+      {reminder.allowedActions.includes('TAKEN') ? (
+        <AppButton
+          label={t('taken')}
+          loading={submitting}
+          disabled={completed}
+          onPress={() =>
+            act(() => onAcknowledge('TAKEN', actionKeys.current.TAKEN), 'taken')
+          }
         />
       ) : null}
-      <AppButton
-        label="Mark this dose as taken"
-        loading={submitting}
-        disabled={completed}
-        onPress={() =>
-          act(() => onAcknowledge('TAKEN', actionKeys.current.TAKEN), 'taken')
-        }
-      />
-      <AppButton
-        variant="secondary"
-        label="Remind me in 10 minutes"
-        disabled={submitting || completed}
-        onPress={() =>
-          act(() => onSnooze(10, actionKeys.current.SNOOZE), 'snoozed')
-        }
-      />
-      <AppButton
-        variant="secondary"
-        label="Record as skipped"
-        disabled={submitting || completed}
-        onPress={() =>
-          act(
-            () => onAcknowledge('SKIPPED', actionKeys.current.SKIPPED),
-            'skipped',
-          )
-        }
-      />
-      <AppAlert message="These actions record your report or postpone this reminder only. They do not change your medication schedule or provide missed-dose advice." />
+      {reminder.allowedActions.includes('SNOOZE') ? (
+        <AppButton
+          variant="secondary"
+          label={t('snooze')}
+          disabled={submitting || completed}
+          onPress={() =>
+            act(() => onSnooze(10, actionKeys.current.SNOOZE), 'snoozed')
+          }
+        />
+      ) : null}
+      {reminder.allowedActions.includes('SKIPPED') ? (
+        <AppButton
+          variant="secondary"
+          label={t('skip')}
+          disabled={submitting || completed}
+          onPress={() =>
+            act(
+              () => onAcknowledge('SKIPPED', actionKeys.current.SKIPPED),
+              'skipped',
+            )
+          }
+        />
+      ) : null}
+      {reminder.allowedActions.length === 0 ? (
+        <AppAlert message={t('reminderNoLongerUpdatable')} />
+      ) : null}
+      <AppAlert message={t('reminderSafetyBoundary')} />
     </>
   );
 }
