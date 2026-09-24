@@ -10,6 +10,9 @@ const saved: MedicationSchedule = {
   startDate: '2026-09-14',
   endDate: null,
   times: ['08:00', '20:00'],
+  doseQuantity: '1',
+  doseUnit: 'tablet',
+  instructions: null,
   revision: 1,
 };
 
@@ -18,16 +21,17 @@ test('creates a timezone-aware schedule with multiple daily times', async () => 
   const screen = await render(
     <ScheduleForm
       medicationId="medicine-id"
+      inventoryUnit="tablet"
       timezone="Asia/Kolkata"
       submit={submit}
     />,
   );
-  await fireEvent.changeText(screen.getByLabelText('Start date'), '2026-09-14');
+  await fireEvent.changeText(screen.getByLabelText('Start Date'), '2026-09-14');
+  await fireEvent.changeText(screen.getByLabelText('Dose Quantity'), '1');
   await fireEvent.changeText(
     screen.getByLabelText('Daily times'),
     '20:00, 08:00',
   );
-  await fireEvent.press(screen.getByRole('button', { name: 'Save as draft' }));
   await fireEvent.press(
     screen.getByRole('button', { name: 'Create schedule' }),
   );
@@ -50,17 +54,12 @@ test('submits explicit dose evidence for linked inventory consumption', async ()
     <ScheduleForm
       medicationId="patient-medication-id"
       timezone="Asia/Kolkata"
+      inventoryUnit="tablet"
       submit={submit}
     />,
   );
-  await fireEvent.changeText(
-    screen.getByLabelText('Dose quantity (optional)'),
-    '0.5',
-  );
-  await fireEvent.changeText(
-    screen.getByLabelText('Dose unit (optional)'),
-    'tablet',
-  );
+  await fireEvent.changeText(screen.getByLabelText('Dose Quantity'), '0.5');
+  await fireEvent.changeText(screen.getByLabelText('Dose Unit'), 'tablet');
   await fireEvent.press(
     screen.getByRole('button', { name: 'Create schedule' }),
   );
@@ -80,6 +79,7 @@ test('edit mode uses existing values and an explicit update action', async () =>
       medicationId="medicine-id"
       initial={saved}
       timezone="Asia/Kolkata"
+      inventoryUnit="tablet"
       submit={submit}
     />,
   );
@@ -93,12 +93,14 @@ test('does not submit an invalid date range or duplicate times', async () => {
     <ScheduleForm
       medicationId="medicine-id"
       timezone="Asia/Kolkata"
+      inventoryUnit="tablet"
       submit={submit}
     />,
   );
-  await fireEvent.changeText(screen.getByLabelText('Start date'), '2026-09-15');
+  await fireEvent.changeText(screen.getByLabelText('Dose Quantity'), '1');
+  await fireEvent.changeText(screen.getByLabelText('Start Date'), '2026-09-15');
   await fireEvent.changeText(
-    screen.getByLabelText('End date (optional)'),
+    screen.getByLabelText('End Date (optional — until stopped)'),
     '2026-09-14',
   );
   await fireEvent.changeText(
@@ -110,4 +112,25 @@ test('does not submit an invalid date range or duplicate times', async () => {
   );
   expect(submit).not.toHaveBeenCalled();
   expect(screen.getByText(/End date cannot be before start date/)).toBeTruthy();
+});
+
+test('blocks a dose unit that does not match known inventory units', async () => {
+  const submit = jest.fn().mockResolvedValue(saved);
+  const screen = await render(
+    <ScheduleForm
+      medicationId="medicine-id"
+      timezone="Asia/Kolkata"
+      inventoryUnit="tablet"
+      submit={submit}
+    />,
+  );
+  await fireEvent.changeText(screen.getByLabelText('Dose Quantity'), '1');
+  await fireEvent.changeText(screen.getByLabelText('Dose Unit'), 'ml');
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Create schedule' }),
+  );
+  expect(submit).not.toHaveBeenCalled();
+  expect(
+    screen.getByText(/must match the inventory unit: tablet/),
+  ).toBeTruthy();
 });

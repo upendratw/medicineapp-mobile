@@ -27,6 +27,7 @@ export * from './SymptomAssessment';
 export * from './EmergencyHelp';
 export * from './VoiceControls';
 export * from './ScheduleForm';
+export * from './ScheduleFields';
 export * from './AccessibilitySettings';
 export * from './LanguageSettings';
 export * from './PushRegistrationSettings';

@@ -28,6 +28,20 @@ const saved = {
     revision: 1,
   },
 };
+const savedSchedule = {
+  id: 'schedule-1',
+  medicationId: saved.id,
+  patientMedicationId: saved.id,
+  status: 'active' as const,
+  timezone: 'Asia/Kolkata',
+  startDate: '2026-09-24',
+  endDate: null,
+  times: ['08:00'],
+  doseQuantity: '1',
+  doseUnit: 'tablet',
+  instructions: null,
+  revision: 1,
+};
 
 const setup = (
   overrides: Partial<React.ComponentProps<typeof OcrConfirmationForm>> = {},
@@ -125,4 +139,55 @@ test('creation failure preserves state and retry skips reconfirm with same key',
   expect(
     (props.createMedication as jest.Mock).mock.calls[0][0].idempotencyKey,
   ).toBe((props.createMedication as jest.Mock).mock.calls[1][0].idempotencyKey);
+});
+
+test('OCR review creates a linked schedule only after confirmation and medicine creation', async () => {
+  const createSchedule = jest.fn().mockResolvedValue(savedSchedule);
+  const { props, screen: pending } = setup({ createSchedule });
+  const screen = await pending;
+  await fireEvent.changeText(screen.getByLabelText('Current Quantity'), '7');
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Set medicine schedule' }),
+  );
+  await fireEvent.changeText(screen.getByLabelText('Dose Quantity'), '1');
+  await fireEvent.press(screen.getByRole('button', { name: 'Add Medicine' }));
+  await waitFor(() => expect(props.onSaved).toHaveBeenCalledTimes(1));
+  expect(createSchedule).toHaveBeenCalledWith(
+    expect.objectContaining({
+      patient_medication_id: saved.id,
+      dose_quantity: '1',
+      dose_unit: 'tablet',
+    }),
+  );
+  expect(
+    (props.confirmCapture as jest.Mock).mock.invocationCallOrder[0],
+  ).toBeLessThan(
+    (props.createMedication as jest.Mock).mock.invocationCallOrder[0],
+  );
+  expect(
+    (props.createMedication as jest.Mock).mock.invocationCallOrder[0],
+  ).toBeLessThan(createSchedule.mock.invocationCallOrder[0]);
+});
+
+test('OCR schedule retry does not reconfirm capture or recreate medicine', async () => {
+  const createSchedule = jest
+    .fn()
+    .mockRejectedValueOnce(new Error('private'))
+    .mockResolvedValueOnce(savedSchedule);
+  const { props, screen: pending } = setup({ createSchedule });
+  const screen = await pending;
+  await fireEvent.changeText(screen.getByLabelText('Current Quantity'), '7');
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Set medicine schedule' }),
+  );
+  await fireEvent.changeText(screen.getByLabelText('Dose Quantity'), '1');
+  await fireEvent.press(screen.getByRole('button', { name: 'Add Medicine' }));
+  await waitFor(() =>
+    expect(screen.getByText(/Medicine added, but the schedule/)).toBeTruthy(),
+  );
+  await fireEvent.press(screen.getByRole('button', { name: 'Retry Schedule' }));
+  await waitFor(() => expect(props.onSaved).toHaveBeenCalledTimes(1));
+  expect(props.confirmCapture).toHaveBeenCalledTimes(1);
+  expect(props.createMedication).toHaveBeenCalledTimes(1);
+  expect(createSchedule).toHaveBeenCalledTimes(2);
 });

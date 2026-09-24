@@ -194,6 +194,72 @@ test('schedule DTO targets the real authenticated schedule endpoint', async () =
   );
 });
 
+test('schedule list filters by patient medication in one request', async () => {
+  const api = client();
+  jest.mocked(api.request).mockResolvedValue([]);
+  await new ScheduleService(api).list(undefined, 'patient-medication-id');
+  expect(api.request).toHaveBeenCalledWith(
+    '/api/v1/medication-schedules?patient_medication_id=patient-medication-id',
+    {},
+    true,
+  );
+  expect(api.request).toHaveBeenCalledTimes(1);
+});
+
+test('schedule edit patches the existing schedule with update fields only', async () => {
+  const api = client();
+  jest.mocked(api.request).mockResolvedValue({
+    id: 'schedule-id',
+    medication_id: null,
+    patient_medication_id: 'patient-medication-id',
+    status: 'active',
+    timezone: 'Asia/Kolkata',
+    start_date: '2026-09-24',
+    end_date: null,
+    dose_quantity: '0.5',
+    dose_unit: 'tablet',
+    instructions_text: null,
+    revision: 2,
+    rules: [],
+  });
+  const input = {
+    patient_medication_id: 'patient-medication-id',
+    timezone: 'Asia/Kolkata',
+    start_date: '2026-09-24',
+    food_instruction: 'none' as const,
+    dose_quantity: '0.5',
+    dose_unit: 'tablet',
+    medication_choice_confirmed: true,
+    activate: true,
+    rules: [
+      {
+        rule_type: 'daily' as const,
+        times_of_day: ['09:00'],
+        days_of_week: [],
+        interval_hours: null,
+        interval_anchor: null,
+        once_at: null,
+      },
+    ],
+  };
+  await new ScheduleService(api).update('schedule-id', input);
+  expect(api.request).toHaveBeenCalledWith(
+    '/api/v1/medication-schedules/schedule-id',
+    expect.objectContaining({ method: 'PATCH' }),
+    true,
+  );
+  const body = JSON.parse(
+    jest.mocked(api.request).mock.calls[0][1]!.body as string,
+  );
+  expect(body).toMatchObject({
+    dose_quantity: '0.5',
+    dose_unit: 'tablet',
+    rules: [expect.objectContaining({ times_of_day: ['09:00'] })],
+  });
+  expect(body).not.toHaveProperty('patient_medication_id');
+  expect(body).not.toHaveProperty('activate');
+});
+
 test('caregiver service uses relationship-authorized E21 routes', async () => {
   const api = client();
   jest.mocked(api.request).mockResolvedValue({ items: [] });

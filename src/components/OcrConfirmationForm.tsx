@@ -8,6 +8,12 @@ import {
   AppText,
   AppTextInput,
 } from '@/components/primitives';
+import {
+  buildLinkedScheduleInput,
+  initialScheduleDraft,
+  ScheduleFields,
+  type ScheduleDraft,
+} from '@/components/ScheduleFields';
 import { useTranslation } from '@/localization';
 import type {
   InventoryQuantityUnit,
@@ -15,6 +21,7 @@ import type {
   PatientMedication,
   ReviewedMedicine,
 } from '@/types/medication';
+import type { MedicationSchedule, ScheduleInput } from '@/types/schedule';
 import {
   defaultQuantityUnit,
   inventoryQuantityUnits,
@@ -26,6 +33,7 @@ type Props = {
   captureId: string;
   confirmCapture(medicine: ReviewedMedicine): Promise<void>;
   createMedication(input: ManualMedicationInput): Promise<PatientMedication>;
+  createSchedule?(input: ScheduleInput): Promise<MedicationSchedule>;
   onSaved(): void;
   onRetake(): Promise<void> | void;
 };
@@ -35,6 +43,7 @@ export function OcrConfirmationForm({
   captureId,
   confirmCapture,
   createMedication,
+  createSchedule,
   onSaved,
   onRetake,
 }: Props) {
@@ -46,6 +55,13 @@ export function OcrConfirmationForm({
   );
   const [unitChosen, setUnitChosen] = useState(false);
   const [unitOpen, setUnitOpen] = useState(false);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft>(() =>
+    initialScheduleDraft(),
+  );
+  const [scheduleErrors, setScheduleErrors] = useState<Record<string, string>>(
+    {},
+  );
   const [captureConfirmed, setCaptureConfirmed] = useState(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
@@ -53,6 +69,8 @@ export function OcrConfirmationForm({
   const key = useRef(Crypto.randomUUID());
   const lastAttempt = useRef('');
   const submitting = useRef(false);
+  const [createdMedication, setCreatedMedication] =
+    useState<PatientMedication | null>(null);
 
   const update = (values: Partial<ReviewedMedicine>) =>
     setMedicine((current) => ({ ...current, ...values }));
@@ -88,7 +106,17 @@ export function OcrConfirmationForm({
     const validation = validateManualMedication(payload);
     setErrors(validation.errors);
     setError('');
-    if (!validation.value) {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const scheduleResult = scheduleEnabled
+      ? buildLinkedScheduleInput(
+          'pending-patient-medication',
+          timezone,
+          scheduleDraft,
+          quantityUnit,
+        )
+      : { errors: {}, input: undefined };
+    setScheduleErrors(scheduleResult.errors);
+    if (!validation.value || (scheduleEnabled && !scheduleResult.input)) {
       submitting.current = false;
       return;
     }
@@ -98,7 +126,22 @@ export function OcrConfirmationForm({
         await confirmCapture(reviewed);
         setCaptureConfirmed(true);
       }
-      await createMedication(validation.value);
+      const savedMedication =
+        createdMedication ?? (await createMedication(validation.value));
+      setCreatedMedication(savedMedication);
+      if (scheduleEnabled && createSchedule && scheduleResult.input) {
+        try {
+          await createSchedule({
+            ...scheduleResult.input,
+            patient_medication_id: savedMedication.id,
+          });
+        } catch {
+          setError(
+            'Medicine added, but the schedule could not be saved. Retry Schedule will only retry the schedule.',
+          );
+          return;
+        }
+      }
       onSaved();
     } catch {
       setError(
@@ -189,14 +232,48 @@ export function OcrConfirmationForm({
               label={t(`quantityUnit_${unit}`)}
               onPress={() => {
                 setQuantityUnit(unit);
+                setScheduleDraft((current) => ({
+                  ...current,
+                  doseUnit: current.doseUnit || unit,
+                }));
                 setUnitChosen(true);
                 setUnitOpen(false);
               }}
             />
           ))
         : null}
+      <AppText variant="heading">Schedule</AppText>
       <AppButton
-        label={t('addMedicine')}
+        variant={scheduleEnabled ? 'primary' : 'secondary'}
+        label={
+          scheduleEnabled
+            ? 'Set medicine schedule: On'
+            : 'Set medicine schedule'
+        }
+        accessibilityHint="Optional. Shows fields for medicine reminders and inventory-linked doses."
+        disabled={Boolean(createdMedication)}
+        onPress={() => {
+          setScheduleEnabled((value) => !value);
+          setScheduleDraft((current) => ({
+            ...current,
+            doseUnit: current.doseUnit || quantityUnit,
+          }));
+        }}
+      />
+      {scheduleEnabled ? (
+        <ScheduleFields
+          value={scheduleDraft}
+          onChange={setScheduleDraft}
+          inventoryUnit={quantityUnit}
+          errors={scheduleErrors}
+        />
+      ) : (
+        <AppText variant="caption">
+          You can add a schedule later from View Medicines.
+        </AppText>
+      )}
+      <AppButton
+        label={createdMedication ? 'Retry Schedule' : t('addMedicine')}
         disabled={reviewed.medicineName.length < 2}
         loading={working}
         onPress={addMedicine}

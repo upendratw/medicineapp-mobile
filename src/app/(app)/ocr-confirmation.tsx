@@ -7,7 +7,11 @@ import {
   OcrConfirmationForm,
   OcrOutcomePanel,
 } from '@/components';
-import { ocrService, patientMedicationService } from '@/services/registry';
+import {
+  ocrService,
+  patientMedicationService,
+  scheduleService,
+} from '@/services/registry';
 import { useCapture } from '@/state/CaptureContext';
 
 export default function OcrConfirmationScreen() {
@@ -29,6 +33,7 @@ export default function OcrConfirmationScreen() {
             ocrService.confirmReview!(recognitionResult.captureId, medicine)
           }
           createMedication={(input) => patientMedicationService.create(input)}
+          createSchedule={(input) => scheduleService.create(input)}
           onSaved={() => {
             clear();
             router.replace('/medicines');

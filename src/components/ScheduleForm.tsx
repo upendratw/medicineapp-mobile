@@ -1,81 +1,64 @@
 import { useState } from 'react';
+import { AppAlert, AppButton, AppText } from '@/components/primitives';
 import {
-  AppAlert,
-  AppButton,
-  AppText,
-  AppTextInput,
-} from '@/components/primitives';
+  buildLinkedScheduleInput,
+  initialScheduleDraft,
+  ScheduleFields,
+  type ScheduleDraft,
+} from '@/components/ScheduleFields';
+import type { InventoryQuantityUnit } from '@/types/medication';
 import type { MedicationSchedule, ScheduleInput } from '@/types/schedule';
-import {
-  normalizeScheduleTimes,
-  validateScheduleDates,
-} from '@/utils/medicationValidation';
 
 type Props = {
   medicationId: string;
   initial?: MedicationSchedule;
   timezone: string;
+  inventoryUnit?: InventoryQuantityUnit;
   submit(input: ScheduleInput): Promise<MedicationSchedule>;
+  onSaved?(schedule: MedicationSchedule): void;
 };
 export function ScheduleForm({
   medicationId,
   initial,
   timezone,
+  inventoryUnit,
   submit,
+  onSaved,
 }: Props) {
-  const [startDate, setStartDate] = useState(
-    initial?.startDate ?? new Date().toISOString().slice(0, 10),
-  );
-  const [endDate, setEndDate] = useState(initial?.endDate ?? '');
-  const [times, setTimes] = useState(initial?.times.join(', ') ?? '08:00');
-  const [instructions, setInstructions] = useState('');
-  const [doseQuantity, setDoseQuantity] = useState('');
-  const [doseUnit, setDoseUnit] = useState('');
-  const [active, setActive] = useState(initial?.status === 'active');
+  const [draft, setDraft] = useState<ScheduleDraft>(() => ({
+    ...initialScheduleDraft(inventoryUnit),
+    ...(initial
+      ? {
+          startDate: initial.startDate,
+          endDate: initial.endDate ?? '',
+          times: initial.times.join(', '),
+          doseQuantity: initial.doseQuantity ?? '',
+          doseUnit: initial.doseUnit ?? inventoryUnit ?? '',
+          instructions: initial.instructions ?? '',
+          active: initial.status === 'active',
+        }
+      : {}),
+  }));
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const save = async () => {
-    const dateError = validateScheduleDates(startDate, endDate);
-    const timeResult = normalizeScheduleTimes(times.split(','));
-    const validationError = dateError ?? timeResult.errors.times;
-    const doseError =
-      Boolean(doseQuantity) !== Boolean(doseUnit)
-        ? 'Dose quantity and unit must be entered together.'
-        : doseQuantity && !/^(?:0\.)?\d{1,8}(?:\.\d{1,4})?$/.test(doseQuantity)
-          ? 'Enter a positive dose quantity with up to 4 decimal places.'
-          : null;
-    if (validationError || doseError) {
-      setError(validationError ?? doseError!);
-      return;
-    }
+    const result = buildLinkedScheduleInput(
+      medicationId,
+      timezone,
+      draft,
+      inventoryUnit,
+    );
+    setErrors(result.errors);
+    if (!result.input) return;
     setError('');
     setSaved(false);
     setLoading(true);
     try {
-      await submit({
-        patient_medication_id: medicationId,
-        timezone,
-        start_date: startDate,
-        end_date: endDate || undefined,
-        food_instruction: 'none',
-        dose_quantity: doseQuantity || undefined,
-        dose_unit: doseUnit || undefined,
-        instructions_text: instructions.trim() || undefined,
-        medication_choice_confirmed: true,
-        rules: [
-          {
-            rule_type: 'daily',
-            times_of_day: timeResult.value!,
-            days_of_week: [],
-            interval_hours: null,
-            interval_anchor: null,
-            once_at: null,
-          },
-        ],
-        activate: active,
-      });
+      const savedSchedule = await submit(result.input);
       setSaved(true);
+      onSaved?.(savedSchedule);
     } catch {
       setError('The schedule could not be saved. Please try again.');
     } finally {
@@ -87,56 +70,14 @@ export function ScheduleForm({
       <AppAlert message="Enter the schedule you intend to follow. MedicineApp does not recommend medication timing or dosage." />
       {error ? <AppAlert tone="error" message={error} /> : null}
       {saved ? <AppAlert tone="success" message="Schedule saved." /> : null}
-      <AppTextInput
-        label="Start date"
-        accessibilityHint="Use YYYY-MM-DD"
-        value={startDate}
-        onChangeText={setStartDate}
-        maxLength={10}
-      />
-      <AppTextInput
-        label="End date (optional)"
-        accessibilityHint="Use YYYY-MM-DD"
-        value={endDate}
-        onChangeText={setEndDate}
-        maxLength={10}
-      />
-      <AppTextInput
-        label="Daily times"
-        accessibilityHint="Use 24-hour times separated by commas"
-        value={times}
-        onChangeText={setTimes}
-        maxLength={71}
-        placeholder="08:00, 20:00"
+      <ScheduleFields
+        value={draft}
+        onChange={setDraft}
+        inventoryUnit={inventoryUnit}
+        errors={errors}
+        showActivation={!initial}
       />
       <AppText>Timezone: {timezone}</AppText>
-      <AppTextInput
-        label="Dose quantity (optional)"
-        accessibilityHint="Used for exact inventory consumption when a dose is marked taken"
-        value={doseQuantity}
-        onChangeText={setDoseQuantity}
-        keyboardType="decimal-pad"
-        maxLength={13}
-      />
-      <AppTextInput
-        label="Dose unit (optional)"
-        accessibilityHint="Must match the inventory unit, such as tablet or ml"
-        value={doseUnit}
-        onChangeText={setDoseUnit}
-        maxLength={32}
-      />
-      <AppTextInput
-        label="User instructions (optional)"
-        value={instructions}
-        onChangeText={setInstructions}
-        maxLength={500}
-        multiline
-      />
-      <AppButton
-        variant={active ? 'primary' : 'secondary'}
-        label={active ? 'Schedule active' : 'Save as draft'}
-        onPress={() => setActive((value) => !value)}
-      />
       <AppButton
         label={initial ? 'Update schedule' : 'Create schedule'}
         loading={loading}

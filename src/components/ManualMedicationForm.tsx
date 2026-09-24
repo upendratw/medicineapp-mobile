@@ -6,11 +6,18 @@ import {
   AppText,
   AppTextInput,
 } from '@/components/primitives';
+import {
+  buildLinkedScheduleInput,
+  initialScheduleDraft,
+  ScheduleFields,
+  type ScheduleDraft,
+} from '@/components/ScheduleFields';
 import type {
   ManualMedicationInput,
   PatientMedication,
   InventoryQuantityUnit,
 } from '@/types/medication';
+import type { MedicationSchedule, ScheduleInput } from '@/types/schedule';
 import { useTranslation } from '@/localization';
 import {
   defaultQuantityUnit,
@@ -23,12 +30,14 @@ type Props = {
   source?: 'manual' | 'ocr_assisted';
   medicineCaptureId?: string;
   submit(input: ManualMedicationInput): Promise<PatientMedication>;
+  createSchedule?(input: ScheduleInput): Promise<MedicationSchedule>;
   onCamera(): void;
   onSaved?(): void;
 };
 export function ManualMedicationForm({
   initial,
   submit,
+  createSchedule,
   onCamera,
   onSaved,
   source = 'manual',
@@ -49,12 +58,23 @@ export function ManualMedicationForm({
   );
   const [unitChosen, setUnitChosen] = useState(false);
   const [unitOpen, setUnitOpen] = useState(false);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft>(() =>
+    initialScheduleDraft(),
+  );
+  const [scheduleErrors, setScheduleErrors] = useState<Record<string, string>>(
+    {},
+  );
+  const [createdMedication, setCreatedMedication] =
+    useState<PatientMedication | null>(null);
   const key = useRef(Crypto.randomUUID());
   const lastAttempt = useRef('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const submitting = useRef(false);
-  const [outcome, setOutcome] = useState<'success' | 'failure' | null>(null);
+  const [outcome, setOutcome] = useState<
+    'success' | 'failure' | 'partial' | null
+  >(null);
   const save = async () => {
     const payload = {
       name,
@@ -77,11 +97,38 @@ export function ManualMedicationForm({
     const result = validateManualMedication(payload);
     setErrors(result.errors);
     setOutcome(null);
-    if (!result.value || submitting.current) return;
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const scheduleResult = scheduleEnabled
+      ? buildLinkedScheduleInput(
+          'pending-patient-medication',
+          timezone,
+          scheduleDraft,
+          quantityUnit,
+        )
+      : { errors: {}, input: undefined };
+    setScheduleErrors(scheduleResult.errors);
+    if (
+      !result.value ||
+      (scheduleEnabled && !scheduleResult.input) ||
+      submitting.current
+    )
+      return;
     submitting.current = true;
     setLoading(true);
     try {
-      await submit(result.value);
+      const savedMedication = createdMedication ?? (await submit(result.value));
+      setCreatedMedication(savedMedication);
+      if (scheduleEnabled && createSchedule && scheduleResult.input) {
+        try {
+          await createSchedule({
+            ...scheduleResult.input,
+            patient_medication_id: savedMedication.id,
+          });
+        } catch {
+          setOutcome('partial');
+          return;
+        }
+      }
       setName('');
       setStrength('');
       setDosageForm('');
@@ -91,6 +138,10 @@ export function ManualMedicationForm({
       setInitialQuantity('');
       setQuantityUnit('');
       setUnitChosen(false);
+      setScheduleEnabled(false);
+      setScheduleDraft(initialScheduleDraft());
+      setScheduleErrors({});
+      setCreatedMedication(null);
       key.current = Crypto.randomUUID();
       lastAttempt.current = '';
       setErrors({});
@@ -115,9 +166,17 @@ export function ManualMedicationForm({
           message="The medicine could not be recorded. Please try again."
         />
       ) : null}
+      {outcome === 'partial' ? (
+        <AppAlert
+          tone="error"
+          announce
+          message="Medicine added, but the schedule could not be saved. Retry Schedule will only retry the schedule."
+        />
+      ) : null}
       <AppTextInput
         label="Medication name"
         value={name}
+        editable={!createdMedication}
         onChangeText={setName}
         error={errors.name}
         maxLength={120}
@@ -126,6 +185,7 @@ export function ManualMedicationForm({
       <AppTextInput
         label="Strength (optional)"
         value={strength}
+        editable={!createdMedication}
         onChangeText={setStrength}
         maxLength={40}
         placeholder="As written on the package"
@@ -133,6 +193,7 @@ export function ManualMedicationForm({
       <AppTextInput
         label="Dosage form (optional)"
         value={dosageForm}
+        editable={!createdMedication}
         onChangeText={(value) => {
           setDosageForm(value);
           if (!unitChosen) setQuantityUnit(defaultQuantityUnit(value) ?? '');
@@ -143,18 +204,21 @@ export function ManualMedicationForm({
       <AppTextInput
         label="Active ingredient (optional)"
         value={activeIngredient}
+        editable={!createdMedication}
         onChangeText={setActiveIngredient}
         maxLength={160}
       />
       <AppTextInput
         label="Manufacturer (optional)"
         value={manufacturer}
+        editable={!createdMedication}
         onChangeText={setManufacturer}
         maxLength={160}
       />
       <AppTextInput
         label="Notes (optional)"
         value={notes}
+        editable={!createdMedication}
         onChangeText={setNotes}
         maxLength={500}
         multiline
@@ -163,6 +227,7 @@ export function ManualMedicationForm({
       <AppTextInput
         label={t('currentQuantity')}
         value={initialQuantity}
+        editable={!createdMedication}
         onChangeText={setInitialQuantity}
         error={errors.initialQuantity}
         keyboardType="decimal-pad"
@@ -185,14 +250,52 @@ export function ManualMedicationForm({
               label={t(`quantityUnit_${unit}`)}
               onPress={() => {
                 setQuantityUnit(unit);
+                setScheduleDraft((current) => ({
+                  ...current,
+                  doseUnit: current.doseUnit || unit,
+                }));
                 setUnitChosen(true);
                 setUnitOpen(false);
               }}
             />
           ))
         : null}
+      <AppText variant="heading">Schedule</AppText>
       <AppButton
-        label="Save user-entered medicine"
+        variant={scheduleEnabled ? 'primary' : 'secondary'}
+        label={
+          scheduleEnabled
+            ? 'Set medicine schedule: On'
+            : 'Set medicine schedule'
+        }
+        accessibilityHint="Optional. Shows fields for medicine reminders and inventory-linked doses."
+        disabled={Boolean(createdMedication)}
+        onPress={() => {
+          setScheduleEnabled((value) => !value);
+          setScheduleDraft((current) => ({
+            ...current,
+            doseUnit: current.doseUnit || quantityUnit,
+          }));
+        }}
+      />
+      {scheduleEnabled ? (
+        <ScheduleFields
+          value={scheduleDraft}
+          onChange={setScheduleDraft}
+          inventoryUnit={quantityUnit}
+          errors={scheduleErrors}
+        />
+      ) : (
+        <AppText variant="caption">
+          You can add a schedule later from View Medicines.
+        </AppText>
+      )}
+      <AppButton
+        label={
+          outcome === 'partial'
+            ? 'Retry Schedule'
+            : 'Save user-entered medicine'
+        }
         loading={loading}
         onPress={save}
       />

@@ -24,6 +24,20 @@ const saved: PatientMedication = {
     revision: 1,
   },
 };
+const savedSchedule = {
+  id: 'schedule-1',
+  medicationId: saved.id,
+  patientMedicationId: saved.id,
+  status: 'active' as const,
+  timezone: 'Asia/Kolkata',
+  startDate: '2026-09-24',
+  endDate: null,
+  times: ['08:00'],
+  doseQuantity: '1',
+  doseUnit: 'tablet',
+  instructions: null,
+  revision: 1,
+};
 
 const enterInventory = async (screen: Awaited<ReturnType<typeof render>>) => {
   await fireEvent.changeText(screen.getByLabelText('Current Quantity'), '20');
@@ -239,4 +253,109 @@ test('failed OCR-assisted persistence retains fields, quantity, and context', as
   expect(cleared).not.toHaveBeenCalled();
   expect(screen.getByDisplayValue('Reviewed Medicine')).toBeTruthy();
   expect(screen.getByLabelText('Current Quantity').props.value).toBe('12.5');
+});
+
+test('optional scheduling stays off and does not call schedule creation', async () => {
+  const submit = jest.fn().mockResolvedValue(saved);
+  const createSchedule = jest.fn().mockResolvedValue(savedSchedule);
+  const screen = await render(
+    form({
+      initial: { name: 'Synthetic Medicine', dosageForm: 'Tablet' },
+      submit,
+      createSchedule,
+      onCamera: jest.fn(),
+    }),
+  );
+  await enterInventory(screen);
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Save user-entered medicine' }),
+  );
+  await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
+  expect(createSchedule).not.toHaveBeenCalled();
+});
+
+test('creates medicine first then a linked active schedule with explicit dose evidence', async () => {
+  const submit = jest.fn().mockResolvedValue(saved);
+  const createSchedule = jest.fn().mockResolvedValue(savedSchedule);
+  const screen = await render(
+    form({
+      initial: { name: 'Synthetic Medicine', dosageForm: 'Tablet' },
+      submit,
+      createSchedule,
+      onCamera: jest.fn(),
+    }),
+  );
+  await enterInventory(screen);
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Set medicine schedule' }),
+  );
+  await fireEvent.changeText(screen.getByLabelText('Dose Quantity'), '1');
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Save user-entered medicine' }),
+  );
+  await waitFor(() => expect(createSchedule).toHaveBeenCalledTimes(1));
+  expect(submit.mock.invocationCallOrder[0]).toBeLessThan(
+    createSchedule.mock.invocationCallOrder[0],
+  );
+  expect(createSchedule).toHaveBeenCalledWith(
+    expect.objectContaining({
+      patient_medication_id: saved.id,
+      dose_quantity: '1',
+      dose_unit: 'tablet',
+      activate: true,
+    }),
+  );
+});
+
+test('does not create a schedule when medicine creation fails', async () => {
+  const submit = jest.fn().mockRejectedValue(new Error('private'));
+  const createSchedule = jest.fn().mockResolvedValue(savedSchedule);
+  const screen = await render(
+    form({
+      initial: { name: 'Synthetic Medicine', dosageForm: 'Tablet' },
+      submit,
+      createSchedule,
+      onCamera: jest.fn(),
+    }),
+  );
+  await enterInventory(screen);
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Set medicine schedule' }),
+  );
+  await fireEvent.changeText(screen.getByLabelText('Dose Quantity'), '1');
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Save user-entered medicine' }),
+  );
+  await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
+  expect(createSchedule).not.toHaveBeenCalled();
+});
+
+test('schedule failure retries only the schedule without duplicating medicine', async () => {
+  const submit = jest.fn().mockResolvedValue(saved);
+  const createSchedule = jest
+    .fn()
+    .mockRejectedValueOnce(new Error('private'))
+    .mockResolvedValueOnce(savedSchedule);
+  const screen = await render(
+    form({
+      initial: { name: 'Synthetic Medicine', dosageForm: 'Tablet' },
+      submit,
+      createSchedule,
+      onCamera: jest.fn(),
+    }),
+  );
+  await enterInventory(screen);
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Set medicine schedule' }),
+  );
+  await fireEvent.changeText(screen.getByLabelText('Dose Quantity'), '1');
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Save user-entered medicine' }),
+  );
+  await waitFor(() =>
+    expect(screen.getByText(/Medicine added, but the schedule/)).toBeTruthy(),
+  );
+  await fireEvent.press(screen.getByRole('button', { name: 'Retry Schedule' }));
+  await waitFor(() => expect(createSchedule).toHaveBeenCalledTimes(2));
+  expect(submit).toHaveBeenCalledTimes(1);
 });

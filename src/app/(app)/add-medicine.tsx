@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { AppHeader, AppScreen, ManualMedicationForm } from '@/components';
-import { patientMedicationService } from '@/services/registry';
+import { patientMedicationService, scheduleService } from '@/services/registry';
 import { useCapture } from '@/state/CaptureContext';
 export default function AddMedicineScreen() {
   const router = useRouter();
@@ -31,13 +31,17 @@ export default function AddMedicineScreen() {
               : undefined
         }
         submit={(input) => patientMedicationService.create(input)}
+        createSchedule={(input) => scheduleService.create(input)}
         source={reviewedMedicine ? 'ocr_assisted' : 'manual'}
         medicineCaptureId={
           reviewedMedicine && recognitionResult?.kind === 'review_ready'
             ? recognitionResult.captureId
             : undefined
         }
-        onSaved={clear}
+        onSaved={() => {
+          clear();
+          router.replace('/medicines');
+        }}
         onCamera={() => router.push('/medicine-camera')}
       />
     </AppScreen>

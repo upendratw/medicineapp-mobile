@@ -4,12 +4,23 @@ import { Alert, RefreshControl } from 'react-native';
 import { useTranslation } from '@/localization';
 import { AppHeader, AppScreen, MedicineList } from '@/components';
 import { useAsyncResource } from '@/hooks/useAsyncResource';
-import { patientMedicationService } from '@/services/registry';
+import { patientMedicationService, scheduleService } from '@/services/registry';
 
 export default function MedicinesScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const load = useCallback(() => patientMedicationService.list(), []);
+  const load = useCallback(async () => {
+    const medicines = await patientMedicationService.list();
+    try {
+      return {
+        medicines,
+        schedules: await scheduleService.list(),
+        scheduleError: false,
+      };
+    } catch {
+      return { medicines, schedules: [], scheduleError: true };
+    }
+  }, []);
   const state = useAsyncResource(load);
   const refresh = state.refresh;
   useFocusEffect(
@@ -45,11 +56,34 @@ export default function MedicinesScreen() {
         subtitle="User-entered records remain distinct from clinically reviewed catalog information."
       />
       <MedicineList
-        medicines={state.data ?? []}
+        medicines={state.data?.medicines ?? []}
+        schedules={state.data?.schedules ?? []}
+        scheduleError={state.data?.scheduleError}
         loading={state.loading && state.data == null}
         error={state.error}
         onRefresh={state.refresh}
         onAdd={() => router.push('/add-medicine')}
+        onAddSchedule={(medication) =>
+          router.push({
+            pathname: '/schedule',
+            params: {
+              patientMedicationId: medication.id,
+              medicineName: medication.canonicalName,
+              inventoryUnit: medication.quantityUnit ?? undefined,
+            },
+          })
+        }
+        onEditSchedule={(medication, scheduleId) =>
+          router.push({
+            pathname: '/schedule',
+            params: {
+              patientMedicationId: medication.id,
+              medicineName: medication.canonicalName,
+              inventoryUnit: medication.quantityUnit ?? undefined,
+              scheduleId,
+            },
+          })
+        }
         onEdit={(id) =>
           router.push({
             pathname: '/edit-medicine',

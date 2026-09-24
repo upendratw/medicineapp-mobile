@@ -32,5 +32,8 @@ export type MedicationSchedule = Readonly<{
   startDate: string;
   endDate: string | null;
   times: readonly string[];
+  doseQuantity: string | null;
+  doseUnit: string | null;
+  instructions: string | null;
   revision: number;
 }>;

@@ -7,24 +7,31 @@ import {
 } from '@/components/primitives';
 import { MedicationCard } from '@/components/MedicationCard';
 import type { MedicationSummary } from '@/types/medication';
+import type { MedicationSchedule } from '@/types/schedule';
 
 type Props = {
   medicines: readonly MedicationSummary[];
+  schedules?: readonly MedicationSchedule[];
+  scheduleError?: boolean;
   loading: boolean;
   error: boolean;
   onRefresh(): void;
   onAdd(): void;
-  onSchedule?(id: string): void;
+  onAddSchedule?(medication: MedicationSummary): void;
+  onEditSchedule?(medication: MedicationSummary, scheduleId: string): void;
   onEdit?(id: string): void;
   onDelete?(id: string): void;
 };
 export function MedicineList({
   medicines,
+  schedules = [],
+  scheduleError = false,
   loading,
   error,
   onRefresh,
   onAdd,
-  onSchedule,
+  onAddSchedule,
+  onEditSchedule,
   onEdit,
   onDelete,
 }: Props) {
@@ -41,6 +48,9 @@ export function MedicineList({
     );
   return (
     <View>
+      {scheduleError ? (
+        <AppAlert message="Schedule information is temporarily unavailable. Your medicines are still shown." />
+      ) : null}
       {!medicines.length ? (
         <EmptyState
           title="No medicines recorded"
@@ -51,7 +61,13 @@ export function MedicineList({
           <MedicationCard
             key={item.id}
             medication={item}
-            onSchedule={onSchedule}
+            schedules={schedules.filter(
+              (schedule) =>
+                schedule.patientMedicationId === item.id &&
+                schedule.status !== 'cancelled',
+            )}
+            onAddSchedule={onAddSchedule}
+            onEditSchedule={onEditSchedule}
             onEdit={onEdit}
             onDelete={onDelete}
           />
