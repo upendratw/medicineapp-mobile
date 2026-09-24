@@ -157,6 +157,7 @@ test('OCR review creates a linked schedule only after confirmation and medicine 
       patient_medication_id: saved.id,
       dose_quantity: '1',
       dose_unit: 'tablet',
+      activate: true,
     }),
   );
   expect(

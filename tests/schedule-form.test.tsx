@@ -26,6 +26,13 @@ test('creates a timezone-aware schedule with multiple daily times', async () => 
       submit={submit}
     />,
   );
+  const reminderSwitch = screen.getByRole('switch', {
+    name: 'Schedule reminders',
+  });
+  expect(reminderSwitch.props.accessibilityState).toMatchObject({
+    checked: true,
+    disabled: false,
+  });
   await fireEvent.changeText(screen.getByLabelText('Start Date'), '2026-09-14');
   await fireEvent.changeText(screen.getByLabelText('Dose Quantity'), '1');
   await fireEvent.changeText(
@@ -46,6 +53,31 @@ test('creates a timezone-aware schedule with multiple daily times', async () => 
   expect(
     screen.getByText(/does not recommend medication timing or dosage/),
   ).toBeTruthy();
+});
+
+test('explicitly switching reminders off creates a draft schedule payload', async () => {
+  const submit = jest.fn().mockResolvedValue({ ...saved, status: 'draft' });
+  const screen = await render(
+    <ScheduleForm
+      medicationId="medicine-id"
+      inventoryUnit="tablet"
+      timezone="Asia/Kolkata"
+      submit={submit}
+    />,
+  );
+  await fireEvent.changeText(screen.getByLabelText('Dose Quantity'), '1');
+  await fireEvent(
+    screen.getByRole('switch', { name: 'Schedule reminders' }),
+    'valueChange',
+    false,
+  );
+  expect(screen.getByText('Schedule reminders: Off')).toBeTruthy();
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Create schedule' }),
+  );
+  expect(submit).toHaveBeenCalledWith(
+    expect.objectContaining({ activate: false }),
+  );
 });
 
 test('submits explicit dose evidence for linked inventory consumption', async () => {
@@ -85,6 +117,34 @@ test('edit mode uses existing values and an explicit update action', async () =>
   );
   expect(screen.getByDisplayValue('08:00, 20:00')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Update schedule' })).toBeTruthy();
+  expect(
+    screen.getByRole('switch', { name: 'Schedule reminders' }).props
+      .accessibilityState,
+  ).toMatchObject({ checked: true, disabled: true });
+});
+
+test('editing a draft represents reminders as off without reactivating it', async () => {
+  const draftSchedule = { ...saved, status: 'draft' as const };
+  const submit = jest.fn().mockResolvedValue(draftSchedule);
+  const screen = await render(
+    <ScheduleForm
+      medicationId="medicine-id"
+      initial={draftSchedule}
+      timezone="Asia/Kolkata"
+      inventoryUnit="tablet"
+      submit={submit}
+    />,
+  );
+  expect(
+    screen.getByRole('switch', { name: 'Schedule reminders' }).props
+      .accessibilityState,
+  ).toMatchObject({ checked: false, disabled: true });
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Update schedule' }),
+  );
+  expect(submit).toHaveBeenCalledWith(
+    expect.objectContaining({ activate: false }),
+  );
 });
 
 test('does not submit an invalid date range or duplicate times', async () => {

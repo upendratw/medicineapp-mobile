@@ -98,6 +98,11 @@ const en = {
   saveChanges: 'Save Changes',
   staleMedication: 'This medicine changed elsewhere. Refresh and try again.',
   setMedicineSchedule: 'Set medicine schedule',
+  scheduleReminders: 'Schedule reminders',
+  scheduleRemindersHint:
+    'When on, this schedule becomes active and creates reminder occurrences.',
+  scheduleRemindersEditHint:
+    'Current reminder state. Use schedule lifecycle controls to pause, resume, or cancel.',
   noSchedule: 'No schedule',
   addSchedule: 'Add Schedule',
   editSchedule: 'Edit Schedule',
@@ -241,6 +246,11 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   saveChanges: 'बदलाव सहेजें',
   staleMedication: 'यह दवा कहीं और बदली गई है। रीफ़्रेश करके फिर प्रयास करें।',
   setMedicineSchedule: 'दवा की समय-सारणी बनाएँ',
+  scheduleReminders: 'दवा रिमाइंडर',
+  scheduleRemindersHint:
+    'चालू होने पर यह समय-सारणी सक्रिय होकर रिमाइंडर बनाती है।',
+  scheduleRemindersEditHint:
+    'वर्तमान रिमाइंडर स्थिति। रोकने, फिर शुरू करने या रद्द करने के लिए समय-सारणी नियंत्रण उपयोग करें।',
   noSchedule: 'कोई समय-सारणी नहीं',
   addSchedule: 'समय-सारणी जोड़ें',
   editSchedule: 'समय-सारणी संपादित करें',

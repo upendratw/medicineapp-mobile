@@ -1,4 +1,6 @@
-import { AppButton, AppText, AppTextInput } from '@/components/primitives';
+import { Switch, View } from 'react-native';
+import { AppText, AppTextInput } from '@/components/primitives';
+import { useTranslation } from '@/localization';
 import type { InventoryQuantityUnit } from '@/types/medication';
 import type { ScheduleInput } from '@/types/schedule';
 import {
@@ -88,6 +90,7 @@ type Props = {
   inventoryUnit?: InventoryQuantityUnit | '';
   errors?: Readonly<Record<string, string>>;
   showActivation?: boolean;
+  activationEditable?: boolean;
 };
 
 export function ScheduleFields({
@@ -96,7 +99,9 @@ export function ScheduleFields({
   inventoryUnit,
   errors,
   showActivation = true,
+  activationEditable = true,
 }: Props) {
+  const { t } = useTranslation();
   const set = (change: Partial<ScheduleDraft>) =>
     onChange({ ...value, ...change });
   return (
@@ -157,11 +162,25 @@ export function ScheduleFields({
         multiline
       />
       {showActivation ? (
-        <AppButton
-          variant={value.active ? 'primary' : 'secondary'}
-          label={value.active ? 'Schedule active' : 'Save as draft'}
-          onPress={() => set({ active: !value.active })}
-        />
+        <View style={{ minHeight: 56, justifyContent: 'center' }}>
+          <AppText>{`${t('scheduleReminders')}: ${value.active ? t('on') : t('off')}`}</AppText>
+          <Switch
+            accessibilityLabel={t('scheduleReminders')}
+            accessibilityHint={
+              activationEditable
+                ? t('scheduleRemindersHint')
+                : t('scheduleRemindersEditHint')
+            }
+            accessibilityRole="switch"
+            accessibilityState={{
+              checked: value.active,
+              disabled: !activationEditable,
+            }}
+            disabled={!activationEditable}
+            value={value.active}
+            onValueChange={(active) => set({ active })}
+          />
+        </View>
       ) : null}
     </>
   );

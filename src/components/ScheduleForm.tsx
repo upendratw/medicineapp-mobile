@@ -75,7 +75,7 @@ export function ScheduleForm({
         onChange={setDraft}
         inventoryUnit={inventoryUnit}
         errors={errors}
-        showActivation={!initial}
+        activationEditable={!initial}
       />
       <AppText>Timezone: {timezone}</AppText>
       <AppButton
