@@ -36,6 +36,9 @@ const config: ExpoConfig = {
     package: 'com.medicineapp.mobile',
     versionCode: 1,
 
+    // Firebase Android configuration used by EAS/native Android builds.
+    googleServicesFile: './google-services.json',
+
     adaptiveIcon: {
       backgroundColor: '#E8F3F1',
       foregroundImage: './assets/images/android-icon-foreground.png',

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "65900276818",
+    "project_id": "medicineapp-daf75",
+    "storage_bucket": "medicineapp-daf75.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:65900276818:android:37ff0feb476ae7a242438b",
+        "android_client_info": {
+          "package_name": "com.medicineapp.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJojmC9HpryVjhmgE4uCZmEwrN0o_JEpY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
