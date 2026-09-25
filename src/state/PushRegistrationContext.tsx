@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/state/AuthContext';
 import { useOnline } from '@/state/NetworkContext';
 import { useDeepLinkIntent } from '@/navigation/DeepLinkContext';
@@ -15,6 +16,8 @@ import {
   type PushRegistrationResult,
 } from '@/services/pushRegistration';
 import { notificationCapability } from '@/services/notificationCapability';
+import { resolveReminderNotificationAction } from '@/services/notificationActions';
+import { notificationActionCoordinator } from '@/services/registry';
 type Value = {
   result: PushRegistrationResult | null;
   loading: boolean;
@@ -27,10 +30,44 @@ const Context = createContext<Value>({
 });
 export function PushRegistrationProvider({ children }: PropsWithChildren) {
   const { status } = useAuth();
+  const router = useRouter();
   const online = useOnline();
   const { acceptNotification } = useDeepLinkIntent();
   const [result, setResult] = useState<PushRegistrationResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const handleNotificationResponse = useCallback(
+    async (
+      response: Parameters<typeof notificationActionCoordinator.capture>[0],
+    ) => {
+      const directAction = resolveReminderNotificationAction(
+        response.actionIdentifier,
+      );
+      if (!directAction) {
+        acceptNotification(response.data);
+        return;
+      }
+      let pending;
+      try {
+        pending = await notificationActionCoordinator.capture(response);
+      } catch {
+        acceptNotification(response.data);
+        return;
+      }
+      if (!pending) return;
+      if (status !== 'authenticated' || !online) {
+        if (status !== 'restoring') acceptNotification(response.data);
+        return;
+      }
+      try {
+        const outcome = await notificationActionCoordinator.process();
+        if (outcome.status === 'applied') router.replace('/home');
+        else acceptNotification(response.data);
+      } catch {
+        acceptNotification(response.data);
+      }
+    },
+    [acceptNotification, online, router, status],
+  );
   const run = useCallback(
     async (request: boolean) => {
       setLoading(true);
@@ -63,7 +100,9 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
     let active = true;
     let remove: (() => void) | undefined;
     void notificationCapability
-      .addResponseListener(acceptNotification)
+      .addResponseListener((response) => {
+        void handleNotificationResponse(response);
+      })
       .then((subscription) => {
         if (!active) subscription?.remove();
         else remove = () => subscription?.remove();
@@ -73,14 +112,40 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
       active = false;
       remove?.();
     };
-  }, [acceptNotification]);
+  }, [handleNotificationResponse]);
+  useEffect(() => {
+    let active = true;
+    void notificationCapability.lastResponse().then((response) => {
+      if (active && response) void handleNotificationResponse(response);
+    });
+    return () => {
+      active = false;
+    };
+  }, [handleNotificationResponse]);
+  useEffect(() => {
+    if (status !== 'authenticated' || !online) return;
+    let active = true;
+    void notificationActionCoordinator
+      .process()
+      .then((outcome) => {
+        if (!active || outcome.status === 'none') return;
+        if (outcome.status === 'applied') router.replace('/home');
+        else if (outcome.pending)
+          acceptNotification({
+            type: 'medicineapp.reminder.due',
+            schema_version: 1,
+            reminder_id: outcome.pending.reminderId,
+          });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [acceptNotification, online, router, status]);
   useEffect(() => {
     if (status !== 'authenticated') return;
     let active = true;
     let remove: (() => void) | undefined;
-    void notificationCapability.lastResponseData().then((data) => {
-      if (active && data) acceptNotification(data);
-    });
     void notificationCapability
       .addPushTokenListener((token) => {
         // Expo emits a native FCM/APNs token here. Defer conversion to an Expo
@@ -106,7 +171,7 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
       active = false;
       remove?.();
     };
-  }, [acceptNotification, online, status]);
+  }, [online, status]);
   const register = useCallback(() => run(true), [run]);
   const value = useMemo(
     () => ({ result, loading, register }),

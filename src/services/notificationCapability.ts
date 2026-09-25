@@ -2,12 +2,22 @@ import Constants from 'expo-constants';
 import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
 import type { DevicePushToken } from 'expo-notifications';
+import {
+  REMINDER_ACTION_IDENTIFIERS,
+  REMINDER_NOTIFICATION_CATEGORY,
+  REMINDER_NOTIFICATION_SOUND,
+} from '@/services/notificationActions';
 
 export type NotificationRuntimeStatus =
   'supported' | 'unsupported_runtime' | 'unsupported_personal_team';
 export type NotificationPermission = 'granted' | 'denied' | 'undetermined';
 export type NotificationSubscription = Readonly<{ remove(): void }>;
 export type NotificationData = Readonly<Record<string, unknown>>;
+export type NotificationResponse = Readonly<{
+  actionIdentifier: string;
+  notificationIdentifier: string;
+  data: NotificationData;
+}>;
 
 type NotificationsModule = typeof import('expo-notifications');
 type NotificationsLoader = () => Promise<NotificationsModule>;
@@ -86,7 +96,34 @@ export class ExpoNotificationCapability {
       vibrationPattern: [0, 500, 250, 500],
       lockscreenVisibility: notifications.AndroidNotificationVisibility.PUBLIC,
       bypassDnd: false,
+      sound: REMINDER_NOTIFICATION_SOUND,
     });
+    return true;
+  }
+
+  async configureReminderCategory(): Promise<boolean> {
+    const notifications = await this.load();
+    if (!notifications) return false;
+    await notifications.setNotificationCategoryAsync(
+      REMINDER_NOTIFICATION_CATEGORY,
+      [
+        {
+          identifier: REMINDER_ACTION_IDENTIFIERS.taken,
+          buttonTitle: 'Taken',
+          options: { opensAppToForeground: true },
+        },
+        {
+          identifier: REMINDER_ACTION_IDENTIFIERS.snooze,
+          buttonTitle: 'Snooze',
+          options: { opensAppToForeground: true },
+        },
+        {
+          identifier: REMINDER_ACTION_IDENTIFIERS.skipped,
+          buttonTitle: 'Skip',
+          options: { opensAppToForeground: true },
+        },
+      ],
+    );
     return true;
   }
 
@@ -106,28 +143,43 @@ export class ExpoNotificationCapability {
   }
 
   async addResponseListener(
-    listener: (data: NotificationData) => void,
+    listener: (response: NotificationResponse) => void,
   ): Promise<NotificationSubscription | null> {
     const notifications = await this.load();
     if (!notifications) return null;
     return notifications.addNotificationResponseReceivedListener((response) =>
-      listener(response.notification.request.content.data ?? {}),
+      listener({
+        actionIdentifier: response.actionIdentifier,
+        notificationIdentifier: response.notification.request.identifier,
+        data: response.notification.request.content.data ?? {},
+      }),
     );
   }
 
-  async lastResponseData(): Promise<NotificationData | null> {
+  async lastResponse(): Promise<NotificationResponse | null> {
     const notifications = await this.load();
     if (!notifications) return null;
     const response = await notifications.getLastNotificationResponseAsync();
     if (!response) return null;
     await notifications.clearLastNotificationResponseAsync();
-    return response.notification.request.content.data ?? {};
+    return {
+      actionIdentifier: response.actionIdentifier,
+      notificationIdentifier: response.notification.request.identifier,
+      data: response.notification.request.content.data ?? {},
+    };
   }
 
   async clearLastResponse(): Promise<void> {
     const notifications = await this.load();
     if (!notifications) return;
     await notifications.clearLastNotificationResponseAsync();
+  }
+
+  async dismiss(notificationIdentifier: string): Promise<boolean> {
+    const notifications = await this.load();
+    if (!notifications) return false;
+    await notifications.dismissNotificationAsync(notificationIdentifier);
+    return true;
   }
 
   async addPushTokenListener(

@@ -32,11 +32,13 @@ jest.mock('expo-notifications', () => ({
   requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'denied' }),
   getExpoPushTokenAsync: jest.fn(),
   setNotificationChannelAsync: jest.fn().mockResolvedValue(null),
+  setNotificationCategoryAsync: jest.fn().mockResolvedValue(null),
   setNotificationHandler: jest.fn(),
   addNotificationResponseReceivedListener: jest.fn(() => ({
     remove: jest.fn(),
   })),
   clearLastNotificationResponseAsync: jest.fn().mockResolvedValue(undefined),
+  dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('expo-application', () => ({

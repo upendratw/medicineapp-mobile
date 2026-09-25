@@ -20,6 +20,7 @@ const module = () => ({
     .fn()
     .mockResolvedValue({ data: 'ExponentPushToken[synthetic]' }),
   setNotificationChannelAsync: jest.fn().mockResolvedValue(null),
+  setNotificationCategoryAsync: jest.fn().mockResolvedValue(null),
   setNotificationHandler: jest.fn(),
   AndroidNotificationPriority: { MAX: 'max' },
   addNotificationResponseReceivedListener: jest.fn(() => ({
@@ -27,6 +28,7 @@ const module = () => ({
   })),
   getLastNotificationResponseAsync: jest.fn().mockResolvedValue(null),
   clearLastNotificationResponseAsync: jest.fn().mockResolvedValue(undefined),
+  dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
   addPushTokenListener: jest.fn(() => ({ remove: jest.fn() })),
 });
 
@@ -79,10 +81,10 @@ test('SDK 57 Android development client is push-capable despite populated manife
     'ExponentPushToken[synthetic]',
   );
   await expect(
-    capability.configureAndroidChannel('medicineapp-reminders-v3'),
+    capability.configureAndroidChannel('medicineapp-reminders-v4'),
   ).resolves.toBe(true);
   expect(notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
-    'medicineapp-reminders-v3',
+    'medicineapp-reminders-v4',
     {
       name: 'MedicineApp reminders',
       description: 'Audible medication reminders',
@@ -91,6 +93,7 @@ test('SDK 57 Android development client is push-capable despite populated manife
       vibrationPattern: [0, 500, 250, 500],
       lockscreenVisibility: 1,
       bypassDnd: false,
+      sound: 'medicine-reminder-alarm.wav',
     },
   );
   await expect(capability.configureForegroundPresentation()).resolves.toBe(
@@ -106,8 +109,27 @@ test('SDK 57 Android development client is push-capable despite populated manife
   });
   const listener = jest.fn();
   await expect(capability.addResponseListener(listener)).resolves.toBeTruthy();
-  await expect(capability.lastResponseData()).resolves.toBeNull();
+  await expect(capability.configureReminderCategory()).resolves.toBe(true);
+  expect(notifications.setNotificationCategoryAsync).toHaveBeenCalledWith(
+    'MEDICINE_REMINDER_ACTIONS',
+    expect.arrayContaining([
+      expect.objectContaining({
+        identifier: 'MEDICINE_TAKEN',
+        options: { opensAppToForeground: true },
+      }),
+      expect.objectContaining({
+        identifier: 'MEDICINE_SNOOZE',
+        options: { opensAppToForeground: true },
+      }),
+      expect.objectContaining({
+        identifier: 'MEDICINE_SKIP',
+        options: { opensAppToForeground: true },
+      }),
+    ]),
+  );
+  await expect(capability.lastResponse()).resolves.toBeNull();
   await expect(capability.clearLastResponse()).resolves.toBeUndefined();
+  await expect(capability.dismiss('notification-id')).resolves.toBe(true);
   expect(notifications.clearLastNotificationResponseAsync).toHaveBeenCalled();
   await expect(capability.addPushTokenListener(listener)).resolves.toBeTruthy();
   expect(loader).toHaveBeenCalled();

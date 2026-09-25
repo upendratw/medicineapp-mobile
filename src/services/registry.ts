@@ -26,6 +26,8 @@ import {
   buildReminderContextService,
   ReminderService,
 } from '@/services/reminderService';
+import { NotificationActionCoordinator } from '@/services/notificationActionService';
+import { notificationCapability } from '@/services/notificationCapability';
 
 const api = new ApiClient(undefined, undefined, secureTokenStore);
 export const patientMedicationService = buildPatientMedicationService(api);
@@ -41,6 +43,11 @@ export const dashboardService = new DashboardService(
 export const ocrService = buildOcrService(api);
 export const reminderService = new ReminderService(api);
 export const reminderContextService = buildReminderContextService(api);
+export const notificationActionCoordinator = new NotificationActionCoordinator(
+  reminderService,
+  reminderContextService,
+  notificationCapability,
+);
 export const medicationHistoryService = new MedicationHistoryService(api);
 export const drugInformationService = new DrugInformationService(api);
 export const interactionService = new PendingInteractionService();

@@ -55,7 +55,7 @@ test('bounded lock-screen notification text remains privacy safe', () => {
     read('src/services/pushRegistration.ts') +
     read('src/services/notificationCapability.ts');
   expect(source).toContain("name: 'MedicineApp reminders'");
-  expect(source).toContain("'medicineapp-reminders-v3'");
+  expect(source).toContain("'medicineapp-reminders-v4'");
   expect(source).not.toContain("sound: 'default'");
   const privacy = read('docs/e33/E33-notification-privacy.md');
   expect(privacy).toContain('authoritative medicine display label');
