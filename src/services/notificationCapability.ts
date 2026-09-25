@@ -80,9 +80,13 @@ export class ExpoNotificationCapability {
     if (!notifications) return false;
     await notifications.setNotificationChannelAsync(channelId, {
       name: 'MedicineApp reminders',
-      importance: notifications.AndroidImportance.DEFAULT,
-      vibrationPattern: null,
-      lockscreenVisibility: notifications.AndroidNotificationVisibility.PRIVATE,
+      description: 'Audible medication reminders',
+      importance: notifications.AndroidImportance.MAX,
+      sound: 'default',
+      enableVibrate: true,
+      vibrationPattern: [0, 500, 250, 500],
+      lockscreenVisibility: notifications.AndroidNotificationVisibility.PUBLIC,
+      bypassDnd: false,
     });
     return true;
   }
@@ -104,6 +108,12 @@ export class ExpoNotificationCapability {
     if (!response) return null;
     await notifications.clearLastNotificationResponseAsync();
     return response.notification.request.content.data ?? {};
+  }
+
+  async clearLastResponse(): Promise<void> {
+    const notifications = await this.load();
+    if (!notifications) return;
+    await notifications.clearLastNotificationResponseAsync();
   }
 
   async addPushTokenListener(

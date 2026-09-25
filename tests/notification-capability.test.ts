@@ -12,8 +12,8 @@ const module = () => ({
     DENIED: 'denied',
     UNDETERMINED: 'undetermined',
   },
-  AndroidImportance: { DEFAULT: 3 },
-  AndroidNotificationVisibility: { PRIVATE: 0 },
+  AndroidImportance: { MAX: 5 },
+  AndroidNotificationVisibility: { PUBLIC: 1 },
   getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
   requestPermissionsAsync: jest.fn(),
   getExpoPushTokenAsync: jest
@@ -77,11 +77,26 @@ test('SDK 57 Android development client is push-capable despite populated manife
     'ExponentPushToken[synthetic]',
   );
   await expect(
-    capability.configureAndroidChannel('medicineapp-reminders-v1'),
+    capability.configureAndroidChannel('medicineapp-reminders-v2'),
   ).resolves.toBe(true);
+  expect(notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
+    'medicineapp-reminders-v2',
+    {
+      name: 'MedicineApp reminders',
+      description: 'Audible medication reminders',
+      importance: 5,
+      sound: 'default',
+      enableVibrate: true,
+      vibrationPattern: [0, 500, 250, 500],
+      lockscreenVisibility: 1,
+      bypassDnd: false,
+    },
+  );
   const listener = jest.fn();
   await expect(capability.addResponseListener(listener)).resolves.toBeTruthy();
   await expect(capability.lastResponseData()).resolves.toBeNull();
+  await expect(capability.clearLastResponse()).resolves.toBeUndefined();
+  expect(notifications.clearLastNotificationResponseAsync).toHaveBeenCalled();
   await expect(capability.addPushTokenListener(listener)).resolves.toBeTruthy();
   expect(loader).toHaveBeenCalled();
   expect(notifications.getExpoPushTokenAsync).toHaveBeenCalledWith({

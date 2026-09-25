@@ -1,10 +1,14 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { AppHeader, AppScreen, ReminderAlert } from '@/components';
 import { useAsyncResource } from '@/hooks/useAsyncResource';
 import { reminderContextService, reminderService } from '@/services/registry';
+import { useDeepLinkIntent } from '@/navigation/DeepLinkContext';
+import { notificationCapability } from '@/services/notificationCapability';
 
 export default function ReminderScreen() {
+  const router = useRouter();
+  const { clear } = useDeepLinkIntent();
   const params = useLocalSearchParams<{
     reminderId?: string;
   }>();
@@ -35,6 +39,11 @@ export default function ReminderScreen() {
         loading={state.loading}
         unavailable={state.error || !reminderId}
         onRetry={() => void state.refresh()}
+        onSuccess={() => {
+          clear();
+          void notificationCapability.clearLastResponse();
+          router.replace('/home');
+        }}
         onAcknowledge={(action, eventId) =>
           reminderService
             .acknowledge(

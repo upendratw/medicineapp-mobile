@@ -25,8 +25,8 @@ jest.mock('expo-notifications', () => ({
     DENIED: 'denied',
     UNDETERMINED: 'undetermined',
   },
-  AndroidImportance: { DEFAULT: 3 },
-  AndroidNotificationVisibility: { PRIVATE: 0 },
+  AndroidImportance: { DEFAULT: 3, MAX: 5 },
+  AndroidNotificationVisibility: { PRIVATE: 0, PUBLIC: 1 },
   getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'undetermined' }),
   requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'denied' }),
   getExpoPushTokenAsync: jest.fn(),
@@ -34,6 +34,7 @@ jest.mock('expo-notifications', () => ({
   addNotificationResponseReceivedListener: jest.fn(() => ({
     remove: jest.fn(),
   })),
+  clearLastNotificationResponseAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('expo-application', () => ({

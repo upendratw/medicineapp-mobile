@@ -54,6 +54,12 @@ const form = (props: ComponentProps<typeof ManualMedicationForm>) => (
 test('manual form validates required bounded input and never implies approval', async () => {
   const submit = jest.fn().mockResolvedValue(saved);
   const screen = await render(form({ submit, onCamera: jest.fn() }));
+  expect(screen.getByLabelText('Dosage form (optional)').props.value).toBe(
+    'Tablet',
+  );
+  expect(
+    screen.getByRole('button', { name: 'Quantity Unit: Tablets' }),
+  ).toBeTruthy();
   await fireEvent.press(
     screen.getByRole('button', { name: 'Save user-entered medicine' }),
   );
@@ -77,9 +83,31 @@ test('manual form validates required bounded input and never implies approval', 
   expect(screen.getByText(/form is ready for another medicine/)).toBeTruthy();
   expect(screen.getByLabelText('Medication name').props.value).toBe('');
   expect(screen.getByLabelText('Strength (optional)').props.value).toBe('');
-  expect(screen.getByLabelText('Dosage form (optional)').props.value).toBe('');
+  expect(screen.getByLabelText('Dosage form (optional)').props.value).toBe(
+    'Tablet',
+  );
   expect(screen.getByLabelText('Notes (optional)').props.value).toBe('');
   expect(screen.getByRole('alert')).toBeTruthy();
+});
+
+test('preserves explicit restored dosage form and quantity unit values', async () => {
+  const screen = await render(
+    form({
+      initial: {
+        name: 'Restored Synthetic Medicine',
+        dosageForm: 'Liquid',
+        quantityUnit: 'ml',
+      },
+      submit: jest.fn().mockResolvedValue(saved),
+      onCamera: jest.fn(),
+    }),
+  );
+  expect(screen.getByLabelText('Dosage form (optional)').props.value).toBe(
+    'Liquid',
+  );
+  expect(
+    screen.getByRole('button', { name: 'Quantity Unit: mL' }),
+  ).toBeTruthy();
 });
 
 test('manual form sanitizes submission failures', async () => {

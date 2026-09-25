@@ -50,12 +50,13 @@ test('production profiles contain no secrets or backend placeholder', () => {
   );
 });
 
-test('generic lock-screen notification text remains privacy safe', () => {
+test('bounded lock-screen notification text remains privacy safe', () => {
   const source =
     read('src/services/pushRegistration.ts') +
     read('src/services/notificationCapability.ts');
   expect(source).toContain("name: 'MedicineApp reminders'");
-  expect(read('docs/e33/E33-notification-privacy.md')).toContain(
-    'You have a scheduled medication reminder.',
-  );
+  expect(source).toContain("'medicineapp-reminders-v2'");
+  const privacy = read('docs/e33/E33-notification-privacy.md');
+  expect(privacy).toContain('authoritative medicine display label');
+  expect(privacy).toContain('Patient name, condition');
 });

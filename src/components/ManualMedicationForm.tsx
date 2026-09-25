@@ -44,9 +44,12 @@ export function ManualMedicationForm({
   medicineCaptureId,
 }: Props) {
   const { t } = useTranslation();
+  const isNewBlankMedicine = initial === undefined;
   const [name, setName] = useState(initial?.name ?? '');
   const [strength, setStrength] = useState(initial?.strength ?? '');
-  const [dosageForm, setDosageForm] = useState(initial?.dosageForm ?? '');
+  const [dosageForm, setDosageForm] = useState(
+    initial?.dosageForm ?? (isNewBlankMedicine ? 'Tablet' : ''),
+  );
   const [activeIngredient, setActiveIngredient] = useState(
     initial?.activeIngredient ?? '',
   );
@@ -54,7 +57,9 @@ export function ManualMedicationForm({
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [initialQuantity, setInitialQuantity] = useState('');
   const [quantityUnit, setQuantityUnit] = useState<InventoryQuantityUnit | ''>(
-    defaultQuantityUnit(initial?.dosageForm ?? '') ?? '',
+    initial?.quantityUnit ??
+      defaultQuantityUnit(initial?.dosageForm ?? '') ??
+      (isNewBlankMedicine ? 'tablet' : ''),
   );
   const [unitChosen, setUnitChosen] = useState(false);
   const [unitOpen, setUnitOpen] = useState(false);
@@ -131,12 +136,12 @@ export function ManualMedicationForm({
       }
       setName('');
       setStrength('');
-      setDosageForm('');
+      setDosageForm('Tablet');
       setActiveIngredient('');
       setManufacturer('');
       setNotes('');
       setInitialQuantity('');
-      setQuantityUnit('');
+      setQuantityUnit('tablet');
       setUnitChosen(false);
       setScheduleEnabled(false);
       setScheduleDraft(initialScheduleDraft());

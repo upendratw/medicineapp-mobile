@@ -42,6 +42,42 @@ test('renders neutral reminder context and real action controls', async () => {
   );
 });
 
+test.each(['Taken', 'Snooze', 'Skip'])(
+  '%s success clears the reminder flow through the success callback',
+  async (label) => {
+    const onSuccess = jest.fn();
+    const screen = await render(
+      <ReminderAlert
+        reminder={reminder}
+        loading={false}
+        unavailable={false}
+        onAcknowledge={jest.fn().mockResolvedValue(undefined)}
+        onSnooze={jest.fn().mockResolvedValue(undefined)}
+        onSuccess={onSuccess}
+      />,
+    );
+    await fireEvent.press(screen.getByRole('button', { name: label }));
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  },
+);
+
+test('failed reminder action remains in place and does not report success', async () => {
+  const onSuccess = jest.fn();
+  const screen = await render(
+    <ReminderAlert
+      reminder={reminder}
+      loading={false}
+      unavailable={false}
+      onAcknowledge={jest.fn().mockRejectedValue(new Error('private'))}
+      onSnooze={jest.fn()}
+      onSuccess={onSuccess}
+    />,
+  );
+  await fireEvent.press(screen.getByRole('button', { name: 'Taken' }));
+  expect(onSuccess).not.toHaveBeenCalled();
+  expect(screen.getByText(/could not be recorded/)).toBeTruthy();
+});
+
 test('snooze and skip call bounded actions', async () => {
   const acknowledge = jest.fn().mockResolvedValue(undefined);
   const snooze = jest.fn().mockResolvedValue(undefined);

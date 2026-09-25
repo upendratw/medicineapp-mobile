@@ -15,6 +15,7 @@ type Props = {
   unavailable: boolean;
   onAcknowledge(action: ReminderAction, eventId: string): Promise<void>;
   onSnooze(minutes: 5 | 10 | 15 | 30, requestKey: string): Promise<void>;
+  onSuccess?(): void;
   onRetry?(): void;
 };
 const requestId = () =>
@@ -26,6 +27,7 @@ export function ReminderAlert({
   unavailable,
   onAcknowledge,
   onSnooze,
+  onSuccess,
   onRetry,
 }: Props) {
   const { t } = useTranslation();
@@ -50,6 +52,7 @@ export function ReminderAlert({
     try {
       await operation();
       setOutcome(success);
+      onSuccess?.();
     } catch {
       setOutcome('failure');
     } finally {

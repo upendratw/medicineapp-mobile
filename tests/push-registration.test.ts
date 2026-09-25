@@ -360,10 +360,10 @@ test('supported iOS runtime uses the backend-mediated iOS registration contract'
   ).resolves.toMatchObject({ status: 'registered' });
   expect(backend.platforms).toEqual(['ios']);
 });
-test('generic default notification content contains no sensitive health details', () => {
+test('bounded notification template contains only the approved medicine label field', () => {
   expect(DEFAULT_NOTIFICATION_COPY).toEqual({
-    title: 'MedicineApp reminder',
-    body: 'You have a scheduled medication reminder.',
+    title: 'Medicine reminder',
+    body: 'Time to take <medicine label>.',
   });
   expect(JSON.stringify(DEFAULT_NOTIFICATION_COPY)).not.toMatch(
     /metformin|mg|dose|symptom|caregiver|prescription|diagnos|side effect/i,

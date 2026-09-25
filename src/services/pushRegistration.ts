@@ -15,10 +15,10 @@ import {
   type NotificationDevicePushToken,
 } from '@/services/notificationCapability';
 
-export const NOTIFICATION_CHANNEL_ID = 'medicineapp-reminders-v1';
+export const NOTIFICATION_CHANNEL_ID = 'medicineapp-reminders-v2';
 export const DEFAULT_NOTIFICATION_COPY = Object.freeze({
-  title: 'MedicineApp reminder',
-  body: 'You have a scheduled medication reminder.',
+  title: 'Medicine reminder',
+  body: 'Time to take <medicine label>.',
 });
 const REGISTRATION_ID_KEY = 'medicineapp.secure.v1.push.registration-id';
 const REGISTRATION_TUPLE_KEY = 'medicineapp.secure.v1.push.registration-tuple';
