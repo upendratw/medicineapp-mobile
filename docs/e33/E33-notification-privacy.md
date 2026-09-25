@@ -15,7 +15,7 @@ accepted locally as successful. Notifications cannot trigger SOS and remain
 supplementary rather than a clinical-safety dependency.
 
 Android uses the versioned `medicineapp-reminders-v4` runtime channel with MAX
-importance, the bundled `medicine-reminder-alarm.wav` sound, vibration, public
+importance, the bundled `medicine_reminder_alarm.wav` sound, vibration, public
 lock-screen visibility, and no DND bypass. The sound is an original,
 programmatically synthesized MedicineApp asset containing no third-party
 sample; it is covered by the repository MIT license. This native configuration

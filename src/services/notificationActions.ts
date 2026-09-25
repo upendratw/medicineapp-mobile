@@ -1,5 +1,5 @@
 export const REMINDER_NOTIFICATION_CATEGORY = 'MEDICINE_REMINDER_ACTIONS';
-export const REMINDER_NOTIFICATION_SOUND = 'medicine-reminder-alarm.wav';
+export const REMINDER_NOTIFICATION_SOUND = 'medicine_reminder_alarm.wav';
 
 export const REMINDER_ACTION_IDENTIFIERS = {
   taken: 'MEDICINE_TAKEN',

@@ -89,7 +89,7 @@ const config: ExpoConfig = {
       'expo-notifications',
       {
         defaultChannel: 'medicineapp-reminders-v4',
-        sounds: ['./assets/sounds/medicine-reminder-alarm.wav'],
+        sounds: ['./assets/sounds/medicine_reminder_alarm.wav'],
       },
     ],
 

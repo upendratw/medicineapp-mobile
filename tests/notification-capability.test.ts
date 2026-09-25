@@ -93,7 +93,7 @@ test('SDK 57 Android development client is push-capable despite populated manife
       vibrationPattern: [0, 500, 250, 500],
       lockscreenVisibility: 1,
       bypassDnd: false,
-      sound: 'medicine-reminder-alarm.wav',
+      sound: 'medicine_reminder_alarm.wav',
     },
   );
   await expect(capability.configureForegroundPresentation()).resolves.toBe(

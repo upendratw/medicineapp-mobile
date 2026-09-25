@@ -19,17 +19,17 @@ test('native notification contract and bundled original sound remain synchronize
     snooze: 'MEDICINE_SNOOZE',
     skipped: 'MEDICINE_SKIP',
   });
-  expect(REMINDER_NOTIFICATION_SOUND).toBe('medicine-reminder-alarm.wav');
+  expect(REMINDER_NOTIFICATION_SOUND).toBe('medicine_reminder_alarm.wav');
   const config = read('app.config.ts');
   expect(config).toContain("defaultChannel: 'medicineapp-reminders-v4'");
   expect(config).toContain(
-    "sounds: ['./assets/sounds/medicine-reminder-alarm.wav']",
+    "sounds: ['./assets/sounds/medicine_reminder_alarm.wav']",
   );
   expect(
     require('node:fs').statSync(
       require('node:path').join(
         process.cwd(),
-        'assets/sounds/medicine-reminder-alarm.wav',
+        'assets/sounds/medicine_reminder_alarm.wav',
       ),
     ).size,
   ).toBeGreaterThan(1000);
