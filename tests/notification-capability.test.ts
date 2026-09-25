@@ -62,7 +62,7 @@ test('application startup path has no static expo-notifications import', () => {
   );
 });
 
-test('development and standalone builds retain lazy notification behavior', async () => {
+test('Android development client is push-capable and retains lazy notification behavior', async () => {
   const notifications = module();
   const loader = jest.fn().mockResolvedValue(notifications);
   const capability = new ExpoNotificationCapability(null, loader);

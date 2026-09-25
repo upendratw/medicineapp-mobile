@@ -96,8 +96,30 @@ test.each<PushPermission>(['denied', 'undetermined'])(
     });
     expect(gateway.token).not.toHaveBeenCalled();
     expect(backend.tokens).toHaveLength(0);
+    expect(gateway.configureChannel).toHaveBeenCalledTimes(1);
   },
 );
+test('Android channel is configured before permission and token handling', async () => {
+  const callOrder: string[] = [];
+  const gateway = new Gateway();
+  gateway.configureChannel.mockImplementation(async () => {
+    callOrder.push('channel');
+  });
+  gateway.permission.mockImplementation(async () => {
+    callOrder.push('permission');
+    return 'granted';
+  });
+  gateway.token.mockImplementation(async () => {
+    callOrder.push('token');
+    return 'ExponentPushToken[synthetic]';
+  });
+  await new PushRegistrationCoordinator(
+    gateway,
+    new Backend(),
+    new Store(),
+  ).register(true, true);
+  expect(callOrder).toEqual(['channel', 'permission', 'token']);
+});
 test('granted permission registers through backend and token rotation updates registration', async () => {
   const gateway = new Gateway();
   const backend = new Backend();
@@ -175,6 +197,14 @@ test('backend adapter uses only real authenticated device endpoints', async () =
     expect.objectContaining({ method: 'POST' }),
     true,
   );
+  expect(
+    JSON.parse(client.request.mock.calls[0][1].body as string),
+  ).toMatchObject({
+    device_identifier: 'device',
+    platform: 'android',
+    push_provider: 'expo',
+    app_environment: 'development',
+  });
   await service.unregister('id');
   expect(client.request).toHaveBeenLastCalledWith(
     '/api/v1/devices/id',

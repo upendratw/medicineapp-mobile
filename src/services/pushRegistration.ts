@@ -161,11 +161,15 @@ export class PushRegistrationCoordinator {
     if (runtimeStatus !== 'supported') {
       return { status: runtimeStatus };
     }
+    // Android 13 does not surface the notification permission prompt until a
+    // channel exists. Expo also requires channel creation before push-token
+    // acquisition, so establish the channel before inspecting/requesting
+    // permission. This is a no-op on iOS.
+    await this.gateway.configureChannel();
     const permission = await this.gateway.permission(requestPermission);
     if (permission === 'denied') return { status: 'denied' };
     if (permission !== 'granted') return { status: 'unavailable' };
     if (!online) return { status: 'offline' };
-    await this.gateway.configureChannel();
     const [pushToken, deviceIdentifier] = await Promise.all([
       this.gateway.token(),
       this.gateway.deviceIdentifier(),
