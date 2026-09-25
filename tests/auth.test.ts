@@ -112,6 +112,23 @@ test('authenticated request uses secure storage and never exposes the token in e
   expect(JSON.stringify(failure)).not.toContain('secret-access-value');
 });
 
+test('API errors expose bounded Retry-After metadata without retrying', async () => {
+  const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+    ok: false,
+    status: 429,
+    headers: new Headers({ 'Retry-After': '20' }),
+    json: async () => ({ error: { code: 'RATE_LIMITED' } }),
+  } as Response);
+  await expect(
+    new ApiClient('https://api.example.test', 1000).request('/limited'),
+  ).rejects.toMatchObject({
+    code: 'RATE_LIMITED',
+    status: 429,
+    retryAfterSeconds: 20,
+  });
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
 test('logout clears secure tokens even when the backend is unavailable', async () => {
   jest.spyOn(global, 'fetch').mockRejectedValue(new Error('offline'));
   const store = new FakeTokenStore();

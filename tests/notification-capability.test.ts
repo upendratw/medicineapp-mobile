@@ -89,6 +89,39 @@ test('SDK 57 Android development client is push-capable despite populated manife
   });
 });
 
+test('native token listener conversion supplies the token and never reacquires it', async () => {
+  const notifications = module();
+  const capability = new ExpoNotificationCapability(
+    false,
+    jest.fn().mockResolvedValue(notifications),
+    false,
+    'android',
+  );
+  const nativeToken = {
+    type: 'android',
+    data: 'synthetic-native-token',
+  } as const;
+  await expect(capability.expoPushToken('project', nativeToken)).resolves.toBe(
+    'ExponentPushToken[synthetic]',
+  );
+  expect(notifications.getExpoPushTokenAsync).toHaveBeenCalledWith({
+    projectId: 'project',
+    devicePushToken: nativeToken,
+  });
+  const listener = jest.fn();
+  await capability.addPushTokenListener(listener);
+  const registeredListener = (
+    notifications.addPushTokenListener as unknown as jest.Mock<
+      { remove(): void },
+      [(token: typeof nativeToken) => void]
+    >
+  ).mock.calls[0]?.[0];
+  expect(registeredListener).toBeDefined();
+  if (!registeredListener) throw new Error('Push token listener was not set');
+  registeredListener(nativeToken);
+  expect(listener).toHaveBeenCalledWith(nativeToken);
+});
+
 test('supported runtime module-load failure remains safely unavailable', async () => {
   const capability = new ExpoNotificationCapability(
     false,

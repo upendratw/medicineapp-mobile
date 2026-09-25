@@ -16,9 +16,11 @@ export function PushRegistrationSettings() {
             ? t('permissionDenied')
             : result?.status === 'offline'
               ? t('registrationOffline')
-              : result
-                ? t('registrationPending')
-                : null;
+              : result?.status === 'rate_limited'
+                ? t('registrationRateLimited')
+                : result
+                  ? t('registrationPending')
+                  : null;
   return (
     <>
       <AppText>{t('notificationsHelp')}</AppText>

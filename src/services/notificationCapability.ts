@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
+import type { DevicePushToken } from 'expo-notifications';
 
 export type NotificationRuntimeStatus =
   'supported' | 'unsupported_runtime' | 'unsupported_personal_team';
@@ -56,11 +57,19 @@ export class ExpoNotificationCapability {
     return 'undetermined';
   }
 
-  async expoPushToken(projectId: string): Promise<string | null> {
+  async expoPushToken(
+    projectId: string,
+    devicePushToken?: DevicePushToken,
+  ): Promise<string | null> {
     const notifications = await this.load();
     if (!notifications) return null;
     try {
-      return (await notifications.getExpoPushTokenAsync({ projectId })).data;
+      return (
+        await notifications.getExpoPushTokenAsync({
+          projectId,
+          ...(devicePushToken ? { devicePushToken } : {}),
+        })
+      ).data;
     } catch {
       return null;
     }
@@ -98,12 +107,14 @@ export class ExpoNotificationCapability {
   }
 
   async addPushTokenListener(
-    listener: () => void,
+    listener: (token: DevicePushToken) => void,
   ): Promise<NotificationSubscription | null> {
     const notifications = await this.load();
     if (!notifications) return null;
-    return notifications.addPushTokenListener(() => listener());
+    return notifications.addPushTokenListener(listener);
   }
 }
+
+export type NotificationDevicePushToken = DevicePushToken;
 
 export const notificationCapability = new ExpoNotificationCapability();

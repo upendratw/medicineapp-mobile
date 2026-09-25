@@ -64,6 +64,8 @@ const en = {
     'Push registration is unavailable. The app remains usable.',
   registrationComplete: 'This device is registered for notifications.',
   registrationOffline: 'Connect to the internet to register notifications.',
+  registrationRateLimited:
+    'Notification registration is temporarily limited. Please try again shortly.',
   notificationsUnsupportedRuntime:
     'Push notifications require an installed development or preview build. Other app features remain available in Expo Go.',
   notificationsUnsupportedPersonalTeam:
@@ -232,6 +234,8 @@ const hi: Partial<Record<keyof typeof en, string>> = {
     'पुश पंजीकरण उपलब्ध नहीं है। ऐप का उपयोग जारी रखा जा सकता है।',
   registrationComplete: 'यह डिवाइस सूचनाओं के लिए पंजीकृत है।',
   registrationOffline: 'सूचनाएँ पंजीकृत करने के लिए इंटरनेट से जुड़ें।',
+  registrationRateLimited:
+    'सूचना पंजीकरण अस्थायी रूप से सीमित है। कृपया थोड़ी देर बाद पुनः प्रयास करें।',
   notificationsUnsupportedRuntime:
     'पुश सूचनाओं के लिए इंस्टॉल किया गया डेवलपमेंट या प्रीव्यू बिल्ड आवश्यक है। Expo Go में ऐप की अन्य सुविधाएँ उपलब्ध रहती हैं।',
   notificationsUnsupportedPersonalTeam:

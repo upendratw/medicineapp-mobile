@@ -27,6 +27,7 @@ test.each([
   null,
   { status: 'unavailable' } as const,
   { status: 'offline' } as const,
+  { status: 'rate_limited', retryAfterSeconds: 20 } as const,
 ])(
   'retryable state %# keeps Enable notifications actionable',
   async (result) => {
@@ -40,6 +41,13 @@ test.each([
     expect(mockRegister).toHaveBeenCalledTimes(1);
   },
 );
+
+test('rate limited state communicates bounded retry without displaying token data', async () => {
+  mockState.result = { status: 'rate_limited', retryAfterSeconds: 20 };
+  const screen = await render(<PushRegistrationSettings />);
+  expect(JSON.stringify(screen.toJSON())).toContain('registrationRateLimited');
+  expect(JSON.stringify(screen.toJSON())).not.toContain('ExponentPushToken');
+});
 
 test('registration in progress prevents duplicate taps', async () => {
   mockState.loading = true;

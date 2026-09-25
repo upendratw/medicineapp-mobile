@@ -82,8 +82,21 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
       if (active && data) acceptNotification(data);
     });
     void notificationCapability
-      .addPushTokenListener(() => {
-        if (active) void run(false);
+      .addPushTokenListener((token) => {
+        // Expo emits a native FCM/APNs token here. Defer conversion to an Expo
+        // token until after this callback returns, and pass the native token so
+        // Expo never reacquires it and retriggers this listener.
+        setTimeout(() => {
+          if (!active) return;
+          void pushRegistrationCoordinator
+            .registerRotatedToken(token, online)
+            .then((next) => {
+              if (active) setResult(next);
+            })
+            .catch(() => {
+              if (active) setResult({ status: 'unavailable' });
+            });
+        }, 0);
       })
       .then((subscription) => {
         if (!active) subscription?.remove();
@@ -93,7 +106,7 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
       active = false;
       remove?.();
     };
-  }, [acceptNotification, run, status]);
+  }, [acceptNotification, online, status]);
   const register = useCallback(() => run(true), [run]);
   const value = useMemo(
     () => ({ result, loading, register }),

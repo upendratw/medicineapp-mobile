@@ -40,3 +40,10 @@ jest.mock('expo-application', () => ({
   getAndroidId: jest.fn(() => 'synthetic-device-id'),
 }));
 jest.mock('expo-device', () => ({ isDevice: true }));
+jest.mock('expo-crypto', () => ({
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  randomUUID: jest.fn(() => '00000000-0000-4000-8000-000000000001'),
+  digestStringAsync: jest.fn(async (_algorithm: string, input: string) =>
+    require('node:crypto').createHash('sha256').update(input).digest('hex'),
+  ),
+}));

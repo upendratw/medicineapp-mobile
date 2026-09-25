@@ -25,6 +25,7 @@ export class ApiError extends Error {
   constructor(
     public readonly code: string,
     public readonly status: number,
+    public readonly retryAfterSeconds?: number,
   ) {
     super('The request could not be completed. Please try again.');
     this.name = 'ApiError';
@@ -62,6 +63,9 @@ export class ApiClient {
         throw new ApiError(
           result.body.error?.code ?? 'REQUEST_FAILED',
           result.response.status,
+          result.response.status === 429
+            ? parseRetryAfter(result.response.headers?.get('Retry-After'))
+            : undefined,
         );
       }
       if (!result.body || !('data' in result.body))
@@ -202,4 +206,16 @@ export class ApiClient {
       this.events.notifyInvalidated();
     }
   }
+}
+
+const MAX_RETRY_AFTER_SECONDS = 3_600;
+
+function parseRetryAfter(value: string | null | undefined): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  const parsed = Number.isFinite(seconds)
+    ? Math.ceil(seconds)
+    : Math.ceil((Date.parse(value) - Date.now()) / 1_000);
+  if (!Number.isFinite(parsed) || parsed < 1) return undefined;
+  return Math.min(parsed, MAX_RETRY_AFTER_SECONDS);
 }

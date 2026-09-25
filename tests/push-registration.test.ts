@@ -8,6 +8,8 @@ import {
   type PushRegistrationService,
   type PushRegistrationStore,
 } from '@/services/pushRegistration';
+import { ApiError } from '@/api/client';
+import type { NotificationDevicePushToken } from '@/services/notificationCapability';
 import * as SecureStore from 'expo-secure-store';
 
 class Gateway implements PushPermissionGateway {
@@ -20,7 +22,9 @@ class Gateway implements PushPermissionGateway {
     (): ReturnType<PushPermissionGateway['runtimeStatus']> => 'supported',
   );
   permission = jest.fn(async () => this.state);
-  token = jest.fn(async () => this.pushToken);
+  token = jest.fn(
+    async (_devicePushToken?: NotificationDevicePushToken) => this.pushToken,
+  );
   deviceIdentifier = jest.fn(async () => this.identifier);
   platform = jest.fn(
     (): ReturnType<PushPermissionGateway['platform']> => 'android',
@@ -70,14 +74,22 @@ class Backend implements PushRegistrationService {
 }
 class Store implements PushRegistrationStore {
   value: string | null = null;
+  tuple: string | null = null;
   async readRegistrationId() {
     return this.value;
   }
   async writeRegistrationId(value: string) {
     this.value = value;
   }
+  async readTupleFingerprint() {
+    return this.tuple;
+  }
+  async writeTupleFingerprint(value: string) {
+    this.tuple = value;
+  }
   async clear() {
     this.value = null;
+    this.tuple = null;
   }
 }
 
@@ -137,6 +149,129 @@ test('granted permission registers through backend and token rotation updates re
   ]);
   expect(store.value).toBe('device-record');
 });
+test('successful registration tuple is deduplicated without persisting a raw token', async () => {
+  const gateway = new Gateway();
+  const backend = new Backend();
+  const store = new Store();
+  const coordinator = new PushRegistrationCoordinator(gateway, backend, store);
+  await coordinator.register(false, true);
+  await expect(coordinator.register(false, true)).resolves.toEqual({
+    status: 'registered',
+    deviceId: 'device-record',
+  });
+  expect(backend.tokens).toHaveLength(1);
+  expect(store.tuple).toMatch(/^[a-f0-9]{64}$/);
+  expect(store.tuple).not.toContain('ExponentPushToken');
+});
+test('concurrent registration calls share one backend operation', async () => {
+  const backend = new Backend();
+  let release!: () => void;
+  backend.register = jest.fn(
+    () =>
+      new Promise(
+        (resolve) => (release = () => resolve({ deviceId: 'device-record' })),
+      ),
+  );
+  const coordinator = new PushRegistrationCoordinator(
+    new Gateway(),
+    backend,
+    new Store(),
+  );
+  const first = coordinator.register(false, true);
+  const second = coordinator.register(true, true);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(backend.register).toHaveBeenCalledTimes(1);
+  release();
+  await expect(Promise.all([first, second])).resolves.toEqual([
+    { status: 'registered', deviceId: 'device-record' },
+    { status: 'registered', deviceId: 'device-record' },
+  ]);
+});
+test('native token rotation is converted without reacquiring a device token and deduplicates events', async () => {
+  const gateway = new Gateway();
+  const backend = new Backend();
+  const coordinator = new PushRegistrationCoordinator(
+    gateway,
+    backend,
+    new Store(),
+  );
+  const nativeToken = {
+    type: 'android',
+    data: 'synthetic-native-token',
+  } as const;
+  await coordinator.registerRotatedToken(nativeToken, true);
+  await coordinator.registerRotatedToken(nativeToken, true);
+  expect(gateway.token).toHaveBeenCalledWith(nativeToken);
+  expect(backend.tokens).toHaveLength(1);
+});
+test('genuine token rotation permits one new backend registration', async () => {
+  const gateway = new Gateway();
+  const backend = new Backend();
+  const coordinator = new PushRegistrationCoordinator(
+    gateway,
+    backend,
+    new Store(),
+  );
+  await coordinator.register(false, true);
+  gateway.pushToken = 'ExponentPushToken[rotated]';
+  await coordinator.registerRotatedToken(
+    { type: 'android', data: 'rotated-native-token' },
+    true,
+  );
+  expect(backend.tokens).toHaveLength(2);
+});
+test('429 returns bounded retryable state without an automatic retry', async () => {
+  const backend = new Backend();
+  backend.register = jest
+    .fn()
+    .mockRejectedValueOnce(new ApiError('RATE_LIMITED', 429, 20))
+    .mockResolvedValueOnce({ deviceId: 'device-record' });
+  const coordinator = new PushRegistrationCoordinator(
+    new Gateway(),
+    backend,
+    new Store(),
+  );
+  await expect(coordinator.register(false, true)).resolves.toEqual({
+    status: 'rate_limited',
+    retryAfterSeconds: 20,
+  });
+  expect(backend.register).toHaveBeenCalledTimes(1);
+  await expect(coordinator.register(false, true)).resolves.toMatchObject({
+    status: 'registered',
+  });
+  expect(backend.register).toHaveBeenCalledTimes(2);
+  await coordinator.register(false, true);
+  expect(backend.register).toHaveBeenCalledTimes(2);
+});
+test('logout invalidates in-flight registration and revokes its stale completion', async () => {
+  const backend = new Backend();
+  let complete!: (value: { deviceId: string }) => void;
+  backend.register = jest.fn(
+    () => new Promise((resolve) => (complete = resolve)),
+  );
+  const store = new Store();
+  const coordinator = new PushRegistrationCoordinator(
+    new Gateway(),
+    backend,
+    store,
+  );
+  const registration = coordinator.register(false, true);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await coordinator.unregister();
+  complete({ deviceId: 'stale-device-record' });
+  await expect(registration).resolves.toEqual({ status: 'unavailable' });
+  expect(backend.unregister).toHaveBeenCalledWith('stale-device-record');
+  expect(store.value).toBeNull();
+  expect(store.tuple).toBeNull();
+  backend.register = jest
+    .fn()
+    .mockResolvedValue({ deviceId: 'fresh-device-record' });
+  await expect(coordinator.register(false, true)).resolves.toEqual({
+    status: 'registered',
+    deviceId: 'fresh-device-record',
+  });
+  expect(backend.register).toHaveBeenCalledTimes(1);
+});
 test('token unavailable and offline registration never fake backend success', async () => {
   const unavailable = new Gateway('granted', null);
   const backend = new Backend();
@@ -166,6 +301,7 @@ test('backend registration failure is explicit and does not persist association'
     ),
   ).rejects.toThrow('synthetic');
   expect(store.value).toBeNull();
+  expect(store.tuple).toBeNull();
 });
 test('logout unregisters and clears local association even when backend fails', async () => {
   const backend = new Backend();
