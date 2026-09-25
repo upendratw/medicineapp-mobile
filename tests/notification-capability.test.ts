@@ -30,7 +30,7 @@ const module = () => ({
 
 test('Expo Go capability never loads unsupported notification module', async () => {
   const loader = jest.fn();
-  const capability = new ExpoNotificationCapability({} as never, loader);
+  const capability = new ExpoNotificationCapability('57.0.0', loader);
   expect(capability.status()).toBe('unsupported_runtime');
   await expect(capability.permission(true)).resolves.toBeNull();
   await expect(capability.expoPushToken('project')).resolves.toBeNull();
@@ -62,7 +62,7 @@ test('application startup path has no static expo-notifications import', () => {
   );
 });
 
-test('Android development client is push-capable and retains lazy notification behavior', async () => {
+test('SDK 57 Android development client without an Expo Go version is push-capable', async () => {
   const notifications = module();
   const loader = jest.fn().mockResolvedValue(notifications);
   const capability = new ExpoNotificationCapability(null, loader);

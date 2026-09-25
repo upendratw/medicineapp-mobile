@@ -22,16 +22,18 @@ export function PushRegistrationSettings() {
   return (
     <>
       <AppText>{t('notificationsHelp')}</AppText>
-      <AppButton
-        label={t('enableNotifications')}
-        loading={loading}
-        onPress={register}
-        accessibilityHint={t('notificationsHelp')}
-        disabled={
-          result?.status === 'unsupported_runtime' ||
-          result?.status === 'unsupported_personal_team'
-        }
-      />
+      {result?.status !== 'registered' && result?.status !== 'denied' ? (
+        <AppButton
+          label={t('enableNotifications')}
+          loading={loading}
+          onPress={register}
+          accessibilityHint={t('notificationsHelp')}
+          disabled={
+            result?.status === 'unsupported_runtime' ||
+            result?.status === 'unsupported_personal_team'
+          }
+        />
+      ) : null}
       {message ? (
         <AppAlert
           tone={result?.status === 'registered' ? 'success' : 'warning'}

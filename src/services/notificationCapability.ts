@@ -11,7 +11,7 @@ type NotificationsLoader = () => Promise<NotificationsModule>;
 
 export class ExpoNotificationCapability {
   constructor(
-    private readonly expoGoConfig: object | null = Constants.expoGoConfig,
+    private readonly expoGoVersion: string | null = Constants.expoVersion,
     private readonly loader: NotificationsLoader = () =>
       import('expo-notifications'),
     private readonly iosPersonalTeamBuild: boolean = Constants.expoConfig?.extra
@@ -20,7 +20,7 @@ export class ExpoNotificationCapability {
 
   status(): NotificationRuntimeStatus {
     if (this.iosPersonalTeamBuild) return 'unsupported_personal_team';
-    return this.expoGoConfig !== null ? 'unsupported_runtime' : 'supported';
+    return this.expoGoVersion !== null ? 'unsupported_runtime' : 'supported';
   }
 
   private async load(): Promise<NotificationsModule | null> {
