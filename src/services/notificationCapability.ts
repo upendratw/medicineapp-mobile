@@ -1,4 +1,6 @@
 import Constants from 'expo-constants';
+import { isRunningInExpoGo } from 'expo';
+import { Platform } from 'react-native';
 
 export type NotificationRuntimeStatus =
   'supported' | 'unsupported_runtime' | 'unsupported_personal_team';
@@ -11,16 +13,21 @@ type NotificationsLoader = () => Promise<NotificationsModule>;
 
 export class ExpoNotificationCapability {
   constructor(
-    private readonly expoGoVersion: string | null = Constants.expoVersion,
+    private readonly runningInExpoGo: boolean = isRunningInExpoGo(),
     private readonly loader: NotificationsLoader = () =>
       import('expo-notifications'),
     private readonly iosPersonalTeamBuild: boolean = Constants.expoConfig?.extra
       ?.iosPersonalTeamBuild === true,
+    private readonly platform: string = Platform.OS,
   ) {}
 
   status(): NotificationRuntimeStatus {
-    if (this.iosPersonalTeamBuild) return 'unsupported_personal_team';
-    return this.expoGoVersion !== null ? 'unsupported_runtime' : 'supported';
+    if (!['android', 'ios'].includes(this.platform))
+      return 'unsupported_runtime';
+    if (this.runningInExpoGo) return 'unsupported_runtime';
+    if (this.platform === 'ios' && this.iosPersonalTeamBuild)
+      return 'unsupported_personal_team';
+    return 'supported';
   }
 
   private async load(): Promise<NotificationsModule | null> {

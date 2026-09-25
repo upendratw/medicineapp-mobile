@@ -30,7 +30,7 @@ const module = () => ({
 
 test('Expo Go capability never loads unsupported notification module', async () => {
   const loader = jest.fn();
-  const capability = new ExpoNotificationCapability('57.0.0', loader);
+  const capability = new ExpoNotificationCapability(true, loader);
   expect(capability.status()).toBe('unsupported_runtime');
   await expect(capability.permission(true)).resolves.toBeNull();
   await expect(capability.expoPushToken('project')).resolves.toBeNull();
@@ -40,7 +40,7 @@ test('Expo Go capability never loads unsupported notification module', async () 
 
 test('Personal Team capability never loads notification native module', async () => {
   const loader = jest.fn();
-  const capability = new ExpoNotificationCapability(null, loader, true);
+  const capability = new ExpoNotificationCapability(false, loader, true, 'ios');
   expect(capability.status()).toBe('unsupported_personal_team');
   await expect(capability.permission(true)).resolves.toBeNull();
   await expect(capability.expoPushToken('project')).resolves.toBeNull();
@@ -62,10 +62,15 @@ test('application startup path has no static expo-notifications import', () => {
   );
 });
 
-test('SDK 57 Android development client without an Expo Go version is push-capable', async () => {
+test('SDK 57 Android development client is push-capable despite populated manifest fields', async () => {
   const notifications = module();
   const loader = jest.fn().mockResolvedValue(notifications);
-  const capability = new ExpoNotificationCapability(null, loader);
+  const capability = new ExpoNotificationCapability(
+    false,
+    loader,
+    false,
+    'android',
+  );
   expect(capability.status()).toBe('supported');
   await expect(capability.permission(false)).resolves.toBe('granted');
   await expect(capability.expoPushToken('project')).resolves.toBe(
@@ -86,9 +91,39 @@ test('SDK 57 Android development client without an Expo Go version is push-capab
 
 test('supported runtime module-load failure remains safely unavailable', async () => {
   const capability = new ExpoNotificationCapability(
-    null,
+    false,
     jest.fn().mockRejectedValue(new Error('synthetic native failure')),
+    false,
+    'android',
   );
   await expect(capability.permission(true)).resolves.toBeNull();
   await expect(capability.addResponseListener(jest.fn())).resolves.toBeNull();
+});
+
+test.each([
+  ['Android EAS development client', false, false, 'android', 'supported'],
+  ['Android preview or standalone build', false, false, 'android', 'supported'],
+  ['Android Expo Go', true, false, 'android', 'unsupported_runtime'],
+  ['iOS EAS development build', false, false, 'ios', 'supported'],
+  ['iOS Expo Go', true, false, 'ios', 'unsupported_runtime'],
+  ['iOS Personal Team build', false, true, 'ios', 'unsupported_personal_team'],
+  ['web', false, false, 'web', 'unsupported_runtime'],
+] as const)(
+  '%s resolves to the expected native-push capability',
+  (_name, expoGo, personalTeam, platform, expected) => {
+    expect(
+      new ExpoNotificationCapability(
+        expoGo,
+        jest.fn(),
+        personalTeam,
+        platform,
+      ).status(),
+    ).toBe(expected);
+  },
+);
+
+test('classifier uses Expo native Expo Go detection, not ambiguous manifest fields', () => {
+  const source = read('src/services/notificationCapability.ts');
+  expect(source).toContain('isRunningInExpoGo()');
+  expect(source).not.toMatch(/Constants\.(?:expoGoConfig|expoVersion)/);
 });
