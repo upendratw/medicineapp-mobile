@@ -15,7 +15,7 @@ import {
   type NotificationDevicePushToken,
 } from '@/services/notificationCapability';
 
-export const NOTIFICATION_CHANNEL_ID = 'medicineapp-reminders-v2';
+export const NOTIFICATION_CHANNEL_ID = 'medicineapp-reminders-v3';
 export const DEFAULT_NOTIFICATION_COPY = Object.freeze({
   title: 'Medicine reminder',
   body: 'Time to take <medicine label>.',
@@ -92,8 +92,9 @@ export class ExpoPushPermissionGateway implements PushPermissionGateway {
       : null;
   }
   async configureChannel(): Promise<void> {
-    if (Platform.OS !== 'android') return;
-    await this.capability.configureAndroidChannel(NOTIFICATION_CHANNEL_ID);
+    if (Platform.OS === 'android')
+      await this.capability.configureAndroidChannel(NOTIFICATION_CHANNEL_ID);
+    await this.capability.configureForegroundPresentation();
   }
 }
 

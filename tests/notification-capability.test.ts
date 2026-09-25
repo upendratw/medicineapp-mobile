@@ -20,6 +20,8 @@ const module = () => ({
     .fn()
     .mockResolvedValue({ data: 'ExponentPushToken[synthetic]' }),
   setNotificationChannelAsync: jest.fn().mockResolvedValue(null),
+  setNotificationHandler: jest.fn(),
+  AndroidNotificationPriority: { MAX: 'max' },
   addNotificationResponseReceivedListener: jest.fn(() => ({
     remove: jest.fn(),
   })),
@@ -77,21 +79,31 @@ test('SDK 57 Android development client is push-capable despite populated manife
     'ExponentPushToken[synthetic]',
   );
   await expect(
-    capability.configureAndroidChannel('medicineapp-reminders-v2'),
+    capability.configureAndroidChannel('medicineapp-reminders-v3'),
   ).resolves.toBe(true);
   expect(notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
-    'medicineapp-reminders-v2',
+    'medicineapp-reminders-v3',
     {
       name: 'MedicineApp reminders',
       description: 'Audible medication reminders',
       importance: 5,
-      sound: 'default',
       enableVibrate: true,
       vibrationPattern: [0, 500, 250, 500],
       lockscreenVisibility: 1,
       bypassDnd: false,
     },
   );
+  await expect(capability.configureForegroundPresentation()).resolves.toBe(
+    true,
+  );
+  const handler = notifications.setNotificationHandler.mock.calls[0]?.[0];
+  await expect(handler?.handleNotification()).resolves.toEqual({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    priority: 'max',
+  });
   const listener = jest.fn();
   await expect(capability.addResponseListener(listener)).resolves.toBeTruthy();
   await expect(capability.lastResponseData()).resolves.toBeNull();

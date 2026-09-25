@@ -82,11 +82,25 @@ export class ExpoNotificationCapability {
       name: 'MedicineApp reminders',
       description: 'Audible medication reminders',
       importance: notifications.AndroidImportance.MAX,
-      sound: 'default',
       enableVibrate: true,
       vibrationPattern: [0, 500, 250, 500],
       lockscreenVisibility: notifications.AndroidNotificationVisibility.PUBLIC,
       bypassDnd: false,
+    });
+    return true;
+  }
+
+  async configureForegroundPresentation(): Promise<boolean> {
+    const notifications = await this.load();
+    if (!notifications) return false;
+    notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        priority: notifications.AndroidNotificationPriority.MAX,
+      }),
     });
     return true;
   }
