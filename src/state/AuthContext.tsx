@@ -11,16 +11,21 @@ import {
 import { ApiClient } from '@/api/client';
 import { sessionEvents } from '@/security/SessionEvents';
 import { secureTokenStore } from '@/security/SecureTokenStore';
-import { AuthService, type OtpChallenge } from '@/services/authService';
+import {
+  AuthService,
+  type AuthRole,
+  normalizeAuthRole,
+  type OtpChallenge,
+} from '@/services/authService';
 import { pushRegistrationCoordinator } from '@/services/pushRegistration';
 
 export type AuthStatus =
   'restoring' | 'unauthenticated' | 'authenticated' | 'error';
-type PendingChallenge = OtpChallenge & { phone: string };
+type PendingChallenge = OtpChallenge & { phone: string; role: AuthRole };
 type AuthValue = {
   status: AuthStatus;
   pendingChallenge: PendingChallenge | null;
-  requestOtp(phone: string): Promise<void>;
+  requestOtp(phone: string, role?: AuthRole): Promise<void>;
   verifyOtp(otp: string): Promise<void>;
   logout(): Promise<void>;
 };
@@ -50,9 +55,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }),
     [],
   );
-  const requestOtp = useCallback(async (phone: string) => {
-    const challenge = await service.requestOtp(phone);
-    setPendingChallenge({ ...challenge, phone });
+  const requestOtp = useCallback(async (phone: string, role?: AuthRole) => {
+    const safeRole = normalizeAuthRole(role);
+    const challenge = await service.requestOtp(phone, safeRole);
+    setPendingChallenge({ ...challenge, phone, role: safeRole });
   }, []);
   const verifyOtp = useCallback(
     async (otp: string) => {

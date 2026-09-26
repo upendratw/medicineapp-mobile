@@ -18,6 +18,46 @@ function Probe() {
   );
 }
 
+function OtpRoleProbe() {
+  const { pendingChallenge, requestOtp, verifyOtp } = useAuth();
+  return (
+    <>
+      <Text>{pendingChallenge?.role ?? 'no-role'}</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="request-caregiver-otp"
+        onPress={() => requestOtp('+919876543210', 'caregiver')}
+      >
+        <Text>request caregiver</Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="request-patient-otp"
+        onPress={() => requestOtp('+919876543210', 'patient')}
+      >
+        <Text>request patient</Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="resend-current-otp"
+        onPress={() =>
+          pendingChallenge &&
+          requestOtp(pendingChallenge.phone, pendingChallenge.role)
+        }
+      >
+        <Text>resend current</Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="verify-current-otp"
+        onPress={() => verifyOtp('123456')}
+      >
+        <Text>verify current</Text>
+      </Pressable>
+    </>
+  );
+}
+
 function CaptureProbe() {
   const capture = useCapture();
   return (
@@ -103,4 +143,90 @@ test('logout clears transient OCR state before a subsequent user can authenticat
   await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy());
   expect(screen.getByText('no transient image')).toBeTruthy();
   expect(screen.getByText('no recognition result')).toBeTruthy();
+});
+
+test('caregiver role remains bound through request, resend, and server-bound verification', async () => {
+  jest.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
+  const fetchMock = jest.spyOn(global, 'fetch').mockImplementation(
+    async (input) =>
+      ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: String(input).endsWith('/verify-otp')
+            ? {
+                user_id: 'synthetic-caregiver',
+                role: 'caregiver',
+                access_token: 'synthetic-access',
+                refresh_token: 'synthetic-refresh',
+                expires_in: 900,
+              }
+            : {
+                challenge_id: 'synthetic-challenge',
+                expires_in_seconds: 300,
+              },
+        }),
+      }) as Response,
+  );
+  const screen = await render(
+    <AuthProvider>
+      <OtpRoleProbe />
+    </AuthProvider>,
+  );
+  await waitFor(() => expect(screen.getByText('no-role')).toBeTruthy());
+  await act(async () =>
+    fireEvent.press(
+      screen.getByRole('button', { name: 'request-caregiver-otp' }),
+    ),
+  );
+  await waitFor(() => expect(screen.getByText('caregiver')).toBeTruthy());
+  await act(async () =>
+    fireEvent.press(screen.getByRole('button', { name: 'resend-current-otp' })),
+  );
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  for (const call of fetchMock.mock.calls) {
+    expect(call[1]?.body).toBe(
+      JSON.stringify({ phone: '+919876543210', role: 'caregiver' }),
+    );
+  }
+  await act(async () =>
+    fireEvent.press(screen.getByRole('button', { name: 'verify-current-otp' })),
+  );
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+  expect(fetchMock.mock.calls[2][1]?.body).toBe(
+    JSON.stringify({
+      challenge_id: 'synthetic-challenge',
+      phone: '+919876543210',
+      otp: '123456',
+    }),
+  );
+});
+
+test('patient role remains bound to the pending challenge and resend request', async () => {
+  jest.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
+  const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      data: { challenge_id: 'patient-challenge', expires_in_seconds: 300 },
+    }),
+  } as Response);
+  const screen = await render(
+    <AuthProvider>
+      <OtpRoleProbe />
+    </AuthProvider>,
+  );
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'request-patient-otp' }),
+  );
+  await waitFor(() => expect(screen.getByText('patient')).toBeTruthy());
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'resend-current-otp' }),
+  );
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  for (const call of fetchMock.mock.calls) {
+    expect(call[1]?.body).toBe(
+      JSON.stringify({ phone: '+919876543210', role: 'patient' }),
+    );
+  }
 });

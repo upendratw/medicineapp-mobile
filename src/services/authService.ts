@@ -5,6 +5,11 @@ export type OtpChallenge = Readonly<{
   challengeId: string;
   expiresInSeconds: number;
 }>;
+export type AuthRole = 'patient' | 'caregiver';
+
+export const normalizeAuthRole = (value: unknown): AuthRole =>
+  value === 'caregiver' ? 'caregiver' : 'patient';
+
 type OtpResponse = { challenge_id: string; expires_in_seconds: number };
 type SessionResponse = {
   user_id: string;
@@ -21,12 +26,15 @@ export class AuthService {
     private readonly sessionCleanup?: () => Promise<void>,
   ) {}
 
-  async requestOtp(phone: string): Promise<OtpChallenge> {
+  async requestOtp(
+    phone: string,
+    role: AuthRole = 'patient',
+  ): Promise<OtpChallenge> {
     const data = await this.client.request<OtpResponse>(
       '/api/v1/auth/request-otp',
       {
         method: 'POST',
-        body: JSON.stringify({ phone, role: 'patient' }),
+        body: JSON.stringify({ phone, role: normalizeAuthRole(role) }),
       },
     );
     return {

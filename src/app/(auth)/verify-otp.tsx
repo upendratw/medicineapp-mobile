@@ -51,7 +51,7 @@ export default function VerifyOtpScreen() {
     setLoading(true);
     setError('');
     try {
-      await requestOtp(pendingChallenge.phone);
+      await requestOtp(pendingChallenge.phone, pendingChallenge.role);
       setCooldown(30);
     } catch {
       setError('A new verification code could not be sent. Please try again.');

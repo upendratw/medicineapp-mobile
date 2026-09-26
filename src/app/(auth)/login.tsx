@@ -10,6 +10,7 @@ import {
   AppTextInput,
 } from '@/components';
 import { publicEnvironment } from '@/config/environment';
+import type { AuthRole } from '@/services/authService';
 import { useAuth } from '@/state/AuthContext';
 import { normalizeIndianPhone } from '@/utils/phone';
 import { useTranslation } from '@/localization';
@@ -19,6 +20,7 @@ export default function LoginScreen() {
   const { requestOtp } = useAuth();
   const { t } = useTranslation();
   const [phone, setPhone] = useState('');
+  const [role, setRole] = useState<AuthRole>('patient');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const submit = async () => {
@@ -30,7 +32,7 @@ export default function LoginScreen() {
     setError('');
     setLoading(true);
     try {
-      await requestOtp(normalized);
+      await requestOtp(normalized, role);
       router.push('/verify-otp');
     } catch {
       setError('We could not send the verification code. Please try again.');
@@ -43,6 +45,23 @@ export default function LoginScreen() {
       <AppHeader
         title={t('signIn')}
         subtitle="Use your mobile number to receive a one-time verification code."
+      />
+      <AppText variant="label">Sign in as</AppText>
+      <AppButton
+        label="Patient"
+        variant={role === 'patient' ? 'primary' : 'secondary'}
+        accessibilityRole="radio"
+        accessibilityLabel="Sign in as Patient"
+        accessibilityState={{ selected: role === 'patient' }}
+        onPress={() => setRole('patient')}
+      />
+      <AppButton
+        label="Caregiver"
+        variant={role === 'caregiver' ? 'primary' : 'secondary'}
+        accessibilityRole="radio"
+        accessibilityLabel="Sign in as Caregiver"
+        accessibilityState={{ selected: role === 'caregiver' }}
+        onPress={() => setRole('caregiver')}
       />
       <AppTextInput
         label={t('mobileNumber')}

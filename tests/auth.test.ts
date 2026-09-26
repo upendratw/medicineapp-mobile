@@ -49,6 +49,36 @@ test('requests OTP using the backend contract without embedding an OTP', async (
   );
 });
 
+test('requests a caregiver OTP only when caregiver is explicitly selected', async () => {
+  const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(
+    response({
+      data: { challenge_id: 'caregiver-challenge', expires_in_seconds: 300 },
+    }),
+  );
+  await new AuthService(
+    new ApiClient('https://api.example.test', 1000),
+    new FakeTokenStore(),
+  ).requestOtp('+919876543210', 'caregiver');
+  expect(fetchMock.mock.calls[0][1]?.body).toBe(
+    JSON.stringify({ phone: '+919876543210', role: 'caregiver' }),
+  );
+});
+
+test('an invalid runtime role fails safely to patient without privilege elevation', async () => {
+  const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(
+    response({
+      data: { challenge_id: 'patient-challenge', expires_in_seconds: 300 },
+    }),
+  );
+  await new AuthService(
+    new ApiClient('https://api.example.test', 1000),
+    new FakeTokenStore(),
+  ).requestOtp('+919876543210', 'admin' as never);
+  expect(fetchMock.mock.calls[0][1]?.body).toBe(
+    JSON.stringify({ phone: '+919876543210', role: 'patient' }),
+  );
+});
+
 test('verification sends the bounded contract and writes tokens only to secure storage', async () => {
   jest.spyOn(global, 'fetch').mockResolvedValue(
     response({
