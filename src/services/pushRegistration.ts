@@ -33,10 +33,27 @@ export type PushRegistrationResult = Readonly<{
     | 'unsupported_runtime'
     | 'unsupported_personal_team'
     | 'offline'
-    | 'rate_limited';
+    | 'rate_limited'
+    | 'ownership_transfer_required';
   deviceId?: string;
   retryAfterSeconds?: number;
 }>;
+type RegistrationInput = Readonly<{
+  deviceIdentifier: string;
+  pushToken: string;
+  platform: PushPlatform;
+  appVersion: string | null;
+  appEnvironment: 'development' | 'test' | 'staging' | 'production';
+}>;
+export type OwnershipTransferEvidence = Readonly<
+  RegistrationInput & {
+    transferChallenge: string;
+    tupleFingerprint: string;
+    generation: number;
+  }
+>;
+export type PushRegistrationAttemptResult = PushRegistrationResult &
+  Readonly<{ transferEvidence?: OwnershipTransferEvidence }>;
 export interface PushPermissionGateway {
   runtimeStatus(): NotificationRuntimeStatus;
   permission(request: boolean): Promise<PushPermission>;
@@ -46,13 +63,10 @@ export interface PushPermissionGateway {
   configureChannel(): Promise<void>;
 }
 export interface PushRegistrationService {
-  register(input: {
-    deviceIdentifier: string;
-    pushToken: string;
-    platform: PushPlatform;
-    appVersion: string | null;
-    appEnvironment: 'development' | 'test' | 'staging' | 'production';
-  }): Promise<{ deviceId: string }>;
+  register(input: RegistrationInput): Promise<{ deviceId: string }>;
+  transferOwnership?(
+    input: RegistrationInput & { transferChallenge: string },
+  ): Promise<{ deviceId: string; transferred: boolean }>;
   unregister(deviceId: string): Promise<void>;
 }
 export interface PushRegistrationStore {
@@ -76,6 +90,7 @@ export class ExpoPushPermissionGateway implements PushPermissionGateway {
   async token(
     devicePushToken?: NotificationDevicePushToken,
   ): Promise<string | null> {
+    await this.capability.verifyReminderCategoryBeforeDeviceRegistration();
     if (!Device.isDevice) return null;
     const projectId = Constants.easConfig?.projectId;
     if (!projectId) return null;
@@ -137,6 +152,33 @@ export class BackendPushRegistrationService implements PushRegistrationService {
       true,
     );
   }
+  async transferOwnership(
+    input: RegistrationInput & { transferChallenge: string },
+  ): Promise<{ deviceId: string; transferred: boolean }> {
+    const data = await this.client.request<{
+      device_id: string;
+      active: boolean;
+      transferred: boolean;
+    }>(
+      '/api/v1/devices/transfer',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          device_identifier: input.deviceIdentifier,
+          platform: input.platform,
+          push_provider: 'expo',
+          app_environment: input.appEnvironment,
+          push_token: input.pushToken,
+          transfer_challenge: input.transferChallenge,
+          app_version: input.appVersion,
+        }),
+      },
+      true,
+    );
+    if (!data.active || !data.device_id)
+      throw new Error('Push ownership transfer was not confirmed');
+    return { deviceId: data.device_id, transferred: data.transferred };
+  }
 }
 
 export class SecurePushRegistrationStore implements PushRegistrationStore {
@@ -182,7 +224,8 @@ const hashTuple: TupleHasher = (parts) =>
   );
 
 export class PushRegistrationCoordinator {
-  private inFlight: Promise<PushRegistrationResult> | null = null;
+  private inFlight: Promise<PushRegistrationAttemptResult> | null = null;
+  private transferInFlight: Promise<PushRegistrationResult> | null = null;
   private generation = 0;
 
   constructor(
@@ -194,14 +237,27 @@ export class PushRegistrationCoordinator {
   async register(
     requestPermission: boolean,
     online: boolean,
-  ): Promise<PushRegistrationResult> {
+  ): Promise<PushRegistrationAttemptResult> {
     return this.singleFlight(requestPermission, online);
+  }
+
+  confirmOwnershipTransfer(
+    evidence: OwnershipTransferEvidence,
+  ): Promise<PushRegistrationResult> {
+    if (this.transferInFlight) return this.transferInFlight;
+    const pending = this.performOwnershipTransfer(evidence);
+    this.transferInFlight = pending;
+    const clear = () => {
+      if (this.transferInFlight === pending) this.transferInFlight = null;
+    };
+    void pending.then(clear, clear);
+    return pending;
   }
 
   async registerRotatedToken(
     devicePushToken: NotificationDevicePushToken,
     online: boolean,
-  ): Promise<PushRegistrationResult> {
+  ): Promise<PushRegistrationAttemptResult> {
     return this.singleFlight(false, online, devicePushToken);
   }
 
@@ -209,7 +265,7 @@ export class PushRegistrationCoordinator {
     requestPermission: boolean,
     online: boolean,
     devicePushToken?: NotificationDevicePushToken,
-  ): Promise<PushRegistrationResult> {
+  ): Promise<PushRegistrationAttemptResult> {
     if (this.inFlight) return this.inFlight;
     const generation = this.generation;
     const pending = this.performRegistration(
@@ -231,7 +287,7 @@ export class PushRegistrationCoordinator {
     online: boolean,
     generation: number,
     devicePushToken?: NotificationDevicePushToken,
-  ): Promise<PushRegistrationResult> {
+  ): Promise<PushRegistrationAttemptResult> {
     const runtimeStatus = this.gateway.runtimeStatus();
     if (runtimeStatus !== 'supported') {
       return { status: runtimeStatus };
@@ -276,6 +332,28 @@ export class PushRegistrationCoordinator {
         appEnvironment: publicEnvironment.appEnvironment,
       });
     } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.code === 'PUSH_TOKEN_OWNERSHIP_CONFLICT' &&
+        typeof error.transferChallenge === 'string' &&
+        /^[0-9]{1,20}\.[a-f0-9]{64}$/.test(error.transferChallenge) &&
+        error.transferChallenge.length >= 12 &&
+        error.transferChallenge.length <= 96
+      ) {
+        return {
+          status: 'ownership_transfer_required',
+          transferEvidence: Object.freeze({
+            deviceIdentifier,
+            pushToken,
+            platform,
+            appVersion: Constants.expoConfig?.version ?? null,
+            appEnvironment: publicEnvironment.appEnvironment,
+            transferChallenge: error.transferChallenge,
+            tupleFingerprint,
+            generation,
+          }),
+        };
+      }
       if (error instanceof ApiError && error.status === 429) {
         return {
           status: 'rate_limited',
@@ -300,6 +378,40 @@ export class PushRegistrationCoordinator {
     return { status: 'registered', deviceId: result.deviceId };
   }
 
+  private async performOwnershipTransfer(
+    evidence: OwnershipTransferEvidence,
+  ): Promise<PushRegistrationResult> {
+    if (
+      evidence.generation !== this.generation ||
+      !/^[0-9]{1,20}\.[a-f0-9]{64}$/.test(evidence.transferChallenge) ||
+      !this.backend.transferOwnership
+    ) {
+      return { status: 'unavailable' };
+    }
+    const result = await this.backend.transferOwnership({
+      deviceIdentifier: evidence.deviceIdentifier,
+      pushToken: evidence.pushToken,
+      platform: evidence.platform,
+      appVersion: evidence.appVersion,
+      appEnvironment: evidence.appEnvironment,
+      transferChallenge: evidence.transferChallenge,
+    });
+    if (evidence.generation !== this.generation) {
+      await this.revokeStale(result.deviceId);
+      return { status: 'unavailable' };
+    }
+    await Promise.all([
+      this.store.writeRegistrationId(result.deviceId),
+      this.store.writeTupleFingerprint(evidence.tupleFingerprint),
+    ]);
+    if (evidence.generation !== this.generation) {
+      await this.store.clear();
+      await this.revokeStale(result.deviceId);
+      return { status: 'unavailable' };
+    }
+    return { status: 'registered', deviceId: result.deviceId };
+  }
+
   private async revokeStale(deviceId: string): Promise<void> {
     try {
       await this.backend.unregister(deviceId);
@@ -311,6 +423,7 @@ export class PushRegistrationCoordinator {
   async unregister(): Promise<void> {
     this.generation += 1;
     this.inFlight = null;
+    this.transferInFlight = null;
     const deviceId = await this.store.readRegistrationId();
     try {
       if (deviceId) await this.backend.unregister(deviceId);

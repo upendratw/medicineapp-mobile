@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useRouter } from 'expo-router';
@@ -13,20 +14,31 @@ import { useOnline } from '@/state/NetworkContext';
 import { useDeepLinkIntent } from '@/navigation/DeepLinkContext';
 import {
   pushRegistrationCoordinator,
+  type OwnershipTransferEvidence,
+  type PushRegistrationAttemptResult,
   type PushRegistrationResult,
 } from '@/services/pushRegistration';
+import { DeviceOwnershipTransferDialog } from '@/components/DeviceOwnershipTransferDialog';
 import { notificationCapability } from '@/services/notificationCapability';
 import { resolveReminderNotificationAction } from '@/services/notificationActions';
 import { notificationActionCoordinator } from '@/services/registry';
 type Value = {
   result: PushRegistrationResult | null;
   loading: boolean;
+  ownershipTransferRequired: boolean;
+  transferLoading: boolean;
   register(): Promise<void>;
+  confirmOwnershipTransfer(): Promise<void>;
+  cancelOwnershipTransfer(): void;
 };
 const Context = createContext<Value>({
   result: null,
   loading: false,
+  ownershipTransferRequired: false,
+  transferLoading: false,
   async register() {},
+  async confirmOwnershipTransfer() {},
+  cancelOwnershipTransfer() {},
 });
 export function PushRegistrationProvider({ children }: PropsWithChildren) {
   const { status } = useAuth();
@@ -35,6 +47,28 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
   const { acceptNotification } = useDeepLinkIntent();
   const [result, setResult] = useState<PushRegistrationResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ownershipTransferRequired, setOwnershipTransferRequired] =
+    useState(false);
+  const [transferLoading, setTransferLoading] = useState(false);
+  const transferEvidence = useRef<OwnershipTransferEvidence | null>(null);
+  const transferRequest = useRef<Promise<void> | null>(null);
+  const applyRegistrationAttempt = useCallback(
+    (next: PushRegistrationAttemptResult) => {
+      if (
+        next.status === 'ownership_transfer_required' &&
+        next.transferEvidence
+      ) {
+        transferEvidence.current = next.transferEvidence;
+        setOwnershipTransferRequired(true);
+        setResult({ status: 'ownership_transfer_required' });
+        return;
+      }
+      transferEvidence.current = null;
+      setOwnershipTransferRequired(false);
+      setResult(next);
+    },
+    [],
+  );
   const handleNotificationResponse = useCallback(
     async (
       response: Parameters<typeof notificationActionCoordinator.capture>[0],
@@ -72,14 +106,16 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
     async (request: boolean) => {
       setLoading(true);
       try {
-        setResult(await pushRegistrationCoordinator.register(request, online));
+        applyRegistrationAttempt(
+          await pushRegistrationCoordinator.register(request, online),
+        );
       } catch {
         setResult({ status: 'unavailable' });
       } finally {
         setLoading(false);
       }
     },
-    [online],
+    [applyRegistrationAttempt, online],
   );
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -87,7 +123,7 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
     void pushRegistrationCoordinator
       .register(false, online)
       .then((next) => {
-        if (active) setResult(next);
+        if (active) applyRegistrationAttempt(next);
       })
       .catch(() => {
         if (active) setResult({ status: 'unavailable' });
@@ -95,7 +131,37 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
     return () => {
       active = false;
     };
-  }, [online, status]);
+  }, [applyRegistrationAttempt, online, status]);
+  useEffect(() => {
+    if (status === 'authenticated') return;
+    transferEvidence.current = null;
+    transferRequest.current = null;
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      setOwnershipTransferRequired(false);
+      setTransferLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [status]);
+  useEffect(() => {
+    if (!__DEV__) return;
+    let active = true;
+    let remove: (() => void) | undefined;
+    void notificationCapability
+      .addReceivedListener()
+      .then((subscription) => {
+        if (!active) subscription?.remove();
+        else remove = () => subscription?.remove();
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+      remove?.();
+    };
+  }, []);
   useEffect(() => {
     let active = true;
     let remove: (() => void) | undefined;
@@ -152,11 +218,11 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
         // token until after this callback returns, and pass the native token so
         // Expo never reacquires it and retriggers this listener.
         setTimeout(() => {
-          if (!active) return;
+          if (!active || transferEvidence.current) return;
           void pushRegistrationCoordinator
             .registerRotatedToken(token, online)
             .then((next) => {
-              if (active) setResult(next);
+              if (active) applyRegistrationAttempt(next);
             })
             .catch(() => {
               if (active) setResult({ status: 'unavailable' });
@@ -171,13 +237,71 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
       active = false;
       remove?.();
     };
-  }, [online, status]);
+  }, [applyRegistrationAttempt, online, status]);
+  const cancelOwnershipTransfer = useCallback(() => {
+    if (transferRequest.current) return;
+    transferEvidence.current = null;
+    setOwnershipTransferRequired(false);
+    setResult({ status: 'unavailable' });
+  }, []);
+  const confirmOwnershipTransfer = useCallback((): Promise<void> => {
+    if (transferRequest.current) return transferRequest.current;
+    const evidence = transferEvidence.current;
+    if (!evidence) return Promise.resolve();
+    setTransferLoading(true);
+    const pending = pushRegistrationCoordinator
+      .confirmOwnershipTransfer(evidence)
+      .then((next) => {
+        if (transferEvidence.current !== evidence) return;
+        transferEvidence.current = null;
+        setOwnershipTransferRequired(false);
+        setResult(next);
+      })
+      .catch(() => {
+        if (transferEvidence.current !== evidence) return;
+        transferEvidence.current = null;
+        setOwnershipTransferRequired(false);
+        setResult({ status: 'unavailable' });
+      })
+      .finally(() => {
+        if (transferRequest.current === pending) transferRequest.current = null;
+        setTransferLoading(false);
+      });
+    transferRequest.current = pending;
+    return pending;
+  }, []);
   const register = useCallback(() => run(true), [run]);
   const value = useMemo(
-    () => ({ result, loading, register }),
-    [loading, register, result],
+    () => ({
+      result,
+      loading,
+      ownershipTransferRequired,
+      transferLoading,
+      register,
+      confirmOwnershipTransfer,
+      cancelOwnershipTransfer,
+    }),
+    [
+      cancelOwnershipTransfer,
+      confirmOwnershipTransfer,
+      loading,
+      ownershipTransferRequired,
+      register,
+      result,
+      transferLoading,
+    ],
   );
-  return <Context.Provider value={value}>{children}</Context.Provider>;
+  return (
+    <Context.Provider value={value}>
+      {children}
+      <DeviceOwnershipTransferDialog
+        visible={status === 'authenticated' && ownershipTransferRequired}
+        loading={transferLoading}
+        onConfirm={() => void confirmOwnershipTransfer()}
+        onCancel={cancelOwnershipTransfer}
+      />
+    </Context.Provider>
+  );
 }
 export function usePushRegistration(): Value {
   return useContext(Context);

@@ -3,14 +3,63 @@ import { mobileObservability, type MobileObservability } from '@/observability';
 import { sessionEvents, type SessionEvents } from '@/security/SessionEvents';
 import type { SecureTokenStore, TokenPair } from '@/security/SecureTokenStore';
 
-type ApiEnvelope<T> = { data: T };
-type ApiErrorEnvelope = { error?: { code?: string; message?: string } };
+type ApiEnvelope<T> = { data?: T };
+type ApiErrorEnvelope = {
+  error?: {
+    code?: string;
+    message?: string;
+    transferChallenge?: string;
+  };
+};
 type RefreshResponse = {
   access_token: string;
   refresh_token: string;
 };
 
 const refreshes = new WeakMap<SecureTokenStore, Promise<TokenPair>>();
+const OWNERSHIP_CONFLICT_CODE = 'PUSH_TOKEN_OWNERSHIP_CONFLICT';
+const TRANSFER_CHALLENGE_PATTERN = /^[0-9]{1,20}\.[a-f0-9]{64}$/;
+const MIN_TRANSFER_CHALLENGE_LENGTH = 12;
+const MAX_TRANSFER_CHALLENGE_LENGTH = 96;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function extractTransferChallenge(
+  error: Record<string, unknown>,
+): string | undefined {
+  if (error.code !== OWNERSHIP_CONFLICT_CODE || !isRecord(error.details))
+    return undefined;
+  const challenge = error.details.transfer_challenge;
+  if (
+    typeof challenge !== 'string' ||
+    challenge.length < MIN_TRANSFER_CHALLENGE_LENGTH ||
+    challenge.length > MAX_TRANSFER_CHALLENGE_LENGTH ||
+    !TRANSFER_CHALLENGE_PATTERN.test(challenge)
+  )
+    return undefined;
+  return challenge;
+}
+
+function sanitizeEnvelope<T>(
+  value: unknown,
+): ApiEnvelope<T> & ApiErrorEnvelope {
+  if (!isRecord(value)) return {};
+  const envelope: ApiEnvelope<T> & ApiErrorEnvelope = {};
+  if ('data' in value) envelope.data = value.data as T;
+  if (!isRecord(value.error)) return envelope;
+  const code =
+    typeof value.error.code === 'string' ? value.error.code : undefined;
+  const message =
+    typeof value.error.message === 'string' ? value.error.message : undefined;
+  envelope.error = {
+    code,
+    message,
+    transferChallenge: extractTransferChallenge(value.error),
+  };
+  return envelope;
+}
 
 function validToken(value: unknown): value is string {
   return (
@@ -22,13 +71,22 @@ function validToken(value: unknown): value is string {
 }
 
 export class ApiError extends Error {
+  public readonly transferChallenge!: string | undefined;
+
   constructor(
     public readonly code: string,
     public readonly status: number,
     public readonly retryAfterSeconds?: number,
+    transferChallenge?: string,
   ) {
     super('The request could not be completed. Please try again.');
     this.name = 'ApiError';
+    Object.defineProperty(this, 'transferChallenge', {
+      configurable: false,
+      enumerable: false,
+      value: transferChallenge,
+      writable: false,
+    });
   }
 }
 
@@ -66,12 +124,13 @@ export class ApiClient {
           result.response.status === 429
             ? parseRetryAfter(result.response.headers?.get('Retry-After'))
             : undefined,
+          result.body.error?.transferChallenge,
         );
       }
       if (!result.body || !('data' in result.body))
         throw new ApiError('INVALID_RESPONSE', 502);
       outcome = 'success';
-      return result.body.data;
+      return result.body.data as T;
     } catch (error) {
       const sanitized =
         error instanceof ApiError
@@ -129,8 +188,7 @@ export class ApiClient {
         headers,
         signal: controller.signal,
       });
-      const body = (await response.json().catch(() => ({}))) as ApiEnvelope<T> &
-        ApiErrorEnvelope;
+      const body = sanitizeEnvelope<T>(await response.json().catch(() => ({})));
       return { response, body };
     } finally {
       clearTimeout(timeout);
