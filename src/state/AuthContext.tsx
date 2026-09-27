@@ -17,7 +17,7 @@ import {
   normalizeAuthRole,
   type OtpChallenge,
 } from '@/services/authService';
-import { pushRegistrationCoordinator } from '@/services/pushRegistration';
+import { SecurePushRegistrationStore } from '@/services/pushRegistration';
 
 export type AuthStatus =
   'restoring' | 'unauthenticated' | 'authenticated' | 'error';
@@ -30,10 +30,15 @@ type AuthValue = {
   logout(): Promise<void>;
 };
 
+const pushRegistrationStore = new SecurePushRegistrationStore();
 const service = new AuthService(
   new ApiClient(undefined, undefined, secureTokenStore),
   secureTokenStore,
-  () => pushRegistrationCoordinator.unregister(),
+  // Logout clears only local registration bookkeeping. The authoritative
+  // backend registration remains active until an explicit device-revocation
+  // flow unregisters it. A later authenticated user must resolve ownership
+  // again through the normal backend registration path.
+  () => pushRegistrationStore.clear(),
 );
 const AuthContext = createContext<AuthValue | null>(null);
 

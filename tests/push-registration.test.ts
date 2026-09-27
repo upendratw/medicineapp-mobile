@@ -243,7 +243,7 @@ test('429 returns bounded retryable state without an automatic retry', async () 
   await coordinator.register(false, true);
   expect(backend.register).toHaveBeenCalledTimes(2);
 });
-test('logout invalidates in-flight registration and revokes its stale completion', async () => {
+test('explicit unregister invalidates in-flight registration and revokes its stale completion', async () => {
   const backend = new Backend();
   let complete!: (value: { deviceId: string }) => void;
   backend.register = jest.fn(
@@ -303,7 +303,7 @@ test('backend registration failure is explicit and does not persist association'
   expect(store.value).toBeNull();
   expect(store.tuple).toBeNull();
 });
-test('logout unregisters and clears local association even when backend fails', async () => {
+test('explicit unregister clears local association even when backend fails', async () => {
   const backend = new Backend();
   backend.unregister.mockRejectedValue(new Error('synthetic'));
   const store = new Store();
@@ -315,6 +315,25 @@ test('logout unregisters and clears local association even when backend fails', 
   ).unregister();
   expect(backend.unregister).toHaveBeenCalledWith('device-record');
   expect(store.value).toBeNull();
+});
+test('cleared logout bookkeeping forces later registration through backend ownership validation', async () => {
+  const backend = new Backend();
+  const store = new Store();
+  store.value = 'previous-device-record';
+  store.tuple = 'previous-registration-tuple';
+  await store.clear();
+
+  await expect(
+    new PushRegistrationCoordinator(new Gateway(), backend, store).register(
+      false,
+      true,
+    ),
+  ).resolves.toEqual({
+    status: 'registered',
+    deviceId: 'device-record',
+  });
+  expect(backend.tokens).toHaveLength(1);
+  expect(store.value).toBe('device-record');
 });
 test('backend adapter uses only real authenticated device endpoints', async () => {
   const client = {
