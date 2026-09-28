@@ -22,6 +22,29 @@ export type NotificationResponse = Readonly<{
 type NotificationsModule = typeof import('expo-notifications');
 type NotificationsLoader = () => Promise<NotificationsModule>;
 
+type ReminderCategory = Readonly<{
+  identifier: string;
+  actions: readonly Readonly<{ identifier: string }>[];
+}>;
+
+export function formatReminderCategoryDiagnostic(
+  categories: readonly ReminderCategory[],
+  beforeDeviceRegistration = false,
+): string {
+  const category = categories.find(
+    ({ identifier }) => identifier === REMINDER_NOTIFICATION_CATEGORY,
+  );
+  const prefix = beforeDeviceRegistration ? 'beforeDeviceRegistration ' : '';
+  const count = category?.actions.length ?? 0;
+  return `[NotificationActions] ${prefix}categoryFound=${String(Boolean(category))} actionCount=${count}`;
+}
+
+export function formatReceivedCategoryDiagnostic(
+  categoryIdentifier: string | null,
+): string {
+  return `[NotificationActions] received category=${categoryIdentifier === REMINDER_NOTIFICATION_CATEGORY ? REMINDER_NOTIFICATION_CATEGORY : 'none'}`;
+}
+
 export class ExpoNotificationCapability {
   constructor(
     private readonly runningInExpoGo: boolean = isRunningInExpoGo(),
@@ -124,7 +147,28 @@ export class ExpoNotificationCapability {
         },
       ],
     );
+    await this.reportReminderCategory(notifications, false);
     return true;
+  }
+
+  async verifyReminderCategoryBeforeDeviceRegistration(): Promise<void> {
+    if (!__DEV__) return;
+    const notifications = await this.load();
+    if (!notifications) return;
+    await this.reportReminderCategory(notifications, true);
+  }
+
+  private async reportReminderCategory(
+    notifications: NotificationsModule,
+    beforeDeviceRegistration: boolean,
+  ): Promise<void> {
+    if (!__DEV__) return;
+    const categories = await notifications.getNotificationCategoriesAsync();
+    // Only the presence and action count of MedicineApp's fixed category are logged.
+    // eslint-disable-next-line no-console
+    console.info(
+      formatReminderCategoryDiagnostic(categories, beforeDeviceRegistration),
+    );
   }
 
   async configureForegroundPresentation(): Promise<boolean> {
@@ -154,6 +198,21 @@ export class ExpoNotificationCapability {
         data: response.notification.request.content.data ?? {},
       }),
     );
+  }
+
+  async addReceivedListener(): Promise<NotificationSubscription | null> {
+    if (!__DEV__) return null;
+    const notifications = await this.load();
+    if (!notifications) return null;
+    return notifications.addNotificationReceivedListener((notification) => {
+      // Only the fixed category identifier is logged; notification content is excluded.
+      // eslint-disable-next-line no-console
+      console.info(
+        formatReceivedCategoryDiagnostic(
+          notification.request.content.categoryIdentifier,
+        ),
+      );
+    });
   }
 
   async lastResponse(): Promise<NotificationResponse | null> {

@@ -1,4 +1,8 @@
-import { ExpoNotificationCapability } from '@/services/notificationCapability';
+import {
+  ExpoNotificationCapability,
+  formatReceivedCategoryDiagnostic,
+  formatReminderCategoryDiagnostic,
+} from '@/services/notificationCapability';
 
 const read = (file: string) =>
   require('node:fs').readFileSync(
@@ -21,11 +25,22 @@ const module = () => ({
     .mockResolvedValue({ data: 'ExponentPushToken[synthetic]' }),
   setNotificationChannelAsync: jest.fn().mockResolvedValue(null),
   setNotificationCategoryAsync: jest.fn().mockResolvedValue(null),
+  getNotificationCategoriesAsync: jest.fn().mockResolvedValue([
+    {
+      identifier: 'MEDICINE_REMINDER_ACTIONS',
+      actions: [
+        { identifier: 'MEDICINE_TAKEN' },
+        { identifier: 'MEDICINE_SNOOZE' },
+        { identifier: 'MEDICINE_SKIP' },
+      ],
+    },
+  ]),
   setNotificationHandler: jest.fn(),
   AndroidNotificationPriority: { MAX: 'max' },
   addNotificationResponseReceivedListener: jest.fn(() => ({
     remove: jest.fn(),
   })),
+  addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
   getLastNotificationResponseAsync: jest.fn().mockResolvedValue(null),
   clearLastNotificationResponseAsync: jest.fn().mockResolvedValue(undefined),
   dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
@@ -38,6 +53,7 @@ test('Expo Go capability never loads unsupported notification module', async () 
   expect(capability.status()).toBe('unsupported_runtime');
   await expect(capability.permission(true)).resolves.toBeNull();
   await expect(capability.expoPushToken('project')).resolves.toBeNull();
+  await expect(capability.addReceivedListener()).resolves.toBeNull();
   await expect(capability.addResponseListener(jest.fn())).resolves.toBeNull();
   expect(loader).not.toHaveBeenCalled();
 });
@@ -48,6 +64,7 @@ test('Personal Team capability never loads notification native module', async ()
   expect(capability.status()).toBe('unsupported_personal_team');
   await expect(capability.permission(true)).resolves.toBeNull();
   await expect(capability.expoPushToken('project')).resolves.toBeNull();
+  await expect(capability.addReceivedListener()).resolves.toBeNull();
   await expect(capability.addResponseListener(jest.fn())).resolves.toBeNull();
   expect(loader).not.toHaveBeenCalled();
 });
@@ -136,6 +153,77 @@ test('SDK 57 Android development client is push-capable despite populated manife
   expect(notifications.getExpoPushTokenAsync).toHaveBeenCalledWith({
     projectId: 'project',
   });
+});
+
+test('development received listener delegates once, logs bounded category, and propagates cleanup', async () => {
+  const notifications = module();
+  const remove = jest.fn();
+  notifications.addNotificationReceivedListener.mockReturnValue({ remove });
+  const capability = new ExpoNotificationCapability(
+    false,
+    jest.fn().mockResolvedValue(notifications),
+    false,
+    'android',
+  );
+  const info = jest.spyOn(console, 'info').mockImplementation(() => undefined);
+
+  const subscription = await capability.addReceivedListener();
+
+  expect(notifications.addNotificationReceivedListener).toHaveBeenCalledTimes(
+    1,
+  );
+  const registered =
+    notifications.addNotificationReceivedListener as unknown as jest.Mock<
+      { remove(): void },
+      [
+        (notification: {
+          request: { content: { categoryIdentifier: string | null } };
+        }) => void,
+      ]
+    >;
+  const listener = registered.mock.calls[0]?.[0];
+  expect(listener).toBeDefined();
+  listener?.({
+    request: { content: { categoryIdentifier: 'MEDICINE_REMINDER_ACTIONS' } },
+  });
+  expect(info).toHaveBeenCalledWith(
+    '[NotificationActions] received category=MEDICINE_REMINDER_ACTIONS',
+  );
+  expect(notifications.getExpoPushTokenAsync).not.toHaveBeenCalled();
+  subscription?.remove();
+  expect(remove).toHaveBeenCalledTimes(1);
+  info.mockRestore();
+});
+
+test('category verification delegates to the SDK and reports only bounded state', async () => {
+  const notifications = module();
+  const capability = new ExpoNotificationCapability(
+    false,
+    jest.fn().mockResolvedValue(notifications),
+    false,
+    'android',
+  );
+  const info = jest.spyOn(console, 'info').mockImplementation(() => undefined);
+
+  await capability.verifyReminderCategoryBeforeDeviceRegistration();
+
+  expect(notifications.getNotificationCategoriesAsync).toHaveBeenCalledTimes(1);
+  expect(info).toHaveBeenCalledWith(
+    '[NotificationActions] beforeDeviceRegistration categoryFound=true actionCount=3',
+  );
+  expect(formatReminderCategoryDiagnostic([])).toBe(
+    '[NotificationActions] categoryFound=false actionCount=0',
+  );
+  info.mockRestore();
+});
+
+test('received notification diagnostic never exposes unknown category content', () => {
+  expect(formatReceivedCategoryDiagnostic('private-category')).toBe(
+    '[NotificationActions] received category=none',
+  );
+  expect(formatReceivedCategoryDiagnostic(null)).toBe(
+    '[NotificationActions] received category=none',
+  );
 });
 
 test('native token listener conversion supplies the token and never reacquires it', async () => {

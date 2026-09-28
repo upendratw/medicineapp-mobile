@@ -7,6 +7,7 @@ const mockAddPushTokenListener = jest.fn().mockResolvedValue(null);
 const mockReplace = jest.fn();
 const mockAcceptNotification = jest.fn();
 const mockAddResponseListener = jest.fn().mockResolvedValue(null);
+const mockAddReceivedListener = jest.fn().mockResolvedValue(null);
 const mockLastResponse = jest.fn().mockResolvedValue(null);
 const mockCapture = jest.fn().mockResolvedValue(null);
 const mockProcess = jest.fn().mockResolvedValue({ status: 'none' });
@@ -33,6 +34,8 @@ jest.mock('@/services/pushRegistration', () => ({
 }));
 jest.mock('@/services/notificationCapability', () => ({
   notificationCapability: {
+    addReceivedListener: (...args: unknown[]) =>
+      mockAddReceivedListener(...args),
     addResponseListener: (...args: unknown[]) =>
       mockAddResponseListener(...args),
     lastResponse: (...args: unknown[]) => mockLastResponse(...args),
@@ -68,9 +71,25 @@ beforeEach(() => {
   mockRegisterRotatedToken.mockResolvedValue({ status: 'registered' });
   mockAddPushTokenListener.mockResolvedValue(null);
   mockAddResponseListener.mockResolvedValue(null);
+  mockAddReceivedListener.mockResolvedValue(null);
   mockLastResponse.mockResolvedValue(null);
   mockCapture.mockResolvedValue(null);
   mockProcess.mockResolvedValue({ status: 'none' });
+});
+
+test('provider mounts one foreground listener and removes its subscription', async () => {
+  const remove = jest.fn();
+  mockAddReceivedListener.mockResolvedValue({ remove });
+  const screen = await render(
+    <PushRegistrationProvider>
+      <Probe />
+    </PushRegistrationProvider>,
+  );
+  await waitFor(() => expect(mockAddReceivedListener).toHaveBeenCalledTimes(1));
+
+  screen.unmount();
+
+  await waitFor(() => expect(remove).toHaveBeenCalledTimes(1));
 });
 
 test('ordinary rerender does not repeat automatic registration', async () => {
