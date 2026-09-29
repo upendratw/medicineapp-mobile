@@ -41,17 +41,24 @@ export interface CaregiverAlertService {
     relationshipId: string,
     options: Readonly<{ limit: number; offset: number }>,
   ): Promise<CaregiverAlertPage>;
+  getAlert(relationshipId: string, alertId: string): Promise<CaregiverAlert>;
+  acknowledgeAlert(
+    relationshipId: string,
+    alertId: string,
+  ): Promise<CaregiverAlert>;
 }
 
-export type CaregiverAlertFailure = 'access' | 'temporary';
+export type CaregiverAlertFailure =
+  'access' | 'conflict' | 'rate-limited' | 'temporary';
 
 export function classifyCaregiverAlertFailure(
   error: unknown,
 ): CaregiverAlertFailure {
-  return error instanceof ApiError &&
-    (error.status === 403 || error.status === 404)
-    ? 'access'
-    : 'temporary';
+  if (!(error instanceof ApiError)) return 'temporary';
+  if (error.status === 403 || error.status === 404) return 'access';
+  if (error.status === 409) return 'conflict';
+  if (error.status === 429) return 'rate-limited';
+  return 'temporary';
 }
 
 export class BackendCaregiverAlertService implements CaregiverAlertService {
@@ -75,6 +82,7 @@ export class BackendCaregiverAlertService implements CaregiverAlertService {
       .map((item) => ({
         relationshipId: item.relationship_id,
         label: item.relationship_label?.trim() || 'Family member',
+        canAcknowledge: item.permissions['alerts.acknowledge'] === true,
       }));
   }
 
@@ -93,6 +101,34 @@ export class BackendCaregiverAlertService implements CaregiverAlertService {
       items: data.items.map(mapAlert),
     };
   }
+
+  async getAlert(
+    relationshipId: string,
+    alertId: string,
+  ): Promise<CaregiverAlert> {
+    const data = await this.client.request<AlertResponse>(
+      alertPath(relationshipId, alertId),
+      {},
+      true,
+    );
+    return mapAlert(data);
+  }
+
+  async acknowledgeAlert(
+    relationshipId: string,
+    alertId: string,
+  ): Promise<CaregiverAlert> {
+    const data = await this.client.request<AlertResponse>(
+      `${alertPath(relationshipId, alertId)}/acknowledge`,
+      { method: 'POST' },
+      true,
+    );
+    return mapAlert(data);
+  }
+}
+
+function alertPath(relationshipId: string, alertId: string): string {
+  return `/api/v1/caregiver-relationships/${encodeURIComponent(relationshipId)}/alerts/${encodeURIComponent(alertId)}`;
 }
 
 function mapAlert(item: AlertResponse): CaregiverAlert {

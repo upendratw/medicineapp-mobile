@@ -203,6 +203,32 @@ const en = {
   caregiverAlertState_acknowledged: 'Acknowledged',
   caregiverAlertState_resolved: 'Resolved',
   caregiverAlertState_cancelled: 'Cancelled',
+  caregiverAlertOpenDetail: 'Open caregiver alert details',
+  caregiverAlertDetailTitle: 'Caregiver alert details',
+  caregiverAlertDetailBack: 'Back to caregiver alerts',
+  caregiverAlertDetailLoading: 'Loading caregiver alert details',
+  caregiverAlertDetailFailure:
+    'Caregiver alert details are temporarily unavailable. Please try again.',
+  caregiverAlertDetailOfflineTitle: 'Caregiver alert details are offline',
+  caregiverAlertDetailOffline:
+    'Connect to the internet to load or acknowledge this caregiver alert.',
+  caregiverAlertTypeLabel: 'Alert type',
+  caregiverAlertSourceLabel: 'Source category',
+  caregiverAlertStateLabel: 'State',
+  caregiverAlertSource_reminder: 'Reminder',
+  caregiverAlertSource_intake: 'Medication activity',
+  caregiverAlertSource_inventory: 'Medication inventory',
+  caregiverAlertSource_system: 'System',
+  caregiverAlertOccurredAt: 'Occurred at',
+  caregiverAlertAcknowledgedAt: 'Acknowledged at',
+  caregiverAlertResolvedAt: 'Resolved at',
+  caregiverAlertCancelledAt: 'Cancelled at',
+  caregiverAlertAcknowledge: 'Acknowledge',
+  caregiverAlertRefresh: 'Refresh alert',
+  caregiverAlertConflict:
+    'This alert changed. Refresh to see its current state.',
+  caregiverAlertRateLimited:
+    'Caregiver alert requests are temporarily limited. Please wait and try again.',
 } as const;
 const hi: Partial<Record<keyof typeof en, string>> = {
   settings: 'सेटिंग्स',

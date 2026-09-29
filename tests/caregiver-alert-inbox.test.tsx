@@ -21,31 +21,43 @@ const alert = (
   cancelledAt: null,
 });
 
-const view = (service: CaregiverAlertService, online = true) => (
+const view = (
+  service: Pick<
+    CaregiverAlertService,
+    'listEligibleRelationships' | 'listAlerts'
+  >,
+  online = true,
+  onOpenAlert = jest.fn(),
+  focusVersion = 1,
+) => (
   <PreferencesProvider>
     <CaregiverAlertInbox
       service={service}
       online={online}
-      focusVersion={1}
+      focusVersion={focusVersion}
       onBack={jest.fn()}
+      onOpenAlert={onOpenAlert}
     />
   </PreferencesProvider>
 );
 
-test('auto-selects one relationship and renders accessible non-interactive alert rows', async () => {
-  const service: CaregiverAlertService = {
-    listEligibleRelationships: jest
-      .fn()
-      .mockResolvedValue([
-        { relationshipId: 'relationship-one', label: 'Parent' },
-      ]),
+test('auto-selects one relationship and renders accessible actionable alert rows', async () => {
+  const onOpenAlert = jest.fn();
+  const service = {
+    listEligibleRelationships: jest.fn().mockResolvedValue([
+      {
+        relationshipId: 'relationship-one',
+        label: 'Parent',
+        canAcknowledge: true,
+      },
+    ]),
     listAlerts: jest.fn().mockResolvedValue({
       items: [alert('alert-one')],
       limit: 50,
       offset: 0,
     }),
   };
-  const screen = await render(view(service));
+  const screen = await render(view(service, true, onOpenAlert));
   await waitFor(() =>
     expect(screen.getByText('Medication marked as missed')).toBeTruthy(),
   );
@@ -55,18 +67,19 @@ test('auto-selects one relationship and renders accessible non-interactive alert
   });
   expect(screen.getByText('Workflow priority: Attention')).toBeTruthy();
   expect(screen.queryByText('alert-one')).toBeNull();
-  expect(
-    screen.queryAllByRole('button', { name: /Medication marked as missed/ }),
-  ).toHaveLength(0);
-  expect(
-    screen.getByLabelText(
-      /Parent.*Medication marked as missed.*Workflow priority.*Open/,
-    ),
-  ).toBeTruthy();
+  const row = screen.getByRole('button', {
+    name: /Parent.*Medication marked as missed.*Workflow priority.*Open/,
+  });
+  await fireEvent.press(row);
+  expect(onOpenAlert).toHaveBeenCalledWith('relationship-one', 'alert-one');
+  expect(JSON.stringify(onOpenAlert.mock.calls)).not.toContain('Parent');
+  expect(JSON.stringify(onOpenAlert.mock.calls)).not.toContain(
+    'Medication marked as missed',
+  );
 });
 
 test('renders bounded zero-relationship and offline states without fetching alerts', async () => {
-  const service: CaregiverAlertService = {
+  const service = {
     listEligibleRelationships: jest.fn().mockResolvedValue([]),
     listAlerts: jest.fn(),
   };
@@ -78,7 +91,7 @@ test('renders bounded zero-relationship and offline states without fetching aler
   );
   expect(service.listAlerts).not.toHaveBeenCalled();
 
-  const offlineService: CaregiverAlertService = {
+  const offlineService = {
     listEligibleRelationships: jest.fn(),
     listAlerts: jest.fn(),
   };
@@ -88,10 +101,18 @@ test('renders bounded zero-relationship and offline states without fetching aler
 });
 
 test('supports multiple relationship selection and resets scoped results', async () => {
-  const service: CaregiverAlertService = {
+  const service = {
     listEligibleRelationships: jest.fn().mockResolvedValue([
-      { relationshipId: 'relationship-one', label: 'Parent' },
-      { relationshipId: 'relationship-two', label: 'Family member' },
+      {
+        relationshipId: 'relationship-one',
+        label: 'Parent',
+        canAcknowledge: true,
+      },
+      {
+        relationshipId: 'relationship-two',
+        label: 'Family member',
+        canAcknowledge: false,
+      },
     ]),
     listAlerts: jest.fn(async (relationshipId) => ({
       items: [alert(`alert-${relationshipId}`, relationshipId)],
@@ -125,12 +146,14 @@ test('load-more uses offset, deduplicates alert IDs, and stops on a partial page
   const firstPage = Array.from({ length: 50 }, (_, index) =>
     alert(`alert-${index}`),
   );
-  const service: CaregiverAlertService = {
-    listEligibleRelationships: jest
-      .fn()
-      .mockResolvedValue([
-        { relationshipId: 'relationship-one', label: 'Parent' },
-      ]),
+  const service = {
+    listEligibleRelationships: jest.fn().mockResolvedValue([
+      {
+        relationshipId: 'relationship-one',
+        label: 'Parent',
+        canAcknowledge: true,
+      },
+    ]),
     listAlerts: jest
       .fn()
       .mockResolvedValueOnce({ items: firstPage, limit: 50, offset: 0 })
@@ -159,7 +182,7 @@ test('load-more uses offset, deduplicates alert IDs, and stops on a partial page
 });
 
 test('generic failures expose Retry while access failures remain non-enumerating', async () => {
-  const temporary: CaregiverAlertService = {
+  const temporary = {
     listEligibleRelationships: jest
       .fn()
       .mockRejectedValue(new Error('offline detail')),
@@ -185,10 +208,18 @@ test('ignores a stale previous-relationship response after a relationship switch
   }>((resolve) => {
     resolveFirst = resolve;
   });
-  const service: CaregiverAlertService = {
+  const service = {
     listEligibleRelationships: jest.fn().mockResolvedValue([
-      { relationshipId: 'relationship-one', label: 'Parent' },
-      { relationshipId: 'relationship-two', label: 'Family member' },
+      {
+        relationshipId: 'relationship-one',
+        label: 'Parent',
+        canAcknowledge: true,
+      },
+      {
+        relationshipId: 'relationship-two',
+        label: 'Family member',
+        canAcknowledge: false,
+      },
     ]),
     listAlerts: jest.fn((relationshipId) =>
       relationshipId === 'relationship-one'
@@ -224,4 +255,39 @@ test('ignores a stale previous-relationship response after a relationship switch
   expect(
     screen.queryByLabelText(/Parent\. Medication marked as missed/),
   ).toBeNull();
+});
+
+test('performs one bounded authoritative refresh when inbox regains focus', async () => {
+  const service = {
+    listEligibleRelationships: jest.fn().mockResolvedValue([
+      {
+        relationshipId: 'relationship-one',
+        label: 'Parent',
+        canAcknowledge: true,
+      },
+    ]),
+    listAlerts: jest
+      .fn()
+      .mockResolvedValueOnce({
+        items: [alert('alert-one')],
+        limit: 50,
+        offset: 0,
+      })
+      .mockResolvedValueOnce({
+        items: [{ ...alert('alert-one'), state: 'acknowledged' as const }],
+        limit: 50,
+        offset: 0,
+      }),
+  };
+  const screen = await render(view(service));
+  await waitFor(() =>
+    expect(screen.getByLabelText(/Parent.*Open/)).toBeTruthy(),
+  );
+
+  await screen.rerender(view(service, true, jest.fn(), 2));
+  await waitFor(() =>
+    expect(screen.getByLabelText(/Parent.*Acknowledged/)).toBeTruthy(),
+  );
+  expect(service.listAlerts).toHaveBeenCalledTimes(2);
+  expect(service.listEligibleRelationships).toHaveBeenCalledTimes(2);
 });

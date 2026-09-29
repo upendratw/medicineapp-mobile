@@ -32,4 +32,5 @@ export type CaregiverAlertPage = Readonly<{
 export type CaregiverAlertRelationship = Readonly<{
   relationshipId: string;
   label: string;
+  canAcknowledge: boolean;
 }>;

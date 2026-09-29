@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { RefreshControl } from 'react-native';
+import { Pressable, RefreshControl, StyleSheet } from 'react-native';
 
 import {
   AppAlert,
@@ -21,14 +21,20 @@ import type {
   CaregiverAlert,
   CaregiverAlertRelationship,
 } from '@/types/caregiverAlert';
+import { theme } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/useAppTheme';
 
 const PAGE_SIZE = 50;
 
 type Props = {
-  service: CaregiverAlertService;
+  service: Pick<
+    CaregiverAlertService,
+    'listEligibleRelationships' | 'listAlerts'
+  >;
   online: boolean;
   focusVersion: number;
   onBack(): void;
+  onOpenAlert(relationshipId: string, alertId: string): void;
 };
 
 export function CaregiverAlertInbox({
@@ -36,6 +42,7 @@ export function CaregiverAlertInbox({
   online,
   focusVersion,
   onBack,
+  onOpenAlert,
 }: Props) {
   const { language, t } = useTranslation();
   const [relationships, setRelationships] = useState<
@@ -226,6 +233,7 @@ export function CaregiverAlertInbox({
               item={item}
               relationshipLabel={relationshipLabel}
               locale={localeFor(language)}
+              onPress={() => onOpenAlert(item.relationshipId, item.alertId)}
             />
           ))}
           {failure === 'temporary' ? (
@@ -279,12 +287,15 @@ function AlertRow({
   item,
   relationshipLabel,
   locale,
+  onPress,
 }: {
   item: CaregiverAlert;
   relationshipLabel: string;
   locale: string;
+  onPress(): void;
 }) {
   const { t } = useTranslation();
+  const activeTheme = useAppTheme();
   const alertType = t(`caregiverAlertType_${item.alertType}`);
   const priority = t(`caregiverAlertSeverity_${item.severity}`);
   const state = t(`caregiverAlertState_${item.state}`);
@@ -297,17 +308,34 @@ function AlertRow({
       }).format(parsed);
   const label = `${relationshipLabel}. ${alertType}. ${t('caregiverAlertWorkflowPriority')}: ${priority}. ${state}. ${occurredAt}`;
   return (
-    <AppCard accessible accessibilityLabel={label}>
-      <AppText variant="label">{relationshipLabel}</AppText>
-      <AppText>{alertType}</AppText>
-      <AppText>
-        {t('caregiverAlertWorkflowPriority')}: {priority}
-      </AppText>
-      <AppText>{state}</AppText>
-      <AppText variant="caption">{occurredAt}</AppText>
-    </AppCard>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={t('caregiverAlertOpenDetail')}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.alertRow,
+        { minHeight: activeTheme.touchTarget },
+        pressed && styles.alertRowPressed,
+      ]}
+    >
+      <AppCard accessible={false}>
+        <AppText variant="label">{relationshipLabel}</AppText>
+        <AppText>{alertType}</AppText>
+        <AppText>
+          {t('caregiverAlertWorkflowPriority')}: {priority}
+        </AppText>
+        <AppText>{state}</AppText>
+        <AppText variant="caption">{occurredAt}</AppText>
+      </AppCard>
+    </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  alertRow: { minHeight: theme.touchTarget },
+  alertRowPressed: { opacity: 0.8 },
+});
 
 function deduplicate(
   items: readonly CaregiverAlert[],

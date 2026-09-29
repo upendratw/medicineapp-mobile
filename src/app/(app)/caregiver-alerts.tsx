@@ -20,6 +20,12 @@ export default function CaregiverAlertsScreen() {
       online={online}
       focusVersion={focusVersion}
       onBack={() => router.replace('/caregiver-dashboard')}
+      onOpenAlert={(relationshipId, alertId) =>
+        router.push({
+          pathname: '/caregiver-alerts/[relationshipId]/[alertId]',
+          params: { relationshipId, alertId },
+        } as never)
+      }
     />
   );
 }
