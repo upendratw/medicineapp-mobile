@@ -11,34 +11,60 @@ export function RouteGuard() {
   const { complete, restoring } = useOnboarding();
   const segments = useSegments();
   const router = useRouter();
-  const { pending, pendingReminder, clear } = useDeepLinkIntent();
+  const { pending, pendingReminder, pendingCaregiver, clear } =
+    useDeepLinkIntent();
   useEffect(() => {
     if (restoring) return;
     const target = resolveRouteGroup(status, complete);
     const current = segments[0];
-    if (target === 'auth' && current !== '(auth)') router.replace('/login');
-    if (target === 'onboarding' && current !== '(onboarding)')
-      router.replace('/welcome');
-    if (target === 'app' && pendingReminder) {
+    if (target === 'auth') {
+      if (current !== '(auth)') router.replace('/login');
+      return;
+    }
+    if (target === 'onboarding') {
+      if (current !== '(onboarding)') router.replace('/welcome');
+      return;
+    }
+    if (target !== 'app') return;
+    if (pendingReminder) {
       router.replace({
         pathname: '/reminder',
         params: { reminderId: pendingReminder.reminderId },
       } as never);
       clear();
-    } else if (target === 'app' && pending) {
+      return;
+    }
+    if (pendingCaregiver) {
+      if (role === 'caregiver') {
+        const alreadyOnInbox =
+          current === '(app)' &&
+          segments[1] === 'caregiver-alerts' &&
+          segments.length === 2;
+        if (!alreadyOnInbox) router.replace('/caregiver-alerts');
+        clear();
+      } else if (role === 'patient') {
+        clear();
+        if (
+          current !== '(app)' ||
+          segments[1] === 'caregiver-dashboard' ||
+          segments[1] === 'caregiver-alerts'
+        )
+          router.replace('/home');
+      }
+      return;
+    }
+    if (pending) {
       router.replace(pending as never);
       clear();
-    } else if (target === 'app' && current !== '(app)') {
+    } else if (current !== '(app)') {
       router.replace(resolveAppLanding(role));
     } else if (
-      target === 'app' &&
       current === '(app)' &&
       role === 'caregiver' &&
       segments[1] === 'home'
     ) {
       router.replace('/caregiver-dashboard');
     } else if (
-      target === 'app' &&
       current === '(app)' &&
       role === 'patient' &&
       (segments[1] === 'caregiver-dashboard' ||
@@ -50,6 +76,7 @@ export function RouteGuard() {
     clear,
     complete,
     pending,
+    pendingCaregiver,
     pendingReminder,
     restoring,
     router,

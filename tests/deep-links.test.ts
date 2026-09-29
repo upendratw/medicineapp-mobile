@@ -74,6 +74,49 @@ test('accepts only the bounded opaque reminder notification contract', () => {
   ).toEqual({ type: 'reminder', reminderId });
 });
 
+test('accepts only the exact privacy-safe caregiver alert notification contract', () => {
+  expect(
+    parseNotificationIntent({
+      type: 'caregiver_alert',
+      schema_version: 1,
+    }),
+  ).toEqual({ type: 'caregiver_alerts' });
+});
+
+test.each([
+  {},
+  { schema_version: 1 },
+  { type: 'wrong', schema_version: 1 },
+  { type: 'caregiver_alert' },
+  { type: 'caregiver_alert', schema_version: '1' },
+  { type: 'caregiver_alert', schema_version: 0 },
+  { type: 'caregiver_alert', schema_version: 2 },
+  null,
+  [],
+  'caregiver_alert',
+  1,
+  { type: 'caregiver_alert', schema_version: 1, extra: true },
+  { type: 'caregiver_alert', schema_version: 1, route: '/caregiver-alerts' },
+  { type: 'caregiver_alert', schema_version: 1, alert_id: 'alert-one' },
+  {
+    type: 'caregiver_alert',
+    schema_version: 1,
+    relationship_id: 'relationship-one',
+  },
+  { type: 'caregiver_alert', schema_version: 1, patient_id: 'patient-one' },
+  { type: 'caregiver_alert', schema_version: 1, data: { arbitrary: true } },
+  {
+    type: 'caregiver_alert',
+    schema_version: 1,
+    reminder_id: '00000000-0000-4000-8000-000000000001',
+  },
+])(
+  'rejects malformed, identifying, mixed, or extra-key caregiver payload %#',
+  (payload) => {
+    expect(parseNotificationIntent(payload)).toBeNull();
+  },
+);
+
 test.each([
   null,
   '/reminder',

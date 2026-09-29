@@ -154,6 +154,22 @@ test('missing reminder identifier is ignored safely', async () => {
   expect(subject.reminders.acknowledge).not.toHaveBeenCalled();
 });
 
+test('caregiver alert payload never enters E19 reminder action handling', async () => {
+  const subject = fixture();
+  await expect(
+    subject.coordinator.capture({
+      ...response(REMINDER_ACTION_IDENTIFIERS.taken),
+      data: { type: 'caregiver_alert', schema_version: 1 },
+    }),
+  ).resolves.toBeNull();
+  await expect(subject.coordinator.process()).resolves.toEqual({
+    status: 'none',
+  });
+  expect(subject.contexts.get).not.toHaveBeenCalled();
+  expect(subject.reminders.acknowledge).not.toHaveBeenCalled();
+  expect(subject.reminders.snooze).not.toHaveBeenCalled();
+});
+
 test('disallowed or stale action falls back safely without mutation or fake success', async () => {
   const subject = fixture();
   subject.contexts.get.mockResolvedValue({

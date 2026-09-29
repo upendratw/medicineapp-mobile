@@ -259,3 +259,59 @@ test('ordinary notification body tap still enters the authenticated reminder flo
   expect(mockAcceptNotification).toHaveBeenCalledWith(data);
   expect(mockCapture).not.toHaveBeenCalled();
 });
+
+test('background Caregiver body tap forwards only notification data to the intent boundary', async () => {
+  let listener: ((response: unknown) => void) | undefined;
+  mockAddResponseListener.mockImplementation(async (next) => {
+    listener = next as (response: unknown) => void;
+    return null;
+  });
+  await render(
+    <PushRegistrationProvider>
+      <Probe />
+    </PushRegistrationProvider>,
+  );
+  await waitFor(() => expect(listener).toBeDefined());
+  const data = { type: 'caregiver_alert', schema_version: 1 };
+  await act(async () => {
+    listener?.({
+      actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+      notificationIdentifier: 'synthetic-caregiver-notification',
+      data,
+    });
+  });
+  expect(mockAcceptNotification).toHaveBeenCalledWith(data);
+  expect(mockCapture).not.toHaveBeenCalled();
+  expect(mockProcess).not.toHaveBeenCalled();
+  expect(mockReplace).not.toHaveBeenCalled();
+});
+
+test('cold-start Caregiver response forwards bounded data after native response clearing boundary', async () => {
+  const data = { type: 'caregiver_alert', schema_version: 1 };
+  mockLastResponse.mockResolvedValue({
+    actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+    notificationIdentifier: 'synthetic-cold-start-caregiver',
+    data,
+  });
+  await render(
+    <PushRegistrationProvider>
+      <Probe />
+    </PushRegistrationProvider>,
+  );
+  await waitFor(() =>
+    expect(mockAcceptNotification).toHaveBeenCalledWith(data),
+  );
+  expect(mockCapture).not.toHaveBeenCalled();
+  expect(mockReplace).not.toHaveBeenCalled();
+});
+
+test('foreground receipt listener registration alone never creates a navigation intent', async () => {
+  await render(
+    <PushRegistrationProvider>
+      <Probe />
+    </PushRegistrationProvider>,
+  );
+  await waitFor(() => expect(mockAddReceivedListener).toHaveBeenCalledTimes(1));
+  expect(mockAcceptNotification).not.toHaveBeenCalled();
+  expect(mockReplace).not.toHaveBeenCalled();
+});

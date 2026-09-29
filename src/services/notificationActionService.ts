@@ -58,7 +58,7 @@ export class NotificationActionCoordinator {
   ): Promise<PendingNotificationAction | null> {
     const action = resolveReminderNotificationAction(response.actionIdentifier);
     const intent = parseNotificationIntent(response.data);
-    if (!action || !intent) return null;
+    if (!action || intent?.type !== 'reminder') return null;
     if (
       !response.notificationIdentifier ||
       response.notificationIdentifier.length > 256

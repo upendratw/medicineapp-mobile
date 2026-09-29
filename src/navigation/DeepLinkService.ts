@@ -32,6 +32,11 @@ export type ReminderNotificationIntent = Readonly<{
   type: 'reminder';
   reminderId: string;
 }>;
+export type CaregiverAlertNotificationIntent = Readonly<{
+  type: 'caregiver_alerts';
+}>;
+export type NotificationIntent =
+  ReminderNotificationIntent | CaregiverAlertNotificationIntent;
 const reminderUuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export function resolveDeepLink(
@@ -75,14 +80,21 @@ export function resolveNotificationDestination(
 export function parseNotificationIntent(
   value: unknown,
   observability: MobileObservability = mobileObservability,
-): ReminderNotificationIntent | null {
+): NotificationIntent | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     rejected('structure', observability);
     return null;
   }
   const data = value as Record<string, unknown>;
+  const keys = Object.keys(data).sort().join(',');
   if (
-    Object.keys(data).sort().join(',') !== 'reminder_id,schema_version,type' ||
+    keys === 'schema_version,type' &&
+    data.type === 'caregiver_alert' &&
+    data.schema_version === 1
+  )
+    return { type: 'caregiver_alerts' };
+  if (
+    keys !== 'reminder_id,schema_version,type' ||
     data.type !== 'medicineapp.reminder.due' ||
     data.schema_version !== 1 ||
     typeof data.reminder_id !== 'string' ||
