@@ -46,7 +46,7 @@ const config: ExpoConfig = {
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
 
-    predictiveBackGestureEnabled: true,
+    predictiveBackGestureEnabled: false,
   },
 
   web: {

@@ -3,7 +3,10 @@ import path from 'node:path';
 
 type PublicConfig = {
   plugins?: (string | [string, object])[];
-  android?: { package?: string };
+  android?: {
+    package?: string;
+    predictiveBackGestureEnabled?: boolean;
+  };
   extra?: { iosPersonalTeamBuild?: boolean };
 };
 
@@ -34,6 +37,7 @@ test('normal config retains notification/APNs plugin and Android identity', () =
   expect(pluginNames(config)).toContain('expo-notifications');
   expect(config.extra?.iosPersonalTeamBuild).toBe(false);
   expect(config.android?.package).toBe('com.medicineapp.mobile');
+  expect(config.android?.predictiveBackGestureEnabled).toBe(false);
 });
 
 test('Personal Team config adds the entitlement-removal plugin without changing Android identity', () => {
