@@ -7,10 +7,11 @@ import { AuthProvider, useAuth } from '@/state/AuthContext';
 import { CaptureProvider, useCapture } from '@/state/CaptureContext';
 
 function Probe() {
-  const { status, logout } = useAuth();
+  const { status, role, logout } = useAuth();
   return (
     <>
       <Text>{status}</Text>
+      <Text>{role ?? 'no-session-role'}</Text>
       <Pressable accessibilityRole="button" onPress={logout}>
         <Text>logout-probe</Text>
       </Pressable>
@@ -88,6 +89,7 @@ beforeEach(() => {
   jest.mocked(SecureStore.getItemAsync).mockImplementation(async (key) => {
     if (key.endsWith('.access')) return 'stored-access';
     if (key.endsWith('.refresh')) return 'stored-refresh';
+    if (key.endsWith('.role')) return 'patient';
     return null;
   });
   jest.mocked(SecureStore.deleteItemAsync).mockResolvedValue(undefined);
@@ -100,8 +102,26 @@ test('session invalidation updates AuthContext so the route guard can return to 
     </AuthProvider>,
   );
   await waitFor(() => expect(screen.getByText('authenticated')).toBeTruthy());
+  expect(screen.getByText('patient')).toBeTruthy();
   await act(async () => sessionEvents.notifyInvalidated());
   await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy());
+  expect(screen.getByText('no-session-role')).toBeTruthy();
+});
+
+test('restores the authoritative Caregiver role from secure session metadata', async () => {
+  jest.mocked(SecureStore.getItemAsync).mockImplementation(async (key) => {
+    if (key.endsWith('.access')) return 'stored-access';
+    if (key.endsWith('.refresh')) return 'stored-refresh';
+    if (key.endsWith('.role')) return 'caregiver';
+    return null;
+  });
+  const screen = await render(
+    <AuthProvider>
+      <Probe />
+    </AuthProvider>,
+  );
+  await waitFor(() => expect(screen.getByText('authenticated')).toBeTruthy());
+  expect(screen.getByText('caregiver')).toBeTruthy();
 });
 
 test('logout transitions authenticated state to Login-compatible unauthenticated state', async () => {

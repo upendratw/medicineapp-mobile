@@ -20,6 +20,7 @@ const view = (props: ComponentProps<typeof CaregiverDashboard>) => (
 
 test('caregiver dashboard renders only an authorized selected context', async () => {
   const select = jest.fn();
+  const alerts = jest.fn();
   const screen = await render(
     view({
       patients: [patient],
@@ -38,12 +39,33 @@ test('caregiver dashboard renders only an authorized selected context', async ()
       onSelect: select,
       onRetry: jest.fn(),
       onBack: jest.fn(),
+      onAlerts: alerts,
     }),
   );
   expect(screen.getByText('Missed-dose indicator')).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: 'Family member' }));
   expect(select).toHaveBeenCalledWith('stable-patient-id');
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Caregiver alerts' }),
+  );
+  expect(alerts).toHaveBeenCalledTimes(1);
   expect(screen.toJSON()).not.toContain('change medication');
+});
+
+test('caregiver Alerts entry is absent when no caregiver-role callback is supplied', async () => {
+  const screen = await render(
+    view({
+      patients: [patient],
+      selected: null,
+      data: null,
+      loading: false,
+      error: null,
+      onSelect: jest.fn(),
+      onRetry: jest.fn(),
+      onBack: jest.fn(),
+    }),
+  );
+  expect(screen.queryByRole('button', { name: 'Caregiver alerts' })).toBeNull();
 });
 
 test('caregiver dashboard fails safely without context or backend', async () => {

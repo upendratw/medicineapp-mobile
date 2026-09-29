@@ -22,6 +22,7 @@ type Props = {
   onSelect(id: string): void;
   onRetry(): void;
   onBack(): void;
+  onAlerts?(): void;
 };
 export function CaregiverDashboard({
   patients,
@@ -32,8 +33,12 @@ export function CaregiverDashboard({
   onSelect,
   onRetry,
   onBack,
+  onAlerts,
 }: Props) {
   const { t } = useTranslation();
+  const alertsEntry = onAlerts ? (
+    <AppButton label={t('caregiverAlertsTitle')} onPress={onAlerts} />
+  ) : null;
   if (loading)
     return <LoadingIndicator label="Loading authorized caregiver view" />;
   if (error === 'authentication')
@@ -68,6 +73,7 @@ export function CaregiverDashboard({
     );
   return (
     <>
+      {alertsEntry}
       <AppText variant="heading">Family member</AppText>
       {patients.map((patient) => (
         <AppButton

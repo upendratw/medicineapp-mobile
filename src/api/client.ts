@@ -210,7 +210,7 @@ export class ApiClient {
 
     const existing = refreshes.get(this.tokenStore);
     if (existing) return existing;
-    const pending = this.refresh(current.refreshToken);
+    const pending = this.refresh(current.refreshToken, current.role);
     refreshes.set(this.tokenStore, pending);
     try {
       return await pending;
@@ -220,7 +220,10 @@ export class ApiClient {
     }
   }
 
-  private async refresh(refreshToken: string): Promise<TokenPair> {
+  private async refresh(
+    refreshToken: string,
+    role: TokenPair['role'],
+  ): Promise<TokenPair> {
     if (!this.tokenStore) throw new ApiError('AUTH_REQUIRED', 401);
     const result = await this.execute<RefreshResponse>('/api/v1/auth/refresh', {
       method: 'POST',
@@ -247,6 +250,7 @@ export class ApiClient {
     const tokens = {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
+      role,
     };
     try {
       await this.tokenStore.write(tokens);

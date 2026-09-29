@@ -1,6 +1,7 @@
 import { ApiClient } from '@/api/client';
 import { secureTokenStore } from '@/security/SecureTokenStore';
 import { BackendCaregiverService } from '@/services/caregiverService';
+import { BackendCaregiverAlertService } from '@/services/caregiverAlertService';
 import { DashboardService } from '@/services/dashboardService';
 import {
   BackendMedicationCatalogService,
@@ -36,6 +37,7 @@ export const medicationCatalogService = new BackendMedicationCatalogService(
   api,
 );
 export const caregiverService = new BackendCaregiverService(api);
+export const caregiverAlertService = new BackendCaregiverAlertService(api);
 export const dashboardService = new DashboardService(
   patientMedicationService,
   scheduleService,

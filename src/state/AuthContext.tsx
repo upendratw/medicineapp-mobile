@@ -24,6 +24,7 @@ export type AuthStatus =
 type PendingChallenge = OtpChallenge & { phone: string; role: AuthRole };
 type AuthValue = {
   status: AuthStatus;
+  role: AuthRole | null;
   pendingChallenge: PendingChallenge | null;
   requestOtp(phone: string, role?: AuthRole): Promise<void>;
   verifyOtp(otp: string): Promise<void>;
@@ -44,18 +45,26 @@ const AuthContext = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>('restoring');
+  const [role, setRole] = useState<AuthRole | null>(null);
   const [pendingChallenge, setPendingChallenge] =
     useState<PendingChallenge | null>(null);
   useEffect(() => {
     secureTokenStore
       .read()
-      .then((tokens) => setStatus(tokens ? 'authenticated' : 'unauthenticated'))
-      .catch(() => setStatus('error'));
+      .then((tokens) => {
+        setRole(tokens?.role ?? null);
+        setStatus(tokens ? 'authenticated' : 'unauthenticated');
+      })
+      .catch(() => {
+        setRole(null);
+        setStatus('error');
+      });
   }, []);
   useEffect(
     () =>
       sessionEvents.subscribe(() => {
         setPendingChallenge(null);
+        setRole(null);
         setStatus('unauthenticated');
       }),
     [],
@@ -68,13 +77,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const verifyOtp = useCallback(
     async (otp: string) => {
       if (!pendingChallenge) throw new Error('OTP challenge is unavailable');
-      await service.verifyOtp(
-        pendingChallenge.challengeId,
-        pendingChallenge.phone,
-        otp,
-      );
-      setPendingChallenge(null);
-      setStatus('authenticated');
+      try {
+        const authenticatedRole = await service.verifyOtp(
+          pendingChallenge.challengeId,
+          pendingChallenge.phone,
+          otp,
+        );
+        setPendingChallenge(null);
+        setRole(authenticatedRole);
+        setStatus('authenticated');
+      } catch (error) {
+        setRole(null);
+        setStatus('unauthenticated');
+        throw error;
+      }
     },
     [pendingChallenge],
   );
@@ -86,8 +102,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, []);
   const value = useMemo(
-    () => ({ status, pendingChallenge, requestOtp, verifyOtp, logout }),
-    [status, pendingChallenge, requestOtp, verifyOtp, logout],
+    () => ({ status, role, pendingChallenge, requestOtp, verifyOtp, logout }),
+    [status, role, pendingChallenge, requestOtp, verifyOtp, logout],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

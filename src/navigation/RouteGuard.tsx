@@ -1,13 +1,13 @@
 import { useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 
-import { resolveRouteGroup } from '@/navigation/guard';
+import { resolveAppLanding, resolveRouteGroup } from '@/navigation/guard';
 import { useDeepLinkIntent } from '@/navigation/DeepLinkContext';
 import { useAuth } from '@/state/AuthContext';
 import { useOnboarding } from '@/state/OnboardingContext';
 
 export function RouteGuard() {
-  const { status } = useAuth();
+  const { status, role } = useAuth();
   const { complete, restoring } = useOnboarding();
   const segments = useSegments();
   const router = useRouter();
@@ -28,7 +28,24 @@ export function RouteGuard() {
     } else if (target === 'app' && pending) {
       router.replace(pending as never);
       clear();
-    } else if (target === 'app' && current !== '(app)') router.replace('/home');
+    } else if (target === 'app' && current !== '(app)') {
+      router.replace(resolveAppLanding(role));
+    } else if (
+      target === 'app' &&
+      current === '(app)' &&
+      role === 'caregiver' &&
+      segments[1] === 'home'
+    ) {
+      router.replace('/caregiver-dashboard');
+    } else if (
+      target === 'app' &&
+      current === '(app)' &&
+      role === 'patient' &&
+      (segments[1] === 'caregiver-dashboard' ||
+        segments[1] === 'caregiver-alerts')
+    ) {
+      router.replace('/home');
+    }
   }, [
     clear,
     complete,
@@ -36,6 +53,7 @@ export function RouteGuard() {
     pendingReminder,
     restoring,
     router,
+    role,
     segments,
     status,
   ]);

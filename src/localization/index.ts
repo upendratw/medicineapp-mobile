@@ -169,6 +169,40 @@ const en = {
   caregiverTemporaryFailure:
     'Caregiver information is temporarily unavailable.',
   caregiverTryAgain: 'Try again',
+  caregiverAlertsTitle: 'Caregiver alerts',
+  caregiverAlertsSubtitle:
+    'Alerts shared through an active, authorized caregiver relationship.',
+  caregiverAlertsBack: 'Back to caregiver dashboard',
+  caregiverAlertsLoading: 'Loading caregiver alerts',
+  caregiverAlertsEmpty: 'No caregiver alerts',
+  caregiverAlertsEmptyMessage: 'There are no alerts for this family member.',
+  caregiverAlertAccessUnavailable: 'Caregiver alert access is unavailable',
+  caregiverAlertAccessUnavailableMessage:
+    'An active relationship with alert access is required.',
+  caregiverAlertsFailure:
+    'Caregiver alerts are temporarily unavailable. Please try again.',
+  caregiverAlertsOfflineTitle: 'Caregiver alerts are offline',
+  caregiverAlertsOffline:
+    'Connect to the internet to refresh caregiver alerts.',
+  caregiverAlertsLoadMore: 'Load more alerts',
+  caregiverAlertsChooseRelationship: 'Choose a family member',
+  caregiverAlertsRelationshipLabel: 'Family member',
+  caregiverAlertFamilyMember: 'Family member',
+  caregiverAlertWorkflowPriority: 'Workflow priority',
+  caregiverAlertTimeUnavailable: 'Time unavailable',
+  caregiverAlertType_reminder_unacknowledged: 'Reminder not acknowledged',
+  caregiverAlertType_medication_missed: 'Medication marked as missed',
+  caregiverAlertType_repeated_non_adherence:
+    'Repeated missed medication activity',
+  caregiverAlertType_inventory_low: 'Medication inventory is low',
+  caregiverAlertType_inventory_exhausted: 'Medication inventory is exhausted',
+  caregiverAlertSeverity_info: 'Information',
+  caregiverAlertSeverity_attention: 'Attention',
+  caregiverAlertSeverity_important: 'Important',
+  caregiverAlertState_open: 'Open',
+  caregiverAlertState_acknowledged: 'Acknowledged',
+  caregiverAlertState_resolved: 'Resolved',
+  caregiverAlertState_cancelled: 'Cancelled',
 } as const;
 const hi: Partial<Record<keyof typeof en, string>> = {
   settings: 'सेटिंग्स',

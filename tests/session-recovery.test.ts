@@ -22,6 +22,7 @@ const response = (data: unknown, status = 200) =>
 const session = (): TokenPair => ({
   accessToken: 'old-access',
   refreshToken: 'valid-refresh',
+  role: 'caregiver',
 });
 
 beforeEach(() => jest.restoreAllMocks());
@@ -70,6 +71,7 @@ test('expired access token refreshes once, rotates storage, and retries once', a
   expect(store.write).toHaveBeenCalledWith({
     accessToken: 'new-access',
     refreshToken: 'new-refresh',
+    role: 'caregiver',
   });
   expect(
     new Headers(fetchMock.mock.calls[2][1]?.headers).get('Authorization'),

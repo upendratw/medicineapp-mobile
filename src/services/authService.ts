@@ -1,14 +1,22 @@
 import { ApiClient } from '@/api/client';
-import type { SecureTokenStore, TokenPair } from '@/security/SecureTokenStore';
+import type {
+  SecureTokenStore,
+  SessionRole,
+  TokenPair,
+} from '@/security/SecureTokenStore';
 
 export type OtpChallenge = Readonly<{
   challengeId: string;
   expiresInSeconds: number;
 }>;
-export type AuthRole = 'patient' | 'caregiver';
+export type AuthRole = SessionRole;
 
 export const normalizeAuthRole = (value: unknown): AuthRole =>
   value === 'caregiver' ? 'caregiver' : 'patient';
+
+function authenticatedRole(value: unknown): AuthRole | null {
+  return value === 'patient' || value === 'caregiver' ? value : null;
+}
 
 type OtpResponse = { challenge_id: string; expires_in_seconds: number };
 type SessionResponse = {
@@ -47,20 +55,35 @@ export class AuthService {
     challengeId: string,
     phone: string,
     otp: string,
-  ): Promise<void> {
-    const data = await this.client.request<SessionResponse>(
-      '/api/v1/auth/verify-otp',
-      {
-        method: 'POST',
-        body: JSON.stringify({ challenge_id: challengeId, phone, otp }),
-      },
-    );
+  ): Promise<AuthRole> {
+    let data: SessionResponse;
+    try {
+      data = await this.client.request<SessionResponse>(
+        '/api/v1/auth/verify-otp',
+        {
+          method: 'POST',
+          body: JSON.stringify({ challenge_id: challengeId, phone, otp }),
+        },
+      );
+    } catch (error) {
+      await this.sessionCleanup?.().catch(() => undefined);
+      await this.tokenStore.clear();
+      throw error;
+    }
+    const role = authenticatedRole(data.role);
+    if (!role) {
+      await this.sessionCleanup?.().catch(() => undefined);
+      await this.tokenStore.clear();
+      throw new Error('Authenticated session role is invalid');
+    }
     const tokens: TokenPair = {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
+      role,
     };
     await this.sessionCleanup?.().catch(() => undefined);
     await this.tokenStore.write(tokens);
+    return role;
   }
 
   async logout(): Promise<void> {

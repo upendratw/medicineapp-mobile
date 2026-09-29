@@ -1,6 +1,11 @@
 import * as SecureStore from 'expo-secure-store';
 
-export type TokenPair = Readonly<{ accessToken: string; refreshToken: string }>;
+export type SessionRole = 'patient' | 'caregiver';
+export type TokenPair = Readonly<{
+  accessToken: string;
+  refreshToken: string;
+  role: SessionRole;
+}>;
 export interface SecureTokenStore {
   read(): Promise<TokenPair | null>;
   write(tokens: TokenPair): Promise<void>;
@@ -15,6 +20,7 @@ export interface SecureSecretStore {
 }
 const ACCESS_KEY = 'medicineapp.secure.v1.auth.access';
 const REFRESH_KEY = 'medicineapp.secure.v1.auth.refresh';
+const ROLE_KEY = 'medicineapp.secure.v1.auth.role';
 const LEGACY_KEYS = [
   'medicineapp.auth.access',
   'medicineapp.auth.refresh',
@@ -31,15 +37,20 @@ export class ExpoSecureTokenStore
   implements SecureTokenStore, SecureSecretStore
 {
   async read(): Promise<TokenPair | null> {
-    const [accessToken, refreshToken] = await Promise.all([
+    const [accessToken, refreshToken, role] = await Promise.all([
       SecureStore.getItemAsync(ACCESS_KEY),
       SecureStore.getItemAsync(REFRESH_KEY),
+      SecureStore.getItemAsync(ROLE_KEY),
     ]);
-    if (!validSecret(accessToken) || !validSecret(refreshToken)) {
+    if (
+      !validSecret(accessToken) ||
+      !validSecret(refreshToken) ||
+      (role !== 'patient' && role !== 'caregiver')
+    ) {
       await this.clear();
       return null;
     }
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, role };
   }
 
   async write(tokens: TokenPair): Promise<void> {
@@ -48,6 +59,7 @@ export class ExpoSecureTokenStore
       await Promise.all([
         this.set('access-token', tokens.accessToken),
         this.set('refresh-token', tokens.refreshToken),
+        SecureStore.setItemAsync(ROLE_KEY, tokens.role, options),
       ]);
     } catch (error) {
       await this.clear();
@@ -59,6 +71,7 @@ export class ExpoSecureTokenStore
     await Promise.all([
       SecureStore.deleteItemAsync(ACCESS_KEY),
       SecureStore.deleteItemAsync(REFRESH_KEY),
+      SecureStore.deleteItemAsync(ROLE_KEY),
       ...LEGACY_KEYS.map((key) => SecureStore.deleteItemAsync(key)),
     ]);
   }

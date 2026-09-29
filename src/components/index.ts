@@ -8,6 +8,7 @@ export * from './AppTextInput';
 export * from './EmptyState';
 export * from './LoadingIndicator';
 export * from './CaregiverDashboard';
+export * from './CaregiverAlertInbox';
 export * from './MedicationCard';
 export * from './EditMedicationForm';
 export * from './MedicineList';

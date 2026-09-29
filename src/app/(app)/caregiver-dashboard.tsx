@@ -8,9 +8,11 @@ import {
   type CaregiverFailureKind,
 } from '@/services/caregiverService';
 import type { CaregiverDashboardData } from '@/types/dashboard';
+import { useAuth } from '@/state/AuthContext';
 
 export default function CaregiverDashboardScreen() {
   const router = useRouter();
+  const { role } = useAuth();
   const list = useCallback(() => caregiverService.listAuthorizedPatients(), []);
   const patients = useAsyncResource(list);
   const [selected, setSelected] = useState<string | null>(null);
@@ -41,6 +43,11 @@ export default function CaregiverDashboardScreen() {
         onSelect={(id) => void select(id)}
         onRetry={patients.refresh}
         onBack={() => router.replace('/home')}
+        onAlerts={
+          role === 'caregiver'
+            ? () => router.push('/caregiver-alerts')
+            : undefined
+        }
       />
     </AppScreen>
   );

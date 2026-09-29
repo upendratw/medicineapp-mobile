@@ -99,6 +99,7 @@ test('verification sends the bounded contract and writes tokens only to secure s
   expect(store.write).toHaveBeenCalledWith({
     accessToken: 'access-value',
     refreshToken: 'refresh-value',
+    role: 'patient',
   });
 });
 
@@ -113,6 +114,11 @@ test('failed OTP response is sanitized and does not persist tokens', async () =>
       ),
     );
   const store = new FakeTokenStore();
+  store.tokens = {
+    accessToken: 'stale-access',
+    refreshToken: 'stale-refresh',
+    role: 'caregiver',
+  };
   await expect(
     new AuthService(
       new ApiClient('https://api.example.test', 1000),
@@ -120,6 +126,30 @@ test('failed OTP response is sanitized and does not persist tokens', async () =>
     ).verifyOtp('challenge', '+919876543210', '123456'),
   ).rejects.toEqual(expect.objectContaining({ code: 'OTP_INVALID' }));
   expect(store.write).not.toHaveBeenCalled();
+  expect(store.tokens).toBeNull();
+});
+
+test('verification rejects an unrecognized server role without retaining credentials', async () => {
+  jest.spyOn(global, 'fetch').mockResolvedValue(
+    response({
+      data: {
+        user_id: 'synthetic-user',
+        role: 'admin',
+        access_token: 'access-value',
+        refresh_token: 'refresh-value',
+        expires_in: 900,
+      },
+    }),
+  );
+  const store = new FakeTokenStore();
+  await expect(
+    new AuthService(
+      new ApiClient('https://api.example.test', 1000),
+      store,
+    ).verifyOtp('challenge', '+919876543210', '123456'),
+  ).rejects.toThrow('role is invalid');
+  expect(store.write).not.toHaveBeenCalled();
+  expect(store.tokens).toBeNull();
 });
 
 test('authenticated request uses secure storage and never exposes the token in errors', async () => {
@@ -130,6 +160,7 @@ test('authenticated request uses secure storage and never exposes the token in e
   store.tokens = {
     accessToken: 'secret-access-value',
     refreshToken: 'secret-refresh-value',
+    role: 'patient',
   };
   const client = new ApiClient('https://api.example.test', 1000, store);
   let failure: unknown;
@@ -165,6 +196,7 @@ test('logout clears secure tokens even when the backend is unavailable', async (
   store.tokens = {
     accessToken: 'access-value',
     refreshToken: 'refresh-value',
+    role: 'patient',
   };
   await new AuthService(
     new ApiClient('https://api.example.test', 1000, store),

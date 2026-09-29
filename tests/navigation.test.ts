@@ -1,4 +1,4 @@
-import { resolveRouteGroup } from '@/navigation/guard';
+import { resolveAppLanding, resolveRouteGroup } from '@/navigation/guard';
 
 const read = (file: string) =>
   require('node:fs').readFileSync(
@@ -32,6 +32,12 @@ test('authenticated stack anchors ordinary and deep-linked children at Home', ()
   ]) {
     expect(homeRoutes).toContain(destination);
   }
+});
+
+test('authenticated landing remains patient-safe and caregiver-aware', () => {
+  expect(resolveAppLanding('patient')).toBe('/home');
+  expect(resolveAppLanding('caregiver')).toBe('/caregiver-dashboard');
+  expect(resolveAppLanding(null)).toBe('/home');
 });
 
 test('completed reminder actions clear stale intent and replace with Home', () => {
