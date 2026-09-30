@@ -83,9 +83,9 @@ const en = {
   accountSettingsHelp: 'Manage this signed-in session on this device.',
   logout: 'Log out',
   logoutHint: 'Ends this session and returns to sign in.',
-  logoutConfirmTitle: 'Log out of MedicineApp?',
+  logoutConfirmTitle: 'Log out?',
   logoutConfirmMessage:
-    'You will need to verify your mobile number to sign in again.',
+    'Are you sure you want to log out of MedicineApp on this device?',
   logoutCancel: 'Cancel',
   logoutError: 'Logout could not be completed. Please try again.',
   notificationsHelp:
@@ -344,9 +344,9 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   accountSettingsHelp: 'इस डिवाइस पर साइन-इन सत्र प्रबंधित करें।',
   logout: 'लॉग आउट करें',
   logoutHint: 'यह सत्र समाप्त करके साइन इन स्क्रीन पर लौटता है।',
-  logoutConfirmTitle: 'MedicineApp से लॉग आउट करें?',
+  logoutConfirmTitle: 'लॉग आउट करें?',
   logoutConfirmMessage:
-    'फिर से साइन इन करने के लिए आपको अपना मोबाइल नंबर सत्यापित करना होगा।',
+    'क्या आप वाकई इस डिवाइस पर MedicineApp से लॉग आउट करना चाहते हैं?',
   logoutCancel: 'रद्द करें',
   logoutError: 'लॉग आउट पूरा नहीं हो सका। कृपया फिर प्रयास करें।',
   notificationsHelp:

@@ -139,6 +139,13 @@ export class NotificationActionCoordinator {
     await this.storage.removeItem(STORAGE_KEY);
   }
 
+  async clearForSessionExit(): Promise<void> {
+    await Promise.allSettled([
+      this.clear(),
+      this.notifications.clearLastResponse(),
+    ]);
+  }
+
   private async read(): Promise<PendingNotificationAction | null> {
     try {
       const raw = await this.storage.getItem(STORAGE_KEY);

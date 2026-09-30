@@ -57,11 +57,18 @@ export default function CaregiverDashboardScreen() {
         }
       />
       {role === 'caregiver' ? (
-        <AppButton
-          variant="secondary"
-          label={t('familyPendingInvitations')}
-          onPress={() => router.push('/family-caregivers' as never)}
-        />
+        <>
+          <AppButton
+            variant="secondary"
+            label={t('familyPendingInvitations')}
+            onPress={() => router.push('/family-caregivers' as never)}
+          />
+          <AppButton
+            variant="secondary"
+            label={t('accountSettings')}
+            onPress={() => router.push('/account-settings')}
+          />
+        </>
       ) : null}
     </AppScreen>
   );

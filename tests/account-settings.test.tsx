@@ -40,13 +40,21 @@ test('English and Hindi logout localization is complete', () => {
     '@/localization',
   ) as typeof import('@/localization');
   expect(translate('en-IN', 'logout')).toBe('Log out');
+  expect(translate('en-IN', 'logoutConfirmTitle')).toBe('Log out?');
+  expect(translate('en-IN', 'logoutConfirmMessage')).toBe(
+    'Are you sure you want to log out of MedicineApp on this device?',
+  );
   expect(translate('hi-IN', 'logout')).toBe('लॉग आउट करें');
+  expect(translate('hi-IN', 'logoutConfirmTitle')).toBe('लॉग आउट करें?');
+  expect(translate('hi-IN', 'logoutConfirmMessage')).toBe(
+    'क्या आप वाकई इस डिवाइस पर MedicineApp से लॉग आउट करना चाहते हैं?',
+  );
   expect(translate('hi-IN', 'logoutHint')).not.toBe(
     translate('en-IN', 'logoutHint'),
   );
 });
 
-test('authenticated home exposes the account settings route', () => {
+test('Patient home and Caregiver dashboard expose the account settings route', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   const source = fs.readFileSync(
@@ -54,4 +62,9 @@ test('authenticated home exposes the account settings route', () => {
     'utf8',
   );
   expect(source).toContain("router.push('/account-settings')");
+  const caregiverSource = fs.readFileSync(
+    path.join(process.cwd(), 'src/app/(app)/caregiver-dashboard.tsx'),
+    'utf8',
+  );
+  expect(caregiverSource).toContain("router.push('/account-settings')");
 });

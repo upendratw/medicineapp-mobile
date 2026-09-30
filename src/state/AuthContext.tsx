@@ -17,7 +17,12 @@ import {
   normalizeAuthRole,
   type OtpChallenge,
 } from '@/services/authService';
-import { SecurePushRegistrationStore } from '@/services/pushRegistration';
+import { AccountLogoutCoordinator } from '@/services/accountLogoutService';
+import {
+  pushRegistrationCoordinator,
+  SecurePushRegistrationStore,
+} from '@/services/pushRegistration';
+import { notificationActionCoordinator } from '@/services/registry';
 
 export type AuthStatus =
   'restoring' | 'unauthenticated' | 'authenticated' | 'error';
@@ -35,11 +40,14 @@ const pushRegistrationStore = new SecurePushRegistrationStore();
 const service = new AuthService(
   new ApiClient(undefined, undefined, secureTokenStore),
   secureTokenStore,
-  // Logout clears only local registration bookkeeping. The authoritative
-  // backend registration remains active until an explicit device-revocation
-  // flow unregisters it. A later authenticated user must resolve ownership
-  // again through the normal backend registration path.
+  // Defense in depth: authoritative logout clears local registration
+  // bookkeeping even if the earlier best-effort device revocation fails.
   () => pushRegistrationStore.clear(),
+);
+const logoutCoordinator = new AccountLogoutCoordinator(
+  pushRegistrationCoordinator,
+  { clear: () => notificationActionCoordinator.clearForSessionExit() },
+  service,
 );
 const AuthContext = createContext<AuthValue | null>(null);
 
@@ -96,9 +104,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
   );
   const logout = useCallback(async () => {
     try {
-      await service.logout();
+      await logoutCoordinator.logout();
     } finally {
-      await sessionEvents.notifyInvalidated();
+      sessionEvents.notifyInvalidated();
     }
   }, []);
   const value = useMemo(

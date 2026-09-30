@@ -30,7 +30,10 @@ function fixture() {
       allowedActions: ['TAKEN', 'SNOOZE', 'SKIPPED'],
     }),
   };
-  const notifications = { dismiss: jest.fn().mockResolvedValue(true) };
+  const notifications = {
+    dismiss: jest.fn().mockResolvedValue(true),
+    clearLastResponse: jest.fn().mockResolvedValue(undefined),
+  };
   const coordinator = new NotificationActionCoordinator(
     reminders as never,
     contexts as never,
@@ -168,6 +171,23 @@ test('caregiver alert payload never enters E19 reminder action handling', async 
   expect(subject.contexts.get).not.toHaveBeenCalled();
   expect(subject.reminders.acknowledge).not.toHaveBeenCalled();
   expect(subject.reminders.snooze).not.toHaveBeenCalled();
+});
+
+test('session exit clears pending actions and the native last response', async () => {
+  const subject = fixture();
+  await subject.coordinator.capture(
+    response(REMINDER_ACTION_IDENTIFIERS.taken),
+  );
+
+  await subject.coordinator.clearForSessionExit();
+
+  expect(subject.storage.removeItem).toHaveBeenCalledWith(
+    '@medicineapp/pending-notification-action/v1',
+  );
+  expect(subject.notifications.clearLastResponse).toHaveBeenCalledTimes(1);
+  await expect(subject.coordinator.process()).resolves.toEqual({
+    status: 'none',
+  });
 });
 
 test('disallowed or stale action falls back safely without mutation or fake success', async () => {
