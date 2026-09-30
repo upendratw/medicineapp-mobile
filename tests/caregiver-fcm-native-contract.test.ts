@@ -30,7 +30,6 @@ test('Caregiver channel is high-importance, default-sound, vibrating, public, an
       enableVibrate: true,
       lockscreenVisibility: 1,
       bypassDnd: false,
-      sound: 'default',
     },
   );
   expect(JSON.stringify(setNotificationChannelAsync.mock.calls)).not.toMatch(

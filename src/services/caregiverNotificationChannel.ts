@@ -21,7 +21,6 @@ export async function configureCaregiverNotificationChannel(
       enableVibrate: true,
       lockscreenVisibility: notifications.AndroidNotificationVisibility.PUBLIC,
       bypassDnd: false,
-      sound: 'default',
     },
   );
   return true;
