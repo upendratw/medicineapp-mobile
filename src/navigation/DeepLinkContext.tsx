@@ -38,10 +38,10 @@ export function DeepLinkProvider({ children }: PropsWithChildren) {
     useState<ReminderNotificationIntent | null>(null);
   const [pendingCaregiver, setPendingCaregiver] =
     useState<CaregiverAlertNotificationIntent | null>(null);
-  const acceptUrl = useCallback(
-    (url: string) => setPending(resolveDeepLink(url).destination),
-    [],
-  );
+  const acceptUrl = useCallback((url: string) => {
+    const resolution = resolveDeepLink(url);
+    if (resolution.accepted) setPending(resolution.destination);
+  }, []);
   const acceptNotification = useCallback((value: unknown) => {
     const intent = parseNotificationIntent(value);
     setPendingReminder(intent?.type === 'reminder' ? intent : null);

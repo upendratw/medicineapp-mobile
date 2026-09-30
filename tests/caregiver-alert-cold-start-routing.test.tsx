@@ -1,3 +1,4 @@
+import { Linking } from 'react-native';
 import { act, render, waitFor } from '@testing-library/react-native';
 
 const mockReplace = jest.fn();
@@ -76,7 +77,12 @@ function Harness() {
 }
 
 beforeEach(() => {
+  jest.restoreAllMocks();
   jest.clearAllMocks();
+  jest.spyOn(Linking, 'getInitialURL').mockResolvedValue(null);
+  jest.spyOn(Linking, 'addEventListener').mockReturnValue({
+    remove: jest.fn(),
+  } as never);
   mockReplace.mockImplementation((route: string | { pathname?: string }) => {
     const pathname = typeof route === 'string' ? route : route.pathname;
     if (!pathname) return;
@@ -244,6 +250,33 @@ test('runs one startup request and one alert route across auth rerenders', async
   expect(
     mockReplace.mock.calls.filter(([route]) => route === '/caregiver-alerts'),
   ).toHaveLength(1);
+});
+
+test('does not let a delayed rejected development-client URL overwrite the Caregiver response', async () => {
+  const initialUrl = deferred<string | null>();
+  jest.spyOn(Linking, 'getInitialURL').mockReturnValue(initialUrl.promise);
+  mockLastResponse.mockResolvedValue(caregiverResponse);
+  const screen = await render(<Harness />);
+  await waitFor(() => expect(mockLastResponse).toHaveBeenCalledTimes(1));
+
+  mockAuth.status = 'authenticated';
+  mockAuth.role = 'caregiver';
+  await screen.rerender(<Harness />);
+  await waitFor(() =>
+    expect(mockReplace).toHaveBeenLastCalledWith('/caregiver-alerts'),
+  );
+  mockSegments = ['(app)', 'caregiver-alerts'];
+  mockReplace.mockClear();
+
+  await act(async () => {
+    initialUrl.resolve(
+      'exp+medicineapp-mobile://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081',
+    );
+    await initialUrl.promise;
+  });
+
+  expect(mockReplace).not.toHaveBeenCalledWith('/home');
+  expect(mockReplace).not.toHaveBeenCalledWith('/caregiver-dashboard');
 });
 
 test('falls back safely when startup response retrieval fails', async () => {
