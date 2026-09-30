@@ -1,6 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { AppHeader, AppScreen, CaregiverDashboard } from '@/components';
+import {
+  AppButton,
+  AppHeader,
+  AppScreen,
+  CaregiverDashboard,
+} from '@/components';
+import { useTranslation } from '@/localization';
 import { useAsyncResource } from '@/hooks/useAsyncResource';
 import { caregiverService } from '@/services/registry';
 import {
@@ -12,6 +18,7 @@ import { useAuth } from '@/state/AuthContext';
 
 export default function CaregiverDashboardScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { role } = useAuth();
   const list = useCallback(() => caregiverService.listAuthorizedPatients(), []);
   const patients = useAsyncResource(list);
@@ -49,6 +56,13 @@ export default function CaregiverDashboardScreen() {
             : undefined
         }
       />
+      {role === 'caregiver' ? (
+        <AppButton
+          variant="secondary"
+          label={t('familyPendingInvitations')}
+          onPress={() => router.push('/family-caregivers' as never)}
+        />
+      ) : null}
     </AppScreen>
   );
 }

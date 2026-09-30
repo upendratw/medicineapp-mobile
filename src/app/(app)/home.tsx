@@ -86,6 +86,11 @@ export default function HomeScreen() {
       />
       <AppButton
         variant="secondary"
+        label={t('familyTitle')}
+        onPress={() => router.push('/family-caregivers' as never)}
+      />
+      <AppButton
+        variant="secondary"
         label={t('caregiverDashboard')}
         onPress={() => router.push('/caregiver-dashboard')}
       />
