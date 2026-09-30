@@ -102,6 +102,13 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
     },
     [acceptNotification, online, router, status],
   );
+  const notificationResponseHandler = useRef(handleNotificationResponse);
+  const startupResponseRequest = useRef<ReturnType<
+    typeof notificationCapability.lastResponse
+  > | null>(null);
+  useEffect(() => {
+    notificationResponseHandler.current = handleNotificationResponse;
+  }, [handleNotificationResponse]);
   const run = useCallback(
     async (request: boolean) => {
       setLoading(true);
@@ -181,13 +188,19 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
   }, [handleNotificationResponse]);
   useEffect(() => {
     let active = true;
-    void notificationCapability.lastResponse().then((response) => {
-      if (active && response) void handleNotificationResponse(response);
-    });
+    const request =
+      startupResponseRequest.current ?? notificationCapability.lastResponse();
+    startupResponseRequest.current = request;
+    void request
+      .then((response) => {
+        if (active && response)
+          void notificationResponseHandler.current(response);
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [handleNotificationResponse]);
+  }, []);
   useEffect(() => {
     if (status !== 'authenticated' || !online) return;
     let active = true;
