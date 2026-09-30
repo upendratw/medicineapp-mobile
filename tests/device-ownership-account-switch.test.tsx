@@ -11,6 +11,7 @@ import {
   type PushRegistrationService,
   type PushRegistrationStore,
 } from '@/services/pushRegistration';
+import type { NotificationDevicePushToken } from '@/services/notificationCapability';
 
 const mockAuthState = { status: 'authenticated' };
 const mockAddReceivedListener = jest.fn().mockResolvedValue(null);
@@ -60,6 +61,12 @@ class Gateway implements PushPermissionGateway {
   runtimeStatus = jest.fn(() => 'supported' as const);
   permission = jest.fn(async () => 'granted' as const);
   token = jest.fn(async () => 'ExponentPushToken[synthetic-account-switch]');
+  nativeToken = jest.fn(
+    async (
+      supplied?: NotificationDevicePushToken,
+    ): Promise<NotificationDevicePushToken> =>
+      supplied ?? { type: 'android', data: 'synthetic-native-token' },
+  );
   deviceIdentifier = jest.fn(async () => 'synthetic-installation');
   platform = jest.fn(() => 'android' as const);
   configureChannel = jest.fn(async () => undefined);
@@ -74,6 +81,7 @@ class Backend implements PushRegistrationService {
       platform: 'android' | 'ios';
       appVersion: string | null;
       appEnvironment: 'development' | 'test' | 'staging' | 'production';
+      pushProvider: 'expo' | 'fcm';
       transferChallenge: string;
     }) => ({
       deviceId: 'transferred-device',
@@ -106,6 +114,7 @@ const evidence = (): OwnershipTransferEvidence => ({
   platform: 'android',
   appVersion: '1.0.0',
   appEnvironment: 'development',
+  pushProvider: 'expo',
   transferChallenge: CHALLENGE,
   tupleFingerprint: HASH,
   generation: 0,
@@ -178,6 +187,7 @@ describe('account-switch registration service', () => {
       platform: 'android',
       appVersion: '1.0.0',
       appEnvironment: 'development',
+      pushProvider: 'expo',
       transferChallenge: CHALLENGE,
     });
     expect(store.registrationId).toBe('transferred-device');

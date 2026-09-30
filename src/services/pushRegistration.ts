@@ -14,6 +14,7 @@ import {
   type NotificationRuntimeStatus,
   type NotificationDevicePushToken,
 } from '@/services/notificationCapability';
+import { configureCaregiverNotificationChannel } from '@/services/caregiverNotificationChannel';
 
 export const NOTIFICATION_CHANNEL_ID = 'medicineapp-reminders-v4';
 export const DEFAULT_NOTIFICATION_COPY = Object.freeze({
@@ -22,9 +23,14 @@ export const DEFAULT_NOTIFICATION_COPY = Object.freeze({
 });
 const REGISTRATION_ID_KEY = 'medicineapp.secure.v1.push.registration-id';
 const REGISTRATION_TUPLE_KEY = 'medicineapp.secure.v1.push.registration-tuple';
+const FCM_REGISTRATION_ID_KEY =
+  'medicineapp.secure.v1.push.fcm-registration-id';
+const FCM_REGISTRATION_TUPLE_KEY =
+  'medicineapp.secure.v1.push.fcm-registration-tuple';
 
 export type PushPermission = NotificationPermission;
 export type PushPlatform = 'android' | 'ios';
+export type PushProvider = 'expo' | 'fcm';
 export type PushRegistrationResult = Readonly<{
   status:
     | 'registered'
@@ -44,6 +50,7 @@ type RegistrationInput = Readonly<{
   platform: PushPlatform;
   appVersion: string | null;
   appEnvironment: 'development' | 'test' | 'staging' | 'production';
+  pushProvider: PushProvider;
 }>;
 export type OwnershipTransferEvidence = Readonly<
   RegistrationInput & {
@@ -58,6 +65,9 @@ export interface PushPermissionGateway {
   runtimeStatus(): NotificationRuntimeStatus;
   permission(request: boolean): Promise<PushPermission>;
   token(devicePushToken?: NotificationDevicePushToken): Promise<string | null>;
+  nativeToken(
+    devicePushToken?: NotificationDevicePushToken,
+  ): Promise<NotificationDevicePushToken | null>;
   deviceIdentifier(): Promise<string | null>;
   platform(): PushPlatform | null;
   configureChannel(): Promise<void>;
@@ -70,10 +80,10 @@ export interface PushRegistrationService {
   unregister(deviceId: string): Promise<void>;
 }
 export interface PushRegistrationStore {
-  readRegistrationId(): Promise<string | null>;
-  writeRegistrationId(value: string): Promise<void>;
-  readTupleFingerprint(): Promise<string | null>;
-  writeTupleFingerprint(value: string): Promise<void>;
+  readRegistrationId(provider?: PushProvider): Promise<string | null>;
+  writeRegistrationId(value: string, provider?: PushProvider): Promise<void>;
+  readTupleFingerprint(provider?: PushProvider): Promise<string | null>;
+  writeTupleFingerprint(value: string, provider?: PushProvider): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -96,6 +106,19 @@ export class ExpoPushPermissionGateway implements PushPermissionGateway {
     if (!projectId) return null;
     return this.capability.expoPushToken(projectId, devicePushToken);
   }
+  async nativeToken(
+    devicePushToken?: NotificationDevicePushToken,
+  ): Promise<NotificationDevicePushToken | null> {
+    if (devicePushToken) return devicePushToken;
+    if (!Device.isDevice) return null;
+    try {
+      return await (
+        await import('expo-notifications')
+      ).getDevicePushTokenAsync();
+    } catch {
+      return null;
+    }
+  }
   async deviceIdentifier(): Promise<string | null> {
     if (Platform.OS === 'android') return Application.getAndroidId();
     if (Platform.OS === 'ios') return Application.getIosIdForVendorAsync();
@@ -107,8 +130,10 @@ export class ExpoPushPermissionGateway implements PushPermissionGateway {
       : null;
   }
   async configureChannel(): Promise<void> {
-    if (Platform.OS === 'android')
+    if (Platform.OS === 'android') {
       await this.capability.configureAndroidChannel(NOTIFICATION_CHANNEL_ID);
+      await configureCaregiverNotificationChannel();
+    }
     await this.capability.configureReminderCategory();
     await this.capability.configureForegroundPresentation();
   }
@@ -116,13 +141,7 @@ export class ExpoPushPermissionGateway implements PushPermissionGateway {
 
 export class BackendPushRegistrationService implements PushRegistrationService {
   constructor(private readonly client: ApiClient) {}
-  async register(input: {
-    deviceIdentifier: string;
-    pushToken: string;
-    platform: PushPlatform;
-    appVersion: string | null;
-    appEnvironment: 'development' | 'test' | 'staging' | 'production';
-  }): Promise<{ deviceId: string }> {
+  async register(input: RegistrationInput): Promise<{ deviceId: string }> {
     const data = await this.client.request<{
       device_id: string;
       active: boolean;
@@ -135,7 +154,7 @@ export class BackendPushRegistrationService implements PushRegistrationService {
           platform: input.platform,
           push_token: input.pushToken,
           app_version: input.appVersion,
-          push_provider: 'expo',
+          push_provider: input.pushProvider,
           app_environment: input.appEnvironment,
         }),
       },
@@ -166,7 +185,7 @@ export class BackendPushRegistrationService implements PushRegistrationService {
         body: JSON.stringify({
           device_identifier: input.deviceIdentifier,
           platform: input.platform,
-          push_provider: 'expo',
+          push_provider: input.pushProvider,
           app_environment: input.appEnvironment,
           push_token: input.pushToken,
           transfer_challenge: input.transferChallenge,
@@ -182,36 +201,48 @@ export class BackendPushRegistrationService implements PushRegistrationService {
 }
 
 export class SecurePushRegistrationStore implements PushRegistrationStore {
-  async readRegistrationId() {
-    const value = await SecureStore.getItemAsync(REGISTRATION_ID_KEY);
+  async readRegistrationId(provider: PushProvider = 'expo') {
+    const value = await SecureStore.getItemAsync(
+      provider === 'fcm' ? FCM_REGISTRATION_ID_KEY : REGISTRATION_ID_KEY,
+    );
     if (value && !/^[A-Za-z0-9_-]{1,200}$/.test(value)) {
       await this.clear();
       return null;
     }
     return value;
   }
-  async writeRegistrationId(value: string) {
+  async writeRegistrationId(value: string, provider: PushProvider = 'expo') {
     if (!/^[A-Za-z0-9_-]{1,200}$/.test(value))
       throw new Error('Invalid registration identifier');
-    await SecureStore.setItemAsync(REGISTRATION_ID_KEY, value);
+    await SecureStore.setItemAsync(
+      provider === 'fcm' ? FCM_REGISTRATION_ID_KEY : REGISTRATION_ID_KEY,
+      value,
+    );
   }
-  async readTupleFingerprint() {
-    const value = await SecureStore.getItemAsync(REGISTRATION_TUPLE_KEY);
+  async readTupleFingerprint(provider: PushProvider = 'expo') {
+    const key =
+      provider === 'fcm' ? FCM_REGISTRATION_TUPLE_KEY : REGISTRATION_TUPLE_KEY;
+    const value = await SecureStore.getItemAsync(key);
     if (value && !/^[a-f0-9]{64}$/.test(value)) {
-      await SecureStore.deleteItemAsync(REGISTRATION_TUPLE_KEY);
+      await SecureStore.deleteItemAsync(key);
       return null;
     }
     return value;
   }
-  async writeTupleFingerprint(value: string) {
+  async writeTupleFingerprint(value: string, provider: PushProvider = 'expo') {
     if (!/^[a-f0-9]{64}$/.test(value))
       throw new Error('Invalid registration tuple fingerprint');
-    await SecureStore.setItemAsync(REGISTRATION_TUPLE_KEY, value);
+    await SecureStore.setItemAsync(
+      provider === 'fcm' ? FCM_REGISTRATION_TUPLE_KEY : REGISTRATION_TUPLE_KEY,
+      value,
+    );
   }
   async clear() {
     await Promise.all([
       SecureStore.deleteItemAsync(REGISTRATION_ID_KEY),
       SecureStore.deleteItemAsync(REGISTRATION_TUPLE_KEY),
+      SecureStore.deleteItemAsync(FCM_REGISTRATION_ID_KEY),
+      SecureStore.deleteItemAsync(FCM_REGISTRATION_TUPLE_KEY),
     ]);
   }
 }
@@ -301,23 +332,63 @@ export class PushRegistrationCoordinator {
     if (permission === 'denied') return { status: 'denied' };
     if (permission !== 'granted') return { status: 'unavailable' };
     if (!online) return { status: 'offline' };
-    const [pushToken, deviceIdentifier] = await Promise.all([
-      this.gateway.token(devicePushToken),
+    const platform = this.gateway.platform();
+    if (!platform) return { status: 'unavailable' };
+    const [nativeToken, deviceIdentifier] = await Promise.all([
+      this.gateway.nativeToken(devicePushToken),
       this.gateway.deviceIdentifier(),
     ]);
-    const platform = this.gateway.platform();
-    if (!pushToken || !deviceIdentifier || !platform)
+    const expoToken = await this.gateway.token(nativeToken ?? undefined);
+    if (!expoToken || !deviceIdentifier) return { status: 'unavailable' };
+    const candidates: Readonly<{
+      provider: PushProvider;
+      token: string;
+    }>[] = [{ provider: 'expo', token: expoToken }];
+    if (
+      platform === 'android' &&
+      nativeToken?.type === 'android' &&
+      typeof nativeToken.data === 'string' &&
+      nativeToken.data
+    ) {
+      candidates.push({ provider: 'fcm', token: nativeToken.data });
+    } else if (platform === 'android') {
       return { status: 'unavailable' };
+    }
+
+    let primaryDeviceId: string | undefined;
+    for (const candidate of candidates) {
+      const outcome = await this.registerProvider({
+        provider: candidate.provider,
+        pushToken: candidate.token,
+        deviceIdentifier,
+        platform,
+        generation,
+      });
+      if (outcome.status !== 'registered') return outcome;
+      if (candidate.provider === 'expo') primaryDeviceId = outcome.deviceId;
+    }
+    return primaryDeviceId
+      ? { status: 'registered', deviceId: primaryDeviceId }
+      : { status: 'unavailable' };
+  }
+
+  private async registerProvider(input: {
+    provider: PushProvider;
+    pushToken: string;
+    deviceIdentifier: string;
+    platform: PushPlatform;
+    generation: number;
+  }): Promise<PushRegistrationAttemptResult> {
     const tupleFingerprint = await this.tupleHasher([
-      pushToken,
-      deviceIdentifier,
-      platform,
-      'expo',
+      input.pushToken,
+      input.deviceIdentifier,
+      input.platform,
+      input.provider,
       publicEnvironment.appEnvironment,
     ]);
     const [currentFingerprint, currentDeviceId] = await Promise.all([
-      this.store.readTupleFingerprint(),
-      this.store.readRegistrationId(),
+      this.store.readTupleFingerprint(input.provider),
+      this.store.readRegistrationId(input.provider),
     ]);
     if (currentFingerprint === tupleFingerprint && currentDeviceId) {
       return { status: 'registered', deviceId: currentDeviceId };
@@ -325,9 +396,10 @@ export class PushRegistrationCoordinator {
     let result: { deviceId: string };
     try {
       result = await this.backend.register({
-        deviceIdentifier,
-        pushToken,
-        platform,
+        deviceIdentifier: input.deviceIdentifier,
+        pushToken: input.pushToken,
+        platform: input.platform,
+        pushProvider: input.provider,
         appVersion: Constants.expoConfig?.version ?? null,
         appEnvironment: publicEnvironment.appEnvironment,
       });
@@ -343,14 +415,15 @@ export class PushRegistrationCoordinator {
         return {
           status: 'ownership_transfer_required',
           transferEvidence: Object.freeze({
-            deviceIdentifier,
-            pushToken,
-            platform,
+            deviceIdentifier: input.deviceIdentifier,
+            pushToken: input.pushToken,
+            platform: input.platform,
+            pushProvider: input.provider,
             appVersion: Constants.expoConfig?.version ?? null,
             appEnvironment: publicEnvironment.appEnvironment,
             transferChallenge: error.transferChallenge,
             tupleFingerprint,
-            generation,
+            generation: input.generation,
           }),
         };
       }
@@ -362,15 +435,15 @@ export class PushRegistrationCoordinator {
       }
       throw error;
     }
-    if (generation !== this.generation) {
+    if (input.generation !== this.generation) {
       await this.revokeStale(result.deviceId);
       return { status: 'unavailable' };
     }
     await Promise.all([
-      this.store.writeRegistrationId(result.deviceId),
-      this.store.writeTupleFingerprint(tupleFingerprint),
+      this.store.writeRegistrationId(result.deviceId, input.provider),
+      this.store.writeTupleFingerprint(tupleFingerprint, input.provider),
     ]);
-    if (generation !== this.generation) {
+    if (input.generation !== this.generation) {
       await this.store.clear();
       await this.revokeStale(result.deviceId);
       return { status: 'unavailable' };
@@ -392,6 +465,7 @@ export class PushRegistrationCoordinator {
       deviceIdentifier: evidence.deviceIdentifier,
       pushToken: evidence.pushToken,
       platform: evidence.platform,
+      pushProvider: evidence.pushProvider,
       appVersion: evidence.appVersion,
       appEnvironment: evidence.appEnvironment,
       transferChallenge: evidence.transferChallenge,
@@ -401,8 +475,11 @@ export class PushRegistrationCoordinator {
       return { status: 'unavailable' };
     }
     await Promise.all([
-      this.store.writeRegistrationId(result.deviceId),
-      this.store.writeTupleFingerprint(evidence.tupleFingerprint),
+      this.store.writeRegistrationId(result.deviceId, evidence.pushProvider),
+      this.store.writeTupleFingerprint(
+        evidence.tupleFingerprint,
+        evidence.pushProvider,
+      ),
     ]);
     if (evidence.generation !== this.generation) {
       await this.store.clear();
@@ -424,11 +501,19 @@ export class PushRegistrationCoordinator {
     this.generation += 1;
     this.inFlight = null;
     this.transferInFlight = null;
-    const deviceId = await this.store.readRegistrationId();
+    const deviceIds = await Promise.all([
+      this.store.readRegistrationId('expo'),
+      this.store.readRegistrationId('fcm'),
+    ]);
     try {
-      if (deviceId) await this.backend.unregister(deviceId);
-    } catch {
-      /* Logout must still clear local association. */
+      for (const deviceId of deviceIds) {
+        if (!deviceId) continue;
+        try {
+          await this.backend.unregister(deviceId);
+        } catch {
+          /* Continue revoking other provider registrations before local clear. */
+        }
+      }
     } finally {
       await this.store.clear();
     }

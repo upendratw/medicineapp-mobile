@@ -17,6 +17,10 @@ class Gateway implements PushPermissionGateway {
     public state: PushPermission = 'granted',
     public pushToken: string | null = 'ExponentPushToken[synthetic]',
     public identifier: string | null = 'synthetic-device',
+    public nativePushToken: NotificationDevicePushToken | null = {
+      type: 'android',
+      data: 'synthetic-native-token',
+    },
   ) {}
   runtimeStatus = jest.fn(
     (): ReturnType<PushPermissionGateway['runtimeStatus']> => 'supported',
@@ -24,6 +28,10 @@ class Gateway implements PushPermissionGateway {
   permission = jest.fn(async () => this.state);
   token = jest.fn(
     async (_devicePushToken?: NotificationDevicePushToken) => this.pushToken,
+  );
+  nativeToken = jest.fn(
+    async (devicePushToken?: NotificationDevicePushToken) =>
+      devicePushToken ?? this.nativePushToken,
   );
   deviceIdentifier = jest.fn(async () => this.identifier);
   platform = jest.fn(
@@ -44,6 +52,7 @@ test('unsupported notification runtime never attempts permission, token, or back
   ).resolves.toEqual({ status: 'unsupported_runtime' });
   expect(gateway.permission).not.toHaveBeenCalled();
   expect(gateway.token).not.toHaveBeenCalled();
+  expect(gateway.nativeToken).not.toHaveBeenCalled();
   expect(gateway.configureChannel).not.toHaveBeenCalled();
   expect(backend.tokens).toHaveLength(0);
 });
@@ -59,37 +68,65 @@ test('Personal Team runtime never attempts permission, token, or backend registr
   ).resolves.toEqual({ status: 'unsupported_personal_team' });
   expect(gateway.permission).not.toHaveBeenCalled();
   expect(gateway.token).not.toHaveBeenCalled();
+  expect(gateway.nativeToken).not.toHaveBeenCalled();
   expect(gateway.configureChannel).not.toHaveBeenCalled();
   expect(backend.tokens).toHaveLength(0);
 });
 class Backend implements PushRegistrationService {
   tokens: string[] = [];
   platforms: string[] = [];
+  providers: string[] = [];
   unregister = jest.fn(async () => undefined);
-  async register(input: { pushToken: string; platform: string }) {
+  async register(input: {
+    pushToken: string;
+    platform: string;
+    pushProvider: string;
+  }) {
     this.tokens.push(input.pushToken);
     this.platforms.push(input.platform);
-    return { deviceId: 'device-record' };
+    this.providers.push(input.pushProvider);
+    return { deviceId: `${input.pushProvider}-device-record` };
   }
 }
 class Store implements PushRegistrationStore {
-  value: string | null = null;
-  tuple: string | null = null;
-  async readRegistrationId() {
-    return this.value;
+  values: Record<'expo' | 'fcm', string | null> = {
+    expo: null,
+    fcm: null,
+  };
+  tuples: Record<'expo' | 'fcm', string | null> = {
+    expo: null,
+    fcm: null,
+  };
+  get value() {
+    return this.values.expo;
   }
-  async writeRegistrationId(value: string) {
-    this.value = value;
+  set value(value: string | null) {
+    this.values.expo = value;
   }
-  async readTupleFingerprint() {
-    return this.tuple;
+  get tuple() {
+    return this.tuples.expo;
   }
-  async writeTupleFingerprint(value: string) {
-    this.tuple = value;
+  set tuple(value: string | null) {
+    this.tuples.expo = value;
+  }
+  async readRegistrationId(provider: 'expo' | 'fcm' = 'expo') {
+    return this.values[provider];
+  }
+  async writeRegistrationId(value: string, provider: 'expo' | 'fcm' = 'expo') {
+    this.values[provider] = value;
+  }
+  async readTupleFingerprint(provider: 'expo' | 'fcm' = 'expo') {
+    return this.tuples[provider];
+  }
+  async writeTupleFingerprint(
+    value: string,
+    provider: 'expo' | 'fcm' = 'expo',
+  ) {
+    this.tuples[provider] = value;
   }
   async clear() {
-    this.value = null;
-    this.tuple = null;
+    this.values = { expo: null, fcm: null };
+    this.tuples = { expo: null, fcm: null };
   }
 }
 
@@ -121,6 +158,10 @@ test('Android channel is configured before permission and token handling', async
     callOrder.push('permission');
     return 'granted';
   });
+  gateway.nativeToken.mockImplementation(async () => {
+    callOrder.push('native-token');
+    return { type: 'android', data: 'synthetic-native-token' };
+  });
   gateway.token.mockImplementation(async () => {
     callOrder.push('token');
     return 'ExponentPushToken[synthetic]';
@@ -130,7 +171,7 @@ test('Android channel is configured before permission and token handling', async
     new Backend(),
     new Store(),
   ).register(true, true);
-  expect(callOrder).toEqual(['channel', 'permission', 'token']);
+  expect(callOrder).toEqual(['channel', 'permission', 'native-token', 'token']);
 });
 test('granted permission registers through backend and token rotation updates registration', async () => {
   const gateway = new Gateway();
@@ -139,15 +180,17 @@ test('granted permission registers through backend and token rotation updates re
   const coordinator = new PushRegistrationCoordinator(gateway, backend, store);
   await expect(coordinator.register(true, true)).resolves.toEqual({
     status: 'registered',
-    deviceId: 'device-record',
+    deviceId: 'expo-device-record',
   });
   gateway.pushToken = 'ExponentPushToken[rotated]';
   await coordinator.register(false, true);
+  expect(backend.providers).toEqual(['expo', 'fcm', 'expo']);
   expect(backend.tokens).toEqual([
     'ExponentPushToken[synthetic]',
+    'synthetic-native-token',
     'ExponentPushToken[rotated]',
   ]);
-  expect(store.value).toBe('device-record');
+  expect(store.value).toBe('expo-device-record');
 });
 test('successful registration tuple is deduplicated without persisting a raw token', async () => {
   const gateway = new Gateway();
@@ -157,21 +200,27 @@ test('successful registration tuple is deduplicated without persisting a raw tok
   await coordinator.register(false, true);
   await expect(coordinator.register(false, true)).resolves.toEqual({
     status: 'registered',
-    deviceId: 'device-record',
+    deviceId: 'expo-device-record',
   });
-  expect(backend.tokens).toHaveLength(1);
+  expect(backend.tokens).toHaveLength(2);
   expect(store.tuple).toMatch(/^[a-f0-9]{64}$/);
   expect(store.tuple).not.toContain('ExponentPushToken');
 });
 test('concurrent registration calls share one backend operation', async () => {
   const backend = new Backend();
   let release!: () => void;
-  backend.register = jest.fn(
-    () =>
-      new Promise(
-        (resolve) => (release = () => resolve({ deviceId: 'device-record' })),
-      ),
-  );
+  let waiting = true;
+  backend.register = jest.fn((input) => {
+    if (!waiting)
+      return Promise.resolve({
+        deviceId: `${input.pushProvider}-device-record`,
+      });
+    waiting = false;
+    return new Promise(
+      (resolve) =>
+        (release = () => resolve({ deviceId: 'expo-device-record' })),
+    );
+  });
   const coordinator = new PushRegistrationCoordinator(
     new Gateway(),
     backend,
@@ -183,9 +232,10 @@ test('concurrent registration calls share one backend operation', async () => {
   expect(backend.register).toHaveBeenCalledTimes(1);
   release();
   await expect(Promise.all([first, second])).resolves.toEqual([
-    { status: 'registered', deviceId: 'device-record' },
-    { status: 'registered', deviceId: 'device-record' },
+    { status: 'registered', deviceId: 'expo-device-record' },
+    { status: 'registered', deviceId: 'expo-device-record' },
   ]);
+  expect(backend.register).toHaveBeenCalledTimes(2);
 });
 test('native token rotation is converted without reacquiring a device token and deduplicates events', async () => {
   const gateway = new Gateway();
@@ -202,7 +252,10 @@ test('native token rotation is converted without reacquiring a device token and 
   await coordinator.registerRotatedToken(nativeToken, true);
   await coordinator.registerRotatedToken(nativeToken, true);
   expect(gateway.token).toHaveBeenCalledWith(nativeToken);
-  expect(backend.tokens).toHaveLength(1);
+  expect(backend.tokens).toEqual([
+    'ExponentPushToken[synthetic]',
+    'synthetic-native-token',
+  ]);
 });
 test('genuine token rotation permits one new backend registration', async () => {
   const gateway = new Gateway();
@@ -218,14 +271,16 @@ test('genuine token rotation permits one new backend registration', async () => 
     { type: 'android', data: 'rotated-native-token' },
     true,
   );
-  expect(backend.tokens).toHaveLength(2);
+  expect(backend.tokens).toHaveLength(4);
 });
 test('429 returns bounded retryable state without an automatic retry', async () => {
   const backend = new Backend();
   backend.register = jest
     .fn()
     .mockRejectedValueOnce(new ApiError('RATE_LIMITED', 429, 20))
-    .mockResolvedValueOnce({ deviceId: 'device-record' });
+    .mockImplementation(async (input) => ({
+      deviceId: `${input.pushProvider}-device-record`,
+    }));
   const coordinator = new PushRegistrationCoordinator(
     new Gateway(),
     backend,
@@ -239,9 +294,9 @@ test('429 returns bounded retryable state without an automatic retry', async () 
   await expect(coordinator.register(false, true)).resolves.toMatchObject({
     status: 'registered',
   });
-  expect(backend.register).toHaveBeenCalledTimes(2);
+  expect(backend.register).toHaveBeenCalledTimes(3);
   await coordinator.register(false, true);
-  expect(backend.register).toHaveBeenCalledTimes(2);
+  expect(backend.register).toHaveBeenCalledTimes(3);
 });
 test('explicit unregister invalidates in-flight registration and revokes its stale completion', async () => {
   const backend = new Backend();
@@ -263,14 +318,14 @@ test('explicit unregister invalidates in-flight registration and revokes its sta
   expect(backend.unregister).toHaveBeenCalledWith('stale-device-record');
   expect(store.value).toBeNull();
   expect(store.tuple).toBeNull();
-  backend.register = jest
-    .fn()
-    .mockResolvedValue({ deviceId: 'fresh-device-record' });
+  backend.register = jest.fn().mockImplementation(async (input) => ({
+    deviceId: `${input.pushProvider}-fresh-device-record`,
+  }));
   await expect(coordinator.register(false, true)).resolves.toEqual({
     status: 'registered',
-    deviceId: 'fresh-device-record',
+    deviceId: 'expo-fresh-device-record',
   });
-  expect(backend.register).toHaveBeenCalledTimes(1);
+  expect(backend.register).toHaveBeenCalledTimes(2);
 });
 test('token unavailable and offline registration never fake backend success', async () => {
   const unavailable = new Gateway('granted', null);
@@ -316,6 +371,27 @@ test('explicit unregister clears local association even when backend fails', asy
   expect(backend.unregister).toHaveBeenCalledWith('device-record');
   expect(store.value).toBeNull();
 });
+test('logout attempts both Expo and FCM revocation even when one provider fails', async () => {
+  const backend = new Backend();
+  backend.unregister.mockRejectedValueOnce(new Error('synthetic-expo-failure'));
+  const store = new Store();
+  store.values = {
+    expo: 'expo-device-record',
+    fcm: 'fcm-device-record',
+  };
+  store.tuples = { expo: 'a'.repeat(64), fcm: 'b'.repeat(64) };
+  await new PushRegistrationCoordinator(
+    new Gateway(),
+    backend,
+    store,
+  ).unregister();
+  expect(backend.unregister.mock.calls).toEqual([
+    ['expo-device-record'],
+    ['fcm-device-record'],
+  ]);
+  expect(store.values).toEqual({ expo: null, fcm: null });
+  expect(store.tuples).toEqual({ expo: null, fcm: null });
+});
 test('cleared logout bookkeeping forces later registration through backend ownership validation', async () => {
   const backend = new Backend();
   const store = new Store();
@@ -330,10 +406,10 @@ test('cleared logout bookkeeping forces later registration through backend owner
     ),
   ).resolves.toEqual({
     status: 'registered',
-    deviceId: 'device-record',
+    deviceId: 'expo-device-record',
   });
-  expect(backend.tokens).toHaveLength(1);
-  expect(store.value).toBe('device-record');
+  expect(backend.tokens).toHaveLength(2);
+  expect(store.value).toBe('expo-device-record');
 });
 test('backend adapter uses only real authenticated device endpoints', async () => {
   const client = {
@@ -346,6 +422,7 @@ test('backend adapter uses only real authenticated device endpoints', async () =
     platform: 'android',
     appVersion: '1.0.0',
     appEnvironment: 'development',
+    pushProvider: 'expo',
   });
   expect(client.request).toHaveBeenCalledWith(
     '/api/v1/devices',
@@ -370,6 +447,7 @@ test('backend adapter uses only real authenticated device endpoints', async () =
 test('supported iOS runtime uses the backend-mediated iOS registration contract', async () => {
   const gateway = new Gateway();
   gateway.platform.mockReturnValue('ios');
+  gateway.nativePushToken = { type: 'ios', data: 'synthetic-apns-token' };
   const backend = new Backend();
   await expect(
     new PushRegistrationCoordinator(gateway, backend, new Store()).register(
@@ -378,6 +456,7 @@ test('supported iOS runtime uses the backend-mediated iOS registration contract'
     ),
   ).resolves.toMatchObject({ status: 'registered' });
   expect(backend.platforms).toEqual(['ios']);
+  expect(backend.providers).toEqual(['expo']);
 });
 test('bounded notification template contains only the approved medicine label field', () => {
   expect(DEFAULT_NOTIFICATION_COPY).toEqual({
