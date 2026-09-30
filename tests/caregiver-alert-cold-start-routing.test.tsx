@@ -8,6 +8,7 @@ const mockAddResponseListener = jest.fn().mockResolvedValue(null);
 const mockAddReceivedListener = jest.fn().mockResolvedValue(null);
 const mockAddPushTokenListener = jest.fn().mockResolvedValue(null);
 const mockProcess = jest.fn().mockResolvedValue({ status: 'none' });
+const mockDiagnostic = jest.fn();
 let responseListener: ((response: unknown) => void) | undefined;
 const mockAuth: {
   status: 'restoring' | 'unauthenticated' | 'authenticated' | 'error';
@@ -47,6 +48,9 @@ jest.mock('@/services/registry', () => ({
     process: (...args: unknown[]) => mockProcess(...args),
   },
 }));
+jest.mock('@/diagnostics/e21ColdStartDiagnostic', () => ({
+  emitE21ColdStartDiagnostic: (marker: string) => mockDiagnostic(marker),
+}));
 
 import { DeepLinkProvider } from '@/navigation/DeepLinkContext';
 import { RouteGuard } from '@/navigation/RouteGuard';
@@ -66,10 +70,24 @@ const caregiverResponse = {
   data: { type: 'caregiver_alert', schema_version: 1 },
 };
 
-function Harness() {
+function diagnosticMarkers(): string[] {
+  return mockDiagnostic.mock.calls.map(([marker]) => marker as string);
+}
+
+function expectMarkerOrder(expected: string[]): void {
+  const markers = diagnosticMarkers();
+  let previous = -1;
+  for (const marker of expected) {
+    const index = markers.indexOf(marker, previous + 1);
+    expect(index).toBeGreaterThan(previous);
+    previous = index;
+  }
+}
+
+function Harness({ providerKey = 'stable' }: { providerKey?: string }) {
   return (
     <DeepLinkProvider>
-      <PushRegistrationProvider>
+      <PushRegistrationProvider key={providerKey}>
         <RouteGuard />
       </PushRegistrationProvider>
     </DeepLinkProvider>
@@ -97,7 +115,7 @@ beforeEach(() => {
   responseListener = undefined;
   mockAddResponseListener.mockImplementation(async (listener) => {
     responseListener = listener as (response: unknown) => void;
-    return null;
+    return { remove: jest.fn() };
   });
   mockRegister.mockResolvedValue({ status: 'registered' });
   mockProcess.mockResolvedValue({ status: 'none' });
@@ -134,6 +152,24 @@ test('routes a late cold-start Caregiver response after auth restores first', as
   await waitFor(() =>
     expect(mockReplace).toHaveBeenLastCalledWith('/caregiver-alerts'),
   );
+  expectMarkerOrder([
+    'PROVIDER_MOUNT',
+    'LIVE_LISTENER_INSTALL_BEGIN',
+    'STARTUP_EFFECT_ACTIVE',
+    'LAST_RESPONSE_REQUEST_BEGIN',
+    'STARTUP_PROMISE_CREATED',
+    'LIVE_LISTENER_INSTALLED',
+    'LAST_RESPONSE_RESULT_PRESENT',
+    'STARTUP_PROMISE_RESOLVED',
+    'HANDLER_PRESENT',
+    'RESPONSE_SOURCE_STARTUP',
+    'RESPONSE_DISPATCHED',
+    'PARSER_RESULT_CAREGIVER',
+    'CAREGIVER_INTENT_INSTALLED',
+    'ROUTEGUARD_CAREGIVER_INTENT_SEEN',
+    'ROUTEGUARD_DECISION_CAREGIVER_ALERTS',
+    'CAREGIVER_INTENT_CONSUMED',
+  ]);
 });
 
 test('routes a response-first cold start after Caregiver auth resolves', async () => {
@@ -159,6 +195,15 @@ test('uses the normal Caregiver landing when the startup response is null', asyn
     expect(mockReplace).toHaveBeenLastCalledWith('/caregiver-dashboard'),
   );
   expect(mockReplace).not.toHaveBeenCalledWith('/caregiver-alerts');
+  expect(diagnosticMarkers()).toEqual(
+    expect.arrayContaining([
+      'LAST_RESPONSE_RESULT_NULL',
+      'STARTUP_PROMISE_RESOLVED',
+      'ROUTEGUARD_DECISION_CAREGIVER_DASHBOARD',
+    ]),
+  );
+  expect(diagnosticMarkers()).not.toContain('RESPONSE_DISPATCHED');
+  expect(diagnosticMarkers()).not.toContain('CAREGIVER_INTENT_INSTALLED');
 });
 
 test('uses the normal Caregiver landing for an invalid startup response', async () => {
@@ -225,6 +270,16 @@ test('preserves live Caregiver response routing after startup hydration', async 
   await waitFor(() =>
     expect(mockReplace).toHaveBeenLastCalledWith('/caregiver-alerts'),
   );
+  expectMarkerOrder([
+    'LIVE_RESPONSE_RECEIVED',
+    'HANDLER_PRESENT',
+    'RESPONSE_SOURCE_LIVE',
+    'RESPONSE_DISPATCHED',
+    'PARSER_RESULT_CAREGIVER',
+    'CAREGIVER_INTENT_INSTALLED',
+    'ROUTEGUARD_CAREGIVER_INTENT_SEEN',
+    'ROUTEGUARD_DECISION_CAREGIVER_ALERTS',
+  ]);
 });
 
 test('runs one startup request and one alert route across auth rerenders', async () => {
@@ -249,6 +304,11 @@ test('runs one startup request and one alert route across auth rerenders', async
   expect(mockLastResponse).toHaveBeenCalledTimes(1);
   expect(
     mockReplace.mock.calls.filter(([route]) => route === '/caregiver-alerts'),
+  ).toHaveLength(1);
+  expect(
+    diagnosticMarkers().filter(
+      (marker) => marker === 'CAREGIVER_INTENT_INSTALLED',
+    ),
   ).toHaveLength(1);
 });
 
@@ -277,6 +337,7 @@ test('does not let a delayed rejected development-client URL overwrite the Careg
 
   expect(mockReplace).not.toHaveBeenCalledWith('/home');
   expect(mockReplace).not.toHaveBeenCalledWith('/caregiver-dashboard');
+  expect(diagnosticMarkers()).toContain('INITIAL_URL_REJECTED');
 });
 
 test('falls back safely when startup response retrieval fails', async () => {
@@ -289,4 +350,54 @@ test('falls back safely when startup response retrieval fails', async () => {
     expect(mockReplace).toHaveBeenLastCalledWith('/caregiver-dashboard'),
   );
   expect(mockReplace).not.toHaveBeenCalledWith('/caregiver-alerts');
+  expectMarkerOrder([
+    'LAST_RESPONSE_REQUEST_BEGIN',
+    'STARTUP_PROMISE_CREATED',
+    'LAST_RESPONSE_RESULT_ERROR',
+    'STARTUP_PROMISE_REJECTED',
+  ]);
+  expect(diagnosticMarkers()).toContain(
+    'ROUTEGUARD_DECISION_CAREGIVER_DASHBOARD',
+  );
+});
+
+test('records provider and startup-effect cleanup without changing lifecycle behavior', async () => {
+  const startupResponse = deferred<typeof caregiverResponse | null>();
+  mockLastResponse.mockReturnValue(startupResponse.promise);
+  const screen = await render(<Harness />);
+  await waitFor(() => expect(mockLastResponse).toHaveBeenCalledTimes(1));
+
+  screen.unmount();
+  await waitFor(() =>
+    expect(diagnosticMarkers()).toContain('STARTUP_EFFECT_CANCELLED'),
+  );
+  startupResponse.resolve(caregiverResponse);
+  await startupResponse.promise;
+  await waitFor(() =>
+    expect(diagnosticMarkers()).toContain(
+      'STARTUP_RESULT_DISCARDED_EFFECT_INACTIVE',
+    ),
+  );
+
+  expectMarkerOrder([
+    'PROVIDER_MOUNT',
+    'STARTUP_EFFECT_ACTIVE',
+    'STARTUP_PROMISE_CREATED',
+    'PROVIDER_UNMOUNT',
+    'STARTUP_EFFECT_CANCELLED',
+    'LAST_RESPONSE_RESULT_PRESENT',
+    'STARTUP_PROMISE_RESOLVED',
+    'STARTUP_RESULT_DISCARDED_EFFECT_INACTIVE',
+  ]);
+  expect(diagnosticMarkers()).not.toContain('RESPONSE_DISPATCHED');
+});
+
+test('records an actual provider remount as unmount followed by a second mount', async () => {
+  const screen = await render(<Harness providerKey="first" />);
+  await waitFor(() => expect(mockLastResponse).toHaveBeenCalledTimes(1));
+
+  await screen.rerender(<Harness providerKey="second" />);
+  await waitFor(() => expect(mockLastResponse).toHaveBeenCalledTimes(2));
+
+  expectMarkerOrder(['PROVIDER_MOUNT', 'PROVIDER_UNMOUNT', 'PROVIDER_MOUNT']);
 });

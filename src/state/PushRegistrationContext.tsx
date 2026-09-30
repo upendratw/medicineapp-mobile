@@ -22,6 +22,7 @@ import { DeviceOwnershipTransferDialog } from '@/components/DeviceOwnershipTrans
 import { notificationCapability } from '@/services/notificationCapability';
 import { resolveReminderNotificationAction } from '@/services/notificationActions';
 import { notificationActionCoordinator } from '@/services/registry';
+import { emitE21ColdStartDiagnostic } from '@/diagnostics/e21ColdStartDiagnostic';
 type Value = {
   result: PushRegistrationResult | null;
   loading: boolean;
@@ -107,6 +108,10 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
     typeof notificationCapability.lastResponse
   > | null>(null);
   useEffect(() => {
+    emitE21ColdStartDiagnostic('PROVIDER_MOUNT');
+    return () => emitE21ColdStartDiagnostic('PROVIDER_UNMOUNT');
+  }, []);
+  useEffect(() => {
     notificationResponseHandler.current = handleNotificationResponse;
   }, [handleNotificationResponse]);
   const run = useCallback(
@@ -172,15 +177,34 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let active = true;
     let remove: (() => void) | undefined;
+    emitE21ColdStartDiagnostic('LIVE_LISTENER_INSTALL_BEGIN');
     void notificationCapability
       .addResponseListener((response) => {
+        emitE21ColdStartDiagnostic('LIVE_RESPONSE_RECEIVED');
+        emitE21ColdStartDiagnostic('HANDLER_PRESENT');
+        emitE21ColdStartDiagnostic('RESPONSE_SOURCE_LIVE');
+        emitE21ColdStartDiagnostic('RESPONSE_DISPATCHED');
         void handleNotificationResponse(response);
       })
       .then((subscription) => {
-        if (!active) subscription?.remove();
-        else remove = () => subscription?.remove();
+        if (!subscription) {
+          emitE21ColdStartDiagnostic('LIVE_LISTENER_INSTALL_ERROR');
+          return;
+        }
+        emitE21ColdStartDiagnostic('LIVE_LISTENER_INSTALLED');
+        if (!active) {
+          subscription.remove();
+          emitE21ColdStartDiagnostic('LIVE_LISTENER_REMOVED');
+        } else {
+          remove = () => {
+            subscription.remove();
+            emitE21ColdStartDiagnostic('LIVE_LISTENER_REMOVED');
+          };
+        }
       })
-      .catch(() => undefined);
+      .catch(() => {
+        emitE21ColdStartDiagnostic('LIVE_LISTENER_INSTALL_ERROR');
+      });
     return () => {
       active = false;
       remove?.();
@@ -188,17 +212,43 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
   }, [handleNotificationResponse]);
   useEffect(() => {
     let active = true;
-    const request =
-      startupResponseRequest.current ?? notificationCapability.lastResponse();
+    emitE21ColdStartDiagnostic('STARTUP_EFFECT_ACTIVE');
+    let request = startupResponseRequest.current;
+    if (request) {
+      emitE21ColdStartDiagnostic('STARTUP_PROMISE_REUSED');
+    } else {
+      emitE21ColdStartDiagnostic('LAST_RESPONSE_REQUEST_BEGIN');
+      request = notificationCapability.lastResponse();
+      emitE21ColdStartDiagnostic('STARTUP_PROMISE_CREATED');
+    }
     startupResponseRequest.current = request;
     void request
       .then((response) => {
-        if (active && response)
-          void notificationResponseHandler.current(response);
+        emitE21ColdStartDiagnostic(
+          response
+            ? 'LAST_RESPONSE_RESULT_PRESENT'
+            : 'LAST_RESPONSE_RESULT_NULL',
+        );
+        emitE21ColdStartDiagnostic('STARTUP_PROMISE_RESOLVED');
+        if (!response) return;
+        if (!active) {
+          emitE21ColdStartDiagnostic(
+            'STARTUP_RESULT_DISCARDED_EFFECT_INACTIVE',
+          );
+          return;
+        }
+        emitE21ColdStartDiagnostic('HANDLER_PRESENT');
+        emitE21ColdStartDiagnostic('RESPONSE_SOURCE_STARTUP');
+        emitE21ColdStartDiagnostic('RESPONSE_DISPATCHED');
+        void notificationResponseHandler.current(response);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        emitE21ColdStartDiagnostic('LAST_RESPONSE_RESULT_ERROR');
+        emitE21ColdStartDiagnostic('STARTUP_PROMISE_REJECTED');
+      });
     return () => {
       active = false;
+      emitE21ColdStartDiagnostic('STARTUP_EFFECT_CANCELLED');
     };
   }, []);
   useEffect(() => {

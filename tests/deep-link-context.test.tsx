@@ -7,6 +7,12 @@ import {
 } from '@/navigation/DeepLinkContext';
 import { sessionEvents } from '@/security/SessionEvents';
 
+const mockDiagnostic = jest.fn();
+
+jest.mock('@/diagnostics/e21ColdStartDiagnostic', () => ({
+  emitE21ColdStartDiagnostic: (marker: string) => mockDiagnostic(marker),
+}));
+
 const reminderPayload = {
   type: 'medicineapp.reminder.due',
   schema_version: 1,
@@ -14,10 +20,17 @@ const reminderPayload = {
 };
 
 function Probe() {
-  const { pendingReminder, pendingCaregiver, acceptNotification, clear } =
-    useDeepLinkIntent();
+  const {
+    pending,
+    pendingReminder,
+    pendingCaregiver,
+    acceptUrl,
+    acceptNotification,
+    clear,
+  } = useDeepLinkIntent();
   return (
     <>
+      <Text testID="pending">{JSON.stringify(pending)}</Text>
       <Text testID="reminder">{JSON.stringify(pendingReminder)}</Text>
       <Text testID="caregiver">{JSON.stringify(pendingCaregiver)}</Text>
       <Pressable
@@ -26,6 +39,23 @@ function Probe() {
         onPress={() =>
           acceptNotification({ type: 'caregiver_alert', schema_version: 1 })
         }
+      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="accept-unsupported"
+        onPress={() =>
+          acceptNotification({ type: 'unsupported', schema_version: 1 })
+        }
+      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="accept-safe-url"
+        onPress={() => acceptUrl('medicineapp://home')}
+      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="reject-url"
+        onPress={() => acceptUrl('https://example.invalid/home')}
       />
       <Pressable
         accessibilityRole="button"
@@ -54,6 +84,7 @@ function Probe() {
 
 beforeEach(() => {
   jest.restoreAllMocks();
+  jest.clearAllMocks();
   jest.spyOn(Linking, 'getInitialURL').mockResolvedValue(null);
   jest.spyOn(Linking, 'addEventListener').mockReturnValue({
     remove: jest.fn(),
@@ -76,6 +107,8 @@ test('stores only one bounded non-sensitive caregiver destination in memory', as
   expect(screen.toJSON()).not.toEqual(
     expect.stringContaining('must-not-be-retained'),
   );
+  expect(mockDiagnostic).toHaveBeenCalledWith('PARSER_RESULT_CAREGIVER');
+  expect(mockDiagnostic).toHaveBeenCalledWith('CAREGIVER_INTENT_INSTALLED');
 });
 
 test('keeps E19 and caregiver intents mutually exclusive and rejects invalid payloads', async () => {
@@ -96,6 +129,9 @@ test('keeps E19 and caregiver intents mutually exclusive and rejects invalid pay
   await fireEvent.press(screen.getByRole('button', { name: 'accept-invalid' }));
   expect(screen.getByTestId('caregiver').props.children).toBe('null');
   expect(screen.getByTestId('reminder').props.children).toBe('null');
+  expect(mockDiagnostic).toHaveBeenCalledWith('PARSER_RESULT_REMINDER');
+  expect(mockDiagnostic).toHaveBeenCalledWith('CAREGIVER_INTENT_REPLACED');
+  expect(mockDiagnostic).toHaveBeenCalledWith('PARSER_RESULT_INVALID');
 });
 
 test('clear and session invalidation remove a pending caregiver destination', async () => {
@@ -116,5 +152,36 @@ test('clear and session invalidation remove a pending caregiver destination', as
   await act(async () => sessionEvents.notifyInvalidated());
   await waitFor(() =>
     expect(screen.getByTestId('caregiver').props.children).toBe('null'),
+  );
+  expect(mockDiagnostic).toHaveBeenCalledWith(
+    'CAREGIVER_INTENT_CLEARED_SESSION_INVALID',
+  );
+});
+
+test('classifies unsupported notifications and records URL decisions without retaining unsafe URLs', async () => {
+  const screen = await render(
+    <DeepLinkProvider>
+      <Probe />
+    </DeepLinkProvider>,
+  );
+
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'accept-unsupported' }),
+  );
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'accept-safe-url' }),
+  );
+  expect(screen.getByTestId('pending').props.children).toBe(
+    JSON.stringify('/home'),
+  );
+  await fireEvent.press(screen.getByRole('button', { name: 'reject-url' }));
+  expect(screen.getByTestId('pending').props.children).toBe(
+    JSON.stringify('/home'),
+  );
+  expect(mockDiagnostic).toHaveBeenCalledWith('PARSER_RESULT_UNSUPPORTED');
+  expect(mockDiagnostic).toHaveBeenCalledWith('INITIAL_URL_ACCEPTED');
+  expect(mockDiagnostic).toHaveBeenCalledWith('INITIAL_URL_REJECTED');
+  expect(mockDiagnostic.mock.calls.flat()).not.toContain(
+    'https://example.invalid/home',
   );
 });
