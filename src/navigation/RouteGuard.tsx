@@ -83,8 +83,11 @@ export function RouteGuard() {
     } else if (
       current === '(app)' &&
       role === 'patient' &&
-      (segments[1] === 'caregiver-dashboard' ||
-        segments[1] === 'caregiver-alerts')
+      [
+        'caregiver-dashboard',
+        'caregiver-alerts',
+        'caregiver-alert-preferences',
+      ].includes(String(segments[1]))
     ) {
       router.replace('/home');
     }

@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   AppAlert,
   AppButton,
@@ -23,6 +24,7 @@ type Props = {
   onRetry(): void;
   onBack(): void;
   onAlerts?(): void;
+  onAlertPreferences?(relationshipId: string): void;
 };
 export function CaregiverDashboard({
   patients,
@@ -34,6 +36,7 @@ export function CaregiverDashboard({
   onRetry,
   onBack,
   onAlerts,
+  onAlertPreferences,
 }: Props) {
   const { t } = useTranslation();
   const alertsEntry = onAlerts ? (
@@ -76,12 +79,25 @@ export function CaregiverDashboard({
       {alertsEntry}
       <AppText variant="heading">Family member</AppText>
       {patients.map((patient) => (
-        <AppButton
-          key={patient.patientUserId}
-          variant={selected === patient.patientUserId ? 'primary' : 'secondary'}
-          label={patient.displayName}
-          onPress={() => onSelect(patient.patientUserId)}
-        />
+        <React.Fragment key={patient.patientUserId}>
+          <AppButton
+            variant={
+              selected === patient.patientUserId ? 'primary' : 'secondary'
+            }
+            label={patient.displayName}
+            onPress={() => onSelect(patient.patientUserId)}
+          />
+          {selected === patient.patientUserId &&
+          patient.alertPreferencesAvailable &&
+          onAlertPreferences ? (
+            <AppButton
+              variant="secondary"
+              label={t('caregiverPreferencesEntry')}
+              accessibilityHint={t('caregiverPreferencesEntryHint')}
+              onPress={() => onAlertPreferences(patient.relationshipId)}
+            />
+          ) : null}
+        </React.Fragment>
       ))}
       {!data ? (
         <EmptyState

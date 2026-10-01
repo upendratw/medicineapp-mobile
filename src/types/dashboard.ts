@@ -14,6 +14,7 @@ export type CaregiverPatient = Readonly<{
   displayName: string;
   relationshipId: string;
   statusText: string;
+  alertPreferencesAvailable?: boolean;
 }>;
 
 export type CaregiverDashboardData = Readonly<{

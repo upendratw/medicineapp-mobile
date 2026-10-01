@@ -30,6 +30,7 @@ import {
 import { NotificationActionCoordinator } from '@/services/notificationActionService';
 import { notificationCapability } from '@/services/notificationCapability';
 import { BackendCaregiverRelationshipService } from '@/services/caregiverRelationshipService';
+import { BackendCaregiverAlertPreferenceService } from '@/services/caregiverAlertPreferenceService';
 
 const api = new ApiClient(undefined, undefined, secureTokenStore);
 export const patientMedicationService = buildPatientMedicationService(api);
@@ -41,6 +42,8 @@ export const caregiverService = new BackendCaregiverService(api);
 export const caregiverAlertService = new BackendCaregiverAlertService(api);
 export const caregiverRelationshipService =
   new BackendCaregiverRelationshipService(api);
+export const caregiverAlertPreferenceService =
+  new BackendCaregiverAlertPreferenceService(api);
 export const dashboardService = new DashboardService(
   patientMedicationService,
   scheduleService,

@@ -10,6 +10,7 @@ type PatientList = {
     display_name: string;
     relationship_id: string;
     status_text: string;
+    alert_preferences_available: boolean;
   }[];
 };
 type DashboardResponse = {
@@ -48,6 +49,7 @@ export class BackendCaregiverService implements CaregiverService {
       displayName: item.display_name,
       relationshipId: item.relationship_id,
       statusText: item.status_text,
+      alertPreferencesAvailable: item.alert_preferences_available,
     }));
   }
   async dashboard(patientUserId: string): Promise<CaregiverDashboardData> {

@@ -262,6 +262,51 @@ const en = {
     'This alert changed. Refresh to see its current state.',
   caregiverAlertRateLimited:
     'Caregiver alert requests are temporarily limited. Please wait and try again.',
+  caregiverPreferencesEntry: 'Alert preferences',
+  caregiverPreferencesEntryHint:
+    'Choose which authorized alerts you want to receive for this family member.',
+  caregiverPreferencesTitle: 'Caregiver alert preferences',
+  caregiverPreferencesSubtitle:
+    'Choose alerts for this family member. These settings do not change medicines or care instructions.',
+  caregiverPreferencesLoading: 'Loading caregiver alert preferences',
+  caregiverPreferencesBack: 'Back to caregiver dashboard',
+  caregiverPreferencesNotConfigured:
+    'No preferences have been saved yet. Opening this screen did not create any settings.',
+  caregiverPreferencesReceiveAlerts: 'Receive alerts',
+  caregiverPreferencesReceiveAlertsHint:
+    'Turn all caregiver alert notifications on or off without changing family access.',
+  caregiverPreferencesAlertTypes: 'Alert types',
+  caregiverPreferencesMinimumSeverity: 'Minimum alert level',
+  caregiverPreferencesMinimumSeverityHint:
+    'You will receive the selected level and more important alerts.',
+  caregiverPreferencesSeverity_info: 'Information and above',
+  caregiverPreferencesSeverity_attention: 'Attention and above',
+  caregiverPreferencesSeverity_important: 'Important only',
+  caregiverPreferencesEscalation: 'Escalation alerts',
+  caregiverPreferencesEscalationHint:
+    'Allow follow-up escalation when the alert workflow requires it.',
+  caregiverPreferencesQuietHours: 'Quiet hours',
+  caregiverPreferencesQuietHoursHint:
+    'Alerts may be suppressed during this local-time window, including overnight.',
+  caregiverPreferencesQuietStart: 'Quiet hours start',
+  caregiverPreferencesQuietEnd: 'Quiet hours end',
+  caregiverPreferencesTimeHint: 'Enter a 24-hour time such as 22:00.',
+  caregiverPreferencesTimezone: 'Timezone',
+  caregiverPreferencesQuietHoursInvalid:
+    'Enter both quiet-hour times in 24-hour HH:MM format.',
+  caregiverPreferencesQuietHoursSame:
+    'Quiet hours start and end must be different.',
+  caregiverPreferencesSave: 'Save alert preferences',
+  caregiverPreferencesSaved: 'Alert preferences saved.',
+  caregiverPreferencesAccessDenied:
+    'Alert preferences are unavailable for this family relationship.',
+  caregiverPreferencesConflict:
+    'These preferences changed elsewhere. Refresh before saving again.',
+  caregiverPreferencesRefresh: 'Refresh alert preferences',
+  caregiverPreferencesSaveFailed:
+    'Alert preferences could not be saved. Please try again.',
+  caregiverPreferencesLoadFailed:
+    'Alert preferences could not be loaded. Please try again.',
 } as const;
 const hi: Partial<Record<keyof typeof en, string>> = {
   settings: 'सेटिंग्स',
@@ -460,6 +505,55 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   caregiverTemporaryFailure:
     'देखभालकर्ता की जानकारी अस्थायी रूप से उपलब्ध नहीं है।',
   caregiverTryAgain: 'फिर प्रयास करें',
+  caregiverPreferencesEntry: 'अलर्ट प्राथमिकताएँ',
+  caregiverPreferencesEntryHint:
+    'इस परिवार सदस्य के लिए अधिकृत अलर्ट चुनें जिन्हें आप प्राप्त करना चाहते हैं।',
+  caregiverPreferencesTitle: 'देखभालकर्ता अलर्ट प्राथमिकताएँ',
+  caregiverPreferencesSubtitle:
+    'इस परिवार सदस्य के लिए अलर्ट चुनें। ये सेटिंग दवाइयाँ या देखभाल निर्देश नहीं बदलतीं।',
+  caregiverPreferencesLoading: 'देखभालकर्ता अलर्ट प्राथमिकताएँ लोड हो रही हैं',
+  caregiverPreferencesBack: 'देखभालकर्ता डैशबोर्ड पर वापस जाएँ',
+  caregiverPreferencesNotConfigured:
+    'अभी कोई प्राथमिकता सहेजी नहीं गई है। इस स्क्रीन को खोलने से कोई सेटिंग नहीं बनी।',
+  caregiverPreferencesReceiveAlerts: 'अलर्ट प्राप्त करें',
+  caregiverPreferencesReceiveAlertsHint:
+    'परिवार की पहुँच बदले बिना सभी देखभालकर्ता अलर्ट सूचनाएँ चालू या बंद करें।',
+  caregiverPreferencesAlertTypes: 'अलर्ट के प्रकार',
+  caregiverPreferencesMinimumSeverity: 'न्यूनतम अलर्ट स्तर',
+  caregiverPreferencesMinimumSeverityHint:
+    'आपको चुने गए स्तर और उससे अधिक महत्वपूर्ण अलर्ट मिलेंगे।',
+  caregiverPreferencesSeverity_info: 'जानकारी और उससे ऊपर',
+  caregiverPreferencesSeverity_attention: 'ध्यान और उससे ऊपर',
+  caregiverPreferencesSeverity_important: 'केवल महत्वपूर्ण',
+  caregiverPreferencesEscalation: 'एस्केलेशन अलर्ट',
+  caregiverPreferencesEscalationHint:
+    'अलर्ट कार्यप्रवाह में आवश्यक होने पर आगे का एस्केलेशन होने दें।',
+  caregiverPreferencesQuietHours: 'शांत समय',
+  caregiverPreferencesQuietHoursHint:
+    'इस स्थानीय समय अवधि में, रात भर सहित, अलर्ट रोके जा सकते हैं।',
+  caregiverPreferencesQuietStart: 'शांत समय शुरू',
+  caregiverPreferencesQuietEnd: 'शांत समय समाप्त',
+  caregiverPreferencesTimeHint: '24 घंटे का समय दर्ज करें, जैसे 22:00।',
+  caregiverPreferencesTimezone: 'समय क्षेत्र',
+  caregiverPreferencesQuietHoursInvalid:
+    'शांत समय के दोनों समय 24 घंटे के HH:MM प्रारूप में दर्ज करें।',
+  caregiverPreferencesQuietHoursSame: 'शांत समय का आरंभ और अंत अलग होना चाहिए।',
+  caregiverPreferencesSave: 'अलर्ट प्राथमिकताएँ सहेजें',
+  caregiverPreferencesSaved: 'अलर्ट प्राथमिकताएँ सहेजी गईं।',
+  caregiverPreferencesAccessDenied:
+    'इस पारिवारिक संबंध के लिए अलर्ट प्राथमिकताएँ उपलब्ध नहीं हैं।',
+  caregiverPreferencesConflict:
+    'ये प्राथमिकताएँ कहीं और बदल गई हैं। फिर सहेजने से पहले रीफ़्रेश करें।',
+  caregiverPreferencesRefresh: 'अलर्ट प्राथमिकताएँ रीफ़्रेश करें',
+  caregiverPreferencesSaveFailed:
+    'अलर्ट प्राथमिकताएँ सहेजी नहीं जा सकीं। कृपया फिर प्रयास करें।',
+  caregiverPreferencesLoadFailed:
+    'अलर्ट प्राथमिकताएँ लोड नहीं हो सकीं। कृपया फिर प्रयास करें।',
+  caregiverAlertType_reminder_unacknowledged: 'रिमाइंडर स्वीकार नहीं किया गया',
+  caregiverAlertType_medication_missed: 'दवा छूटी हुई दर्ज की गई',
+  caregiverAlertType_repeated_non_adherence: 'बार-बार दवा छूटने की गतिविधि',
+  caregiverAlertType_inventory_low: 'दवा का स्टॉक कम है',
+  caregiverAlertType_inventory_exhausted: 'दवा का स्टॉक समाप्त हो गया है',
 };
 export type TranslationKey = keyof typeof en;
 export function translate(language: AppLanguage, key: TranslationKey): string {

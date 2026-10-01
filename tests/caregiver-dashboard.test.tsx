@@ -10,6 +10,7 @@ const patient = {
   displayName: 'Family member',
   relationshipId: 'relationship-id',
   statusText: 'Caregiver access active',
+  alertPreferencesAvailable: true,
 };
 
 const view = (props: ComponentProps<typeof CaregiverDashboard>) => (
@@ -21,6 +22,7 @@ const view = (props: ComponentProps<typeof CaregiverDashboard>) => (
 test('caregiver dashboard renders only an authorized selected context', async () => {
   const select = jest.fn();
   const alerts = jest.fn();
+  const preferences = jest.fn();
   const screen = await render(
     view({
       patients: [patient],
@@ -40,6 +42,7 @@ test('caregiver dashboard renders only an authorized selected context', async ()
       onRetry: jest.fn(),
       onBack: jest.fn(),
       onAlerts: alerts,
+      onAlertPreferences: preferences,
     }),
   );
   expect(screen.getByText('Missed-dose indicator')).toBeTruthy();
@@ -49,6 +52,10 @@ test('caregiver dashboard renders only an authorized selected context', async ()
     screen.getByRole('button', { name: 'Caregiver alerts' }),
   );
   expect(alerts).toHaveBeenCalledTimes(1);
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Alert preferences' }),
+  );
+  expect(preferences).toHaveBeenCalledWith('relationship-id');
   expect(screen.toJSON()).not.toContain('change medication');
 });
 

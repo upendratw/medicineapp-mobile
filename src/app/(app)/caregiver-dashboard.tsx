@@ -55,6 +55,12 @@ export default function CaregiverDashboardScreen() {
             ? () => router.push('/caregiver-alerts')
             : undefined
         }
+        onAlertPreferences={(relationshipId) =>
+          router.push({
+            pathname: '/caregiver-alert-preferences',
+            params: { relationshipId },
+          } as never)
+        }
       />
       {role === 'caregiver' ? (
         <>

@@ -11,6 +11,7 @@ export * from './CaregiverDashboard';
 export * from './FamilyCaregivers';
 export * from './CaregiverAlertInbox';
 export * from './CaregiverAlertDetail';
+export * from './CaregiverAlertPreferences';
 export * from './MedicationCard';
 export * from './EditMedicationForm';
 export * from './MedicineList';
