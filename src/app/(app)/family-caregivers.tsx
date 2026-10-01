@@ -1,4 +1,5 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 
 import { AppHeader, AppScreen, FamilyCaregivers } from '@/components';
 import { useTranslation } from '@/localization';
@@ -9,6 +10,17 @@ export default function FamilyCaregiversScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { role } = useAuth();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const initialFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (initialFocus.current) {
+        initialFocus.current = false;
+        return;
+      }
+      setRefreshKey((current) => current + 1);
+    }, []),
+  );
   if (role !== 'patient' && role !== 'caregiver') return null;
   return (
     <AppScreen>
@@ -16,6 +28,7 @@ export default function FamilyCaregiversScreen() {
       <FamilyCaregivers
         role={role}
         service={caregiverRelationshipService}
+        refreshKey={refreshKey}
         onAccepted={() => router.replace('/caregiver-dashboard')}
       />
     </AppScreen>

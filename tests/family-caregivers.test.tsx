@@ -73,16 +73,21 @@ test('patient adds caregiver with bounded permission selection and pending state
 });
 
 test('patient edits sharing and permissions and explicitly confirms revoke', async () => {
+  const activeRelationship = {
+    relationshipId: 'relationship-1',
+    caregiverDisplayName: 'Caregiver',
+    permissions: ['alerts.read'] as const,
+    sharingEnabled: true,
+    status: 'active',
+  };
   const api = service({
-    listRelationships: jest.fn().mockResolvedValue([
-      {
-        relationshipId: 'relationship-1',
-        caregiverDisplayName: 'Caregiver',
-        permissions: ['alerts.read'],
-        sharingEnabled: true,
-        status: 'active',
-      },
-    ]),
+    listRelationships: jest
+      .fn()
+      .mockResolvedValueOnce([activeRelationship])
+      .mockResolvedValueOnce([activeRelationship])
+      .mockResolvedValueOnce([
+        { ...activeRelationship, sharingEnabled: false, status: 'revoked' },
+      ]),
   });
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
   const screen = await render(view({ role: 'patient', service: api }));
@@ -114,12 +119,166 @@ test('patient edits sharing and permissions and explicitly confirms revoke', asy
   await waitFor(() =>
     expect(api.revoke).toHaveBeenCalledWith('relationship-1'),
   );
-  await waitFor(() =>
-    expect(
-      screen.getByRole('button', { name: 'Save permissions' }).props
-        .accessibilityState.busy,
-    ).toBe(false),
+  await waitFor(() => expect(screen.queryByText('Caregiver')).toBeNull());
+  expect(screen.queryByRole('button', { name: 'Sharing is on' })).toBeNull();
+  expect(
+    screen.queryByRole('button', { name: 'Revoke caregiver access' }),
+  ).toBeNull();
+  alert.mockRestore();
+});
+
+test('patient focus refresh removes a relationship revoked on the server', async () => {
+  const activeRelationship = {
+    relationshipId: 'relationship-1',
+    caregiverDisplayName: 'Caregiver',
+    permissions: ['alerts.read'] as const,
+    sharingEnabled: true,
+    status: 'active',
+  };
+  const api = service({
+    listInvitations: jest.fn().mockResolvedValue([
+      {
+        invitationId: 'invite-1',
+        destination: '***0008',
+        patientDisplayName: 'Patient',
+        permissions: ['alerts.read'],
+        status: 'pending',
+        expiresAt: '2026-10-02T00:00:00Z',
+      },
+    ]),
+    listRelationships: jest
+      .fn()
+      .mockResolvedValueOnce([activeRelationship])
+      .mockResolvedValueOnce([
+        { ...activeRelationship, sharingEnabled: false, status: 'revoked' },
+      ]),
+  });
+  const initialProps = { role: 'patient' as const, service: api };
+  const screen = await render(view({ ...initialProps, refreshKey: 0 }));
+  await screen.findByText('Caregiver');
+  expect(screen.getByText('***0008')).toBeTruthy();
+
+  await act(async () => {
+    screen.rerender(view({ ...initialProps, refreshKey: 1 }));
+  });
+
+  await waitFor(() => expect(api.listRelationships).toHaveBeenCalledTimes(2));
+  expect(screen.queryByText('Caregiver')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Sharing is on' })).toBeNull();
+  expect(
+    screen.queryByRole('button', { name: 'Revoke caregiver access' }),
+  ).toBeNull();
+  expect(screen.getByText('***0008')).toBeTruthy();
+});
+
+test('successful revoke remains removed when reconciliation refresh fails', async () => {
+  const api = service({
+    listRelationships: jest
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          relationshipId: 'relationship-1',
+          caregiverDisplayName: 'Caregiver',
+          permissions: ['alerts.read'],
+          sharingEnabled: true,
+          status: 'active',
+        },
+      ])
+      .mockRejectedValueOnce(new Error('offline')),
+  });
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+  const screen = await render(view({ role: 'patient', service: api }));
+  await screen.findByText('Caregiver');
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Revoke caregiver access' }),
   );
+  const destructive = alert.mock.calls[0]?.[2]?.find(
+    (button) => button.style === 'destructive',
+  );
+
+  await act(async () => {
+    destructive?.onPress?.();
+  });
+
+  await waitFor(() => expect(screen.queryByText('Caregiver')).toBeNull());
+  expect(
+    await screen.findByText(
+      /Family and caregiver access could not be loaded\. Please try again\./,
+    ),
+  ).toBeTruthy();
+  alert.mockRestore();
+});
+
+test('failed revoke preserves the authorized relationship', async () => {
+  const api = service({
+    listRelationships: jest.fn().mockResolvedValue([
+      {
+        relationshipId: 'relationship-1',
+        caregiverDisplayName: 'Caregiver',
+        permissions: ['alerts.read'],
+        sharingEnabled: true,
+        status: 'active',
+      },
+    ]),
+    revoke: jest.fn().mockRejectedValue(new Error('offline')),
+  });
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+  const screen = await render(view({ role: 'patient', service: api }));
+  await screen.findByText('Caregiver');
+
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Revoke caregiver access' }),
+  );
+  const destructive = alert.mock.calls[0]?.[2]?.find(
+    (button) => button.style === 'destructive',
+  );
+  await act(async () => {
+    destructive?.onPress?.();
+  });
+
+  expect(await screen.findByText('Caregiver')).toBeTruthy();
+  expect(
+    screen.getByRole('button', { name: 'Revoke caregiver access' }),
+  ).toBeTruthy();
+  alert.mockRestore();
+});
+
+test('double confirmation cannot submit duplicate revoke mutations', async () => {
+  let finishRevoke: (() => void) | undefined;
+  const revoke = jest.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        finishRevoke = resolve;
+      }),
+  );
+  const api = service({
+    listRelationships: jest.fn().mockResolvedValue([
+      {
+        relationshipId: 'relationship-1',
+        caregiverDisplayName: 'Caregiver',
+        permissions: ['alerts.read'],
+        sharingEnabled: true,
+        status: 'active',
+      },
+    ]),
+    revoke,
+  });
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+  const screen = await render(view({ role: 'patient', service: api }));
+  await screen.findByText('Caregiver');
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Revoke caregiver access' }),
+  );
+  const destructive = alert.mock.calls[0]?.[2]?.find(
+    (button) => button.style === 'destructive',
+  );
+
+  await act(async () => {
+    destructive?.onPress?.();
+    destructive?.onPress?.();
+  });
+  expect(revoke).toHaveBeenCalledTimes(1);
+  await act(async () => finishRevoke?.());
   alert.mockRestore();
 });
 

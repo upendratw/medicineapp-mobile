@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 
 import { AppAlert } from '@/components/AppAlert';
@@ -21,10 +21,16 @@ import { normalizeIndianPhone } from '@/utils/phone';
 type Props = {
   role: AuthRole;
   service: CaregiverRelationshipService;
+  refreshKey?: number;
   onAccepted?(): void;
 };
 
-export function FamilyCaregivers({ role, service, onAccepted }: Props) {
+export function FamilyCaregivers({
+  role,
+  service,
+  refreshKey = 0,
+  onAccepted,
+}: Props) {
   const { t } = useTranslation();
   const loadError = t('familyLoadError');
   const [invitations, setInvitations] = useState<
@@ -38,6 +44,8 @@ export function FamilyCaregivers({ role, service, onAccepted }: Props) {
   const [error, setError] = useState('');
   const [phone, setPhone] = useState('');
   const [permissions, setPermissions] = useState<CaregiverPermission[]>([]);
+  const loadRevision = useRef(0);
+  const workingRef = useRef(false);
 
   const load = useCallback(
     () =>
@@ -49,30 +57,34 @@ export function FamilyCaregivers({ role, service, onAccepted }: Props) {
   );
 
   const refresh = useCallback(async () => {
+    const revision = ++loadRevision.current;
     setError('');
     setLoading(true);
     try {
       const [nextInvitations, nextRelationships] = await load();
+      if (revision !== loadRevision.current) return;
       setInvitations(nextInvitations);
       setRelationships(nextRelationships);
     } catch {
+      if (revision !== loadRevision.current) return;
       setError(loadError);
     } finally {
-      setLoading(false);
+      if (revision === loadRevision.current) setLoading(false);
     }
   }, [load, loadError]);
 
   useEffect(() => {
     let active = true;
+    const revision = ++loadRevision.current;
     void load().then(
       ([nextInvitations, nextRelationships]) => {
-        if (!active) return;
+        if (!active || revision !== loadRevision.current) return;
         setInvitations(nextInvitations);
         setRelationships(nextRelationships);
         setLoading(false);
       },
       () => {
-        if (!active) return;
+        if (!active || revision !== loadRevision.current) return;
         setError(loadError);
         setLoading(false);
       },
@@ -80,18 +92,26 @@ export function FamilyCaregivers({ role, service, onAccepted }: Props) {
     return () => {
       active = false;
     };
-  }, [load, loadError]);
+  }, [load, loadError, refreshKey]);
 
-  const run = async (action: () => Promise<void>, accepted = false) => {
+  const run = async (
+    action: () => Promise<void>,
+    accepted = false,
+    onSuccess?: () => void,
+  ) => {
+    if (workingRef.current) return;
+    workingRef.current = true;
     setError('');
     setWorking(true);
     try {
       await action();
+      onSuccess?.();
       await refresh();
       if (accepted) onAccepted?.();
     } catch {
       setError(t('familyActionError'));
     } finally {
+      workingRef.current = false;
       setWorking(false);
     }
   };
@@ -165,6 +185,13 @@ export function FamilyCaregivers({ role, service, onAccepted }: Props) {
             service={service}
             working={working}
             run={run}
+            onRevoked={() =>
+              setRelationships((current) =>
+                current.filter(
+                  (item) => item.relationshipId !== relationship.relationshipId,
+                ),
+              )
+            }
           />
         ))}
 
@@ -205,13 +232,19 @@ type RelationshipCardProps = {
   relationship: CaregiverRelationship;
   service: CaregiverRelationshipService;
   working: boolean;
-  run(action: () => Promise<void>): Promise<void>;
+  onRevoked(): void;
+  run(
+    action: () => Promise<void>,
+    accepted?: boolean,
+    onSuccess?: () => void,
+  ): Promise<void>;
 };
 
 function RelationshipCard({
   relationship,
   service,
   working,
+  onRevoked,
   run,
 }: RelationshipCardProps) {
   const { t } = useTranslation();
@@ -226,7 +259,15 @@ function RelationshipCard({
         text: t('familyRevoke'),
         style: 'destructive',
         onPress: () =>
-          void run(() => service.revoke(relationship.relationshipId)),
+          void run(
+            () => service.revoke(relationship.relationshipId),
+            false,
+            () => {
+              // A successful revoke removes authorization immediately; the
+              // subsequent refresh reconciles the historical server record.
+              onRevoked();
+            },
+          ),
       },
     ]);
   return (
@@ -249,7 +290,12 @@ function RelationshipCard({
           )
         }
       />
-      <AppButton label={t('familyRevoke')} variant="danger" onPress={revoke} />
+      <AppButton
+        label={t('familyRevoke')}
+        variant="danger"
+        disabled={working}
+        onPress={revoke}
+      />
     </AppCard>
   );
 }
