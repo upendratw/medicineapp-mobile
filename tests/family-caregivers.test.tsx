@@ -127,6 +127,27 @@ test('email invitation controls have explicit Hindi translations', () => {
   );
 });
 
+test('patient can explicitly select reported-symptom sharing', async () => {
+  const api = service();
+  const screen = await render(view({ role: 'patient', service: api }));
+  await screen.findByText('Add caregiver');
+  await fireEvent.changeText(
+    screen.getByLabelText('Caregiver mobile number'),
+    '9000000007',
+  );
+  await fireEvent.press(
+    screen.getByRole('checkbox', { name: 'View my reported symptoms: Off' }),
+  );
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Send invitation' }),
+  );
+  await waitFor(() =>
+    expect(api.invite).toHaveBeenCalledWith('PHONE', '+919000000007', [
+      'symptoms.read',
+    ]),
+  );
+});
+
 test('patient sees only the server-masked email pending destination', async () => {
   const api = service({
     listInvitations: jest.fn().mockResolvedValue([

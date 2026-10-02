@@ -25,4 +25,12 @@ export type CaregiverDashboardData = Readonly<{
   missed: number | null;
   adherencePercentage: number | null;
   recentActivity: readonly string[];
+  reportedSymptoms?:
+    | readonly Readonly<{
+        id: string;
+        symptomText: string;
+        sourceType: 'PATIENT_REPORTED';
+        reportedAt: string;
+      }>[]
+    | null;
 }>;

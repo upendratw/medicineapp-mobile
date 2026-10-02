@@ -35,6 +35,14 @@ test('caregiver dashboard renders only an authorized selected context', async ()
         missed: 1,
         adherencePercentage: 66.67,
         recentActivity: ['Missed scheduled occurrence'],
+        reportedSymptoms: [
+          {
+            id: 'opaque-symptom-id',
+            symptomText: '  Exact mixed भाषा 🙂\nsecond line  ',
+            sourceType: 'PATIENT_REPORTED',
+            reportedAt: '2026-10-02T10:30:00Z',
+          },
+        ],
       },
       loading: false,
       error: null,
@@ -46,6 +54,9 @@ test('caregiver dashboard renders only an authorized selected context', async ()
     }),
   );
   expect(screen.getByText('Missed-dose indicator')).toBeTruthy();
+  expect(screen.getByText('Recent reported symptoms')).toBeTruthy();
+  expect(screen.getByText(/Exact mixed भाषा/)).toBeTruthy();
+  expect(screen.getByText(/2026-10-02T10:30:00Z/)).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: 'Family member' }));
   expect(select).toHaveBeenCalledWith('stable-patient-id');
   await fireEvent.press(

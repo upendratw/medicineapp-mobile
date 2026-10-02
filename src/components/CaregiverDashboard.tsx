@@ -134,6 +134,26 @@ export function CaregiverDashboard({
               : 'None available'}
             .
           </AppText>
+          {data.reportedSymptoms != null ? (
+            <>
+              <AppText variant="heading">
+                {t('caregiverReportedSymptomsTitle')}
+              </AppText>
+              {!data.reportedSymptoms.length ? (
+                <AppText>{t('caregiverReportedSymptomsEmpty')}</AppText>
+              ) : null}
+              {data.reportedSymptoms.map((event) => (
+                <React.Fragment key={event.id}>
+                  <AppText>
+                    {t('caregiverPatientReported')}: {event.symptomText}
+                  </AppText>
+                  <AppText variant="caption">
+                    {t('caregiverReportedAt')}: {event.reportedAt}
+                  </AppText>
+                </React.Fragment>
+              ))}
+            </>
+          ) : null}
         </>
       )}
     </>

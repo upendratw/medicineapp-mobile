@@ -18,6 +18,17 @@ type DashboardResponse = {
   today?: { scheduled: number; taken: number; missed: number };
   adherence?: { percentage: number | null };
   missed?: { status_text: string }[];
+  reported_symptoms?:
+    | {
+        available: true;
+        items: {
+          id: string;
+          symptom_text: string;
+          source_type: 'PATIENT_REPORTED';
+          reported_at: string;
+        }[];
+      }
+    | { available: false; reason: string };
 };
 
 export interface CaregiverService {
@@ -66,6 +77,15 @@ export class BackendCaregiverService implements CaregiverService {
       missed: data.today?.missed ?? null,
       adherencePercentage: data.adherence?.percentage ?? null,
       recentActivity: data.missed?.map((item) => item.status_text) ?? [],
+      reportedSymptoms:
+        data.reported_symptoms?.available === true
+          ? data.reported_symptoms.items.map((item) => ({
+              id: item.id,
+              symptomText: item.symptom_text,
+              sourceType: item.source_type,
+              reportedAt: item.reported_at,
+            }))
+          : null,
     };
   }
 }

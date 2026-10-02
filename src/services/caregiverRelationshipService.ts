@@ -4,6 +4,7 @@ export const caregiverPermissionOptions = [
   { key: 'alerts.read', labelKey: 'familyPermissionAlerts' },
   { key: 'medications.read', labelKey: 'familyPermissionMedications' },
   { key: 'adherence.read', labelKey: 'familyPermissionAdherence' },
+  { key: 'symptoms.read', labelKey: 'familyPermissionSymptoms' },
 ] as const;
 
 export type CaregiverPermission =

@@ -1,15 +1,15 @@
-import { AppHeader, AppScreen, SymptomAssessment } from '@/components';
-import { symptomAssessmentService } from '@/services/registry';
+import { AppHeader, AppScreen, PatientSymptomReport } from '@/components';
+import { useTranslation } from '@/localization';
+import { patientSymptomService } from '@/services/registry';
 export default function Symptoms() {
+  const { t } = useTranslation();
   return (
     <AppScreen>
       <AppHeader
-        title="Symptom information"
-        subtitle="Describe symptoms without local diagnosis or triage."
+        title={t('symptomReportTitle')}
+        subtitle={t('symptomReportSubtitle')}
       />
-      <SymptomAssessment
-        submit={(input) => symptomAssessmentService.assess(input)}
-      />
+      <PatientSymptomReport service={patientSymptomService} />
     </AppScreen>
   );
 }
