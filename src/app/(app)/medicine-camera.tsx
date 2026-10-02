@@ -236,19 +236,28 @@ export default function MedicineCameraScreen() {
     );
   return (
     <View style={styles.container}>
-      <CameraView
-        ref={camera}
-        testID="medicine-camera-preview"
-        style={StyleSheet.absoluteFill}
-        facing="back"
-        onCameraReady={() => setCameraReady(true)}
-        onMountError={() => setError(t('cameraCaptureFailed'))}
-      />
-      <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
+      <View style={styles.cameraFrame}>
+        <CameraView
+          ref={camera}
+          testID="medicine-camera-preview"
+          style={StyleSheet.absoluteFill}
+          facing="back"
+          ratio="4:3"
+          onCameraReady={() => setCameraReady(true)}
+          onMountError={() => setError(t('cameraCaptureFailed'))}
+        />
+        <View
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel={t('cameraCaptureGuide')}
+          pointerEvents="none"
+          testID="medicine-capture-guide"
+          style={styles.captureGuide}
+        />
+      </View>
+      <SafeAreaView style={styles.overlay} edges={['bottom']}>
         <View style={styles.controls}>
-          <AppText style={styles.cameraText}>
-            Place the medicine name and strength inside the frame.
-          </AppText>
+          <AppText style={styles.cameraText}>{t('cameraCaptureGuide')}</AppText>
           {error ? <AppAlert tone="error" message={error} /> : null}
           <AppButton
             label={t('cameraTakePhoto')}
@@ -279,6 +288,22 @@ export default function MedicineCameraScreen() {
 }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000000' },
+  cameraFrame: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    alignSelf: 'center',
+    overflow: 'hidden',
+  },
+  captureGuide: {
+    position: 'absolute',
+    top: '10%',
+    right: '10%',
+    bottom: '10%',
+    left: '10%',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    borderRadius: theme.radius.md,
+  },
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',

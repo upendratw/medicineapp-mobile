@@ -98,6 +98,23 @@ beforeEach(() => {
 
 test('renders a safe accessible capture control after camera readiness', async () => {
   const screen = await render(view());
+  const preview = screen.getByTestId('medicine-camera-preview');
+  const guide = screen.getByTestId('medicine-capture-guide');
+  expect(preview.props.ratio).toBe('4:3');
+  expect(preview.parent?.props.style).toEqual(
+    expect.objectContaining({ width: '100%', aspectRatio: 3 / 4 }),
+  );
+  expect(guide.props.accessibilityLabel).toBe(
+    'Keep the medicine name and strength inside the white frame.',
+  );
+  expect(guide.props.style).toEqual(
+    expect.objectContaining({
+      top: '10%',
+      right: '10%',
+      bottom: '10%',
+      left: '10%',
+    }),
+  );
   const control = screen.getByRole('button', { name: 'Take photo' });
   expect(control.props.accessibilityHint).toMatch(/not uploaded automatically/);
   expect(control.props.accessibilityState.disabled).toBe(true);
@@ -122,7 +139,11 @@ test('capture displays only a transient preview', async () => {
   await fireEvent.press(control);
   expect(mockTakePictureAsync).toHaveBeenCalledTimes(1);
   expect(mockRecognize).not.toHaveBeenCalled();
-  await screen.findByLabelText('Captured medicine packaging preview');
+  const preview = await screen.findByLabelText(
+    'Captured medicine packaging preview',
+  );
+  expect(preview.props.contentFit).toBe('contain');
+  expect(mockTakePictureAsync).toHaveBeenCalledWith({ quality: 0.7 });
 });
 
 test('capture single-flight gate blocks duplicate native operations', async () => {

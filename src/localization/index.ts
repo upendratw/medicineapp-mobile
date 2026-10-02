@@ -220,6 +220,8 @@ const en = {
   cameraTakePhoto: 'Take photo',
   cameraTakePhotoHint:
     'Captures the medicine packaging for your review. It is not uploaded automatically.',
+  cameraCaptureGuide:
+    'Keep the medicine name and strength inside the white frame.',
   cameraCaptureFailed: 'The image could not be captured. Please try again.',
   cameraChoosePhoto: 'Choose from photo library',
   cameraChooseAnotherPhoto: 'Choose another photo',
@@ -565,6 +567,7 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   cameraTakePhoto: 'फ़ोटो लें',
   cameraTakePhotoHint:
     'आपकी समीक्षा के लिए दवा की पैकेजिंग की फ़ोटो लेता है। यह अपने आप अपलोड नहीं होती।',
+  cameraCaptureGuide: 'दवा का नाम और उसकी मात्रा सफ़ेद फ़्रेम के अंदर रखें।',
   cameraCaptureFailed: 'फ़ोटो नहीं ली जा सकी। कृपया फिर प्रयास करें।',
   cameraChoosePhoto: 'फ़ोटो लाइब्रेरी से चुनें',
   cameraChooseAnotherPhoto: 'दूसरी फ़ोटो चुनें',
