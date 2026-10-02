@@ -2,12 +2,13 @@ import { Alert } from 'react-native';
 import { useCallback, useState } from 'react';
 
 import { AppAlert, AppButton, AppHeader, AppScreen } from '@/components';
+import { CaregiverEmailSettings } from '@/components/CaregiverEmailSettings';
 import { useTranslation } from '@/localization';
 import { useAuth } from '@/state/AuthContext';
 
 export default function AccountSettingsScreen() {
   const { t } = useTranslation();
-  const { logout } = useAuth();
+  const { logout, role } = useAuth();
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -36,6 +37,7 @@ export default function AccountSettingsScreen() {
         title={t('accountSettings')}
         subtitle={t('accountSettingsHelp')}
       />
+      {role === 'caregiver' ? <CaregiverEmailSettings /> : null}
       {failed ? <AppAlert tone="error" message={t('logoutError')} /> : null}
       <AppButton
         variant="danger"

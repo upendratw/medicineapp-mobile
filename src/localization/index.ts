@@ -88,6 +88,29 @@ const en = {
     'Are you sure you want to log out of MedicineApp on this device?',
   logoutCancel: 'Cancel',
   logoutError: 'Logout could not be completed. Please try again.',
+  caregiverEmailTitle: 'Verified email',
+  caregiverEmailHelp:
+    'Add and verify an email for future caregiver invitation delivery. This does not change your phone sign-in.',
+  caregiverEmailAddress: 'Email address',
+  caregiverEmailRequest: 'Send verification code',
+  caregiverEmailCode: '6-digit email verification code',
+  caregiverEmailVerify: 'Verify email',
+  caregiverEmailResend: 'Resend code',
+  caregiverEmailUseDifferent: 'Use a different email',
+  caregiverEmailReplace: 'Replace verified email',
+  caregiverEmailPending: 'Verification pending',
+  caregiverEmailVerified: 'Verified email',
+  caregiverEmailLoadFailed: 'Email verification status could not be loaded.',
+  caregiverEmailActionFailed:
+    'Email verification could not be completed. Please try again.',
+  caregiverEmailCooldown: 'Please wait before requesting another code.',
+  caregiverEmailInvalidCode: 'The verification code is incorrect.',
+  caregiverEmailExpired:
+    'The verification code has expired. Request a new code.',
+  caregiverEmailExhausted:
+    'Too many incorrect attempts. Request a new verification code.',
+  caregiverEmailUnavailable:
+    'Email verification is temporarily unavailable. Your account is unchanged.',
   notificationsHelp:
     'Notifications can provide generic reminder alerts. They are optional and do not replace clinical care.',
   enableNotifications: 'Enable notifications',
@@ -388,6 +411,28 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   accountSettings: 'खाता और सत्र',
   accountSettingsHelp: 'इस डिवाइस पर साइन-इन सत्र प्रबंधित करें।',
   logout: 'लॉग आउट करें',
+  caregiverEmailTitle: 'सत्यापित ईमेल',
+  caregiverEmailHelp:
+    'भविष्य में देखभालकर्ता निमंत्रण पाने के लिए ईमेल जोड़ें और सत्यापित करें। इससे फोन साइन-इन नहीं बदलता।',
+  caregiverEmailAddress: 'ईमेल पता',
+  caregiverEmailRequest: 'सत्यापन कोड भेजें',
+  caregiverEmailCode: '6 अंकों का ईमेल सत्यापन कोड',
+  caregiverEmailVerify: 'ईमेल सत्यापित करें',
+  caregiverEmailResend: 'कोड फिर भेजें',
+  caregiverEmailUseDifferent: 'दूसरा ईमेल उपयोग करें',
+  caregiverEmailReplace: 'सत्यापित ईमेल बदलें',
+  caregiverEmailPending: 'सत्यापन लंबित है',
+  caregiverEmailVerified: 'सत्यापित ईमेल',
+  caregiverEmailLoadFailed: 'ईमेल सत्यापन की स्थिति लोड नहीं हुई।',
+  caregiverEmailActionFailed:
+    'ईमेल सत्यापन पूरा नहीं हुआ। कृपया फिर प्रयास करें।',
+  caregiverEmailCooldown: 'दूसरा कोड माँगने से पहले प्रतीक्षा करें।',
+  caregiverEmailInvalidCode: 'सत्यापन कोड गलत है।',
+  caregiverEmailExpired:
+    'सत्यापन कोड की समय-सीमा समाप्त हो गई। नया कोड माँगें।',
+  caregiverEmailExhausted: 'बहुत अधिक गलत प्रयास हुए। नया सत्यापन कोड माँगें।',
+  caregiverEmailUnavailable:
+    'ईमेल सत्यापन अभी उपलब्ध नहीं है। आपका खाता अपरिवर्तित है।',
   logoutHint: 'यह सत्र समाप्त करके साइन इन स्क्रीन पर लौटता है।',
   logoutConfirmTitle: 'लॉग आउट करें?',
   logoutConfirmMessage:

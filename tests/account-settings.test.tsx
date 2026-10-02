@@ -3,7 +3,10 @@ import { fireEvent, render } from '@testing-library/react-native';
 
 const mockLogout = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/state/AuthContext', () => ({
-  useAuth: () => ({ logout: mockLogout }),
+  useAuth: () => ({ logout: mockLogout, role: 'caregiver' }),
+}));
+jest.mock('@/components/CaregiverEmailSettings', () => ({
+  CaregiverEmailSettings: () => null,
 }));
 jest.mock('@/localization', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
