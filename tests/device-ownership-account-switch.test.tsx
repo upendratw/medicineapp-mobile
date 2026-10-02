@@ -285,6 +285,9 @@ describe('account-switch context and privacy-safe confirmation', () => {
       .spyOn(pushRegistrationCoordinator, 'register')
       .mockResolvedValue({ status: 'registered', deviceId: 'normal-device' });
     jest
+      .spyOn(pushRegistrationCoordinator, 'registerForAuthenticatedSession')
+      .mockResolvedValue({ status: 'registered', deviceId: 'normal-device' });
+    jest
       .spyOn(pushRegistrationCoordinator, 'registerRotatedToken')
       .mockResolvedValue({ status: 'registered', deviceId: 'normal-device' });
     jest
@@ -299,10 +302,12 @@ describe('account-switch context and privacy-safe confirmation', () => {
 
   test('conflict waits for explicit confirmation and cancel performs no transfer or unregister', async () => {
     const pendingEvidence = evidence();
-    jest.spyOn(pushRegistrationCoordinator, 'register').mockResolvedValue({
-      status: 'ownership_transfer_required',
-      transferEvidence: pendingEvidence,
-    });
+    jest
+      .spyOn(pushRegistrationCoordinator, 'registerForAuthenticatedSession')
+      .mockResolvedValue({
+        status: 'ownership_transfer_required',
+        transferEvidence: pendingEvidence,
+      });
     const transfer = jest.spyOn(
       pushRegistrationCoordinator,
       'confirmOwnershipTransfer',
@@ -333,10 +338,12 @@ describe('account-switch context and privacy-safe confirmation', () => {
 
   test('confirm invokes one transfer, guards a double tap, and clears the decision on success', async () => {
     const pendingEvidence = evidence();
-    jest.spyOn(pushRegistrationCoordinator, 'register').mockResolvedValue({
-      status: 'ownership_transfer_required',
-      transferEvidence: pendingEvidence,
-    });
+    jest
+      .spyOn(pushRegistrationCoordinator, 'registerForAuthenticatedSession')
+      .mockResolvedValue({
+        status: 'ownership_transfer_required',
+        transferEvidence: pendingEvidence,
+      });
     let release!: () => void;
     const transfer = jest
       .spyOn(pushRegistrationCoordinator, 'confirmOwnershipTransfer')
@@ -369,14 +376,18 @@ describe('account-switch context and privacy-safe confirmation', () => {
       expect(screen.getByText('decision-closed')).toBeTruthy(),
     );
     expect(screen.getByText('registered')).toBeTruthy();
-    expect(pushRegistrationCoordinator.register).toHaveBeenCalledTimes(1);
+    expect(
+      pushRegistrationCoordinator.registerForAuthenticatedSession,
+    ).toHaveBeenCalledTimes(1);
   });
 
   test('transfer failure closes ephemeral decision without unregister, retry, or logout', async () => {
-    jest.spyOn(pushRegistrationCoordinator, 'register').mockResolvedValue({
-      status: 'ownership_transfer_required',
-      transferEvidence: evidence(),
-    });
+    jest
+      .spyOn(pushRegistrationCoordinator, 'registerForAuthenticatedSession')
+      .mockResolvedValue({
+        status: 'ownership_transfer_required',
+        transferEvidence: evidence(),
+      });
     const transfer = jest
       .spyOn(pushRegistrationCoordinator, 'confirmOwnershipTransfer')
       .mockRejectedValue(
@@ -395,7 +406,9 @@ describe('account-switch context and privacy-safe confirmation', () => {
     await waitFor(() => expect(screen.getByText('unavailable')).toBeTruthy());
     expect(transfer).toHaveBeenCalledTimes(1);
     expect(unregister).not.toHaveBeenCalled();
-    expect(pushRegistrationCoordinator.register).toHaveBeenCalledTimes(1);
+    expect(
+      pushRegistrationCoordinator.registerForAuthenticatedSession,
+    ).toHaveBeenCalledTimes(1);
     expect(mockAuthState.status).toBe('authenticated');
   });
 });

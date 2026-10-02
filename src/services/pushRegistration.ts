@@ -272,6 +272,13 @@ export class PushRegistrationCoordinator {
     return this.singleFlight(requestPermission, online);
   }
 
+  async registerForAuthenticatedSession(
+    requestPermission: boolean,
+    online: boolean,
+  ): Promise<PushRegistrationAttemptResult> {
+    return this.singleFlight(requestPermission, online, undefined, true);
+  }
+
   confirmOwnershipTransfer(
     evidence: OwnershipTransferEvidence,
   ): Promise<PushRegistrationResult> {
@@ -296,6 +303,7 @@ export class PushRegistrationCoordinator {
     requestPermission: boolean,
     online: boolean,
     devicePushToken?: NotificationDevicePushToken,
+    revalidateExisting = false,
   ): Promise<PushRegistrationAttemptResult> {
     if (this.inFlight) return this.inFlight;
     const generation = this.generation;
@@ -304,6 +312,7 @@ export class PushRegistrationCoordinator {
       online,
       generation,
       devicePushToken,
+      revalidateExisting,
     );
     this.inFlight = pending;
     const clear = () => {
@@ -318,6 +327,7 @@ export class PushRegistrationCoordinator {
     online: boolean,
     generation: number,
     devicePushToken?: NotificationDevicePushToken,
+    revalidateExisting = false,
   ): Promise<PushRegistrationAttemptResult> {
     const runtimeStatus = this.gateway.runtimeStatus();
     if (runtimeStatus !== 'supported') {
@@ -363,6 +373,7 @@ export class PushRegistrationCoordinator {
         deviceIdentifier,
         platform,
         generation,
+        revalidateExisting,
       });
       if (outcome.status !== 'registered') return outcome;
       if (candidate.provider === 'expo') primaryDeviceId = outcome.deviceId;
@@ -378,6 +389,7 @@ export class PushRegistrationCoordinator {
     deviceIdentifier: string;
     platform: PushPlatform;
     generation: number;
+    revalidateExisting: boolean;
   }): Promise<PushRegistrationAttemptResult> {
     const tupleFingerprint = await this.tupleHasher([
       input.pushToken,
@@ -390,7 +402,11 @@ export class PushRegistrationCoordinator {
       this.store.readTupleFingerprint(input.provider),
       this.store.readRegistrationId(input.provider),
     ]);
-    if (currentFingerprint === tupleFingerprint && currentDeviceId) {
+    if (
+      !input.revalidateExisting &&
+      currentFingerprint === tupleFingerprint &&
+      currentDeviceId
+    ) {
       return { status: 'registered', deviceId: currentDeviceId };
     }
     let result: { deviceId: string };

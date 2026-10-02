@@ -28,6 +28,8 @@ jest.mock('@/state/NetworkContext', () => ({ useOnline: () => true }));
 jest.mock('@/services/pushRegistration', () => ({
   pushRegistrationCoordinator: {
     register: (...args: unknown[]) => mockRegister(...args),
+    registerForAuthenticatedSession: (...args: unknown[]) =>
+      mockRegister(...args),
     registerRotatedToken: jest.fn(),
   },
 }));

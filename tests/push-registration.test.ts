@@ -206,6 +206,25 @@ test('successful registration tuple is deduplicated without persisting a raw tok
   expect(store.tuple).toMatch(/^[a-f0-9]{64}$/);
   expect(store.tuple).not.toContain('ExponentPushToken');
 });
+test('a new authenticated session revalidates matching local provider metadata with the backend', async () => {
+  const gateway = new Gateway();
+  const backend = new Backend();
+  const store = new Store();
+  const coordinator = new PushRegistrationCoordinator(gateway, backend, store);
+
+  await coordinator.register(false, true);
+  backend.tokens = [];
+  backend.platforms = [];
+  backend.providers = [];
+
+  await expect(
+    coordinator.registerForAuthenticatedSession(false, true),
+  ).resolves.toEqual({
+    status: 'registered',
+    deviceId: 'expo-device-record',
+  });
+  expect(backend.providers).toEqual(['expo', 'fcm']);
+});
 test('concurrent registration calls share one backend operation', async () => {
   const backend = new Backend();
   let release!: () => void;

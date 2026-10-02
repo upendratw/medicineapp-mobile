@@ -2,6 +2,7 @@ import { Pressable, Text } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockRegister = jest.fn();
+const mockRegisterForAuthenticatedSession = jest.fn();
 const mockRegisterRotatedToken = jest.fn();
 const mockAddPushTokenListener = jest.fn().mockResolvedValue(null);
 const mockReplace = jest.fn();
@@ -28,6 +29,8 @@ jest.mock('@/navigation/DeepLinkContext', () => ({
 jest.mock('@/services/pushRegistration', () => ({
   pushRegistrationCoordinator: {
     register: (...args: unknown[]) => mockRegister(...args),
+    registerForAuthenticatedSession: (...args: unknown[]) =>
+      mockRegisterForAuthenticatedSession(...args),
     registerRotatedToken: (...args: unknown[]) =>
       mockRegisterRotatedToken(...args),
   },
@@ -68,6 +71,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockAuthState.status = 'unauthenticated';
   mockRegister.mockResolvedValue({ status: 'registered' });
+  mockRegisterForAuthenticatedSession.mockResolvedValue({
+    status: 'registered',
+  });
   mockRegisterRotatedToken.mockResolvedValue({ status: 'registered' });
   mockAddPushTokenListener.mockResolvedValue(null);
   mockAddResponseListener.mockResolvedValue(null);
@@ -99,13 +105,15 @@ test('ordinary rerender does not repeat automatic registration', async () => {
       <Probe />
     </PushRegistrationProvider>,
   );
-  await waitFor(() => expect(mockRegister).toHaveBeenCalledTimes(1));
+  await waitFor(() =>
+    expect(mockRegisterForAuthenticatedSession).toHaveBeenCalledTimes(1),
+  );
   await screen.rerender(
     <PushRegistrationProvider>
       <Probe />
     </PushRegistrationProvider>,
   );
-  expect(mockRegister).toHaveBeenCalledTimes(1);
+  expect(mockRegisterForAuthenticatedSession).toHaveBeenCalledTimes(1);
 });
 
 test('token listener defers rotation and uses the supplied native token', async () => {
@@ -144,7 +152,45 @@ test('logged-out state does not register and authentication triggers registratio
       <Probe />
     </PushRegistrationProvider>,
   );
-  await waitFor(() => expect(mockRegister).toHaveBeenCalledWith(false, true));
+  await waitFor(() =>
+    expect(mockRegisterForAuthenticatedSession).toHaveBeenCalledWith(
+      false,
+      true,
+    ),
+  );
+});
+
+test('each Caregiver to Patient to Caregiver login starts one authoritative registration session', async () => {
+  const screen = await render(
+    <PushRegistrationProvider>
+      <Probe />
+    </PushRegistrationProvider>,
+  );
+
+  for (let login = 1; login <= 3; login += 1) {
+    mockAuthState.status = 'authenticated';
+    await screen.rerender(
+      <PushRegistrationProvider>
+        <Probe />
+      </PushRegistrationProvider>,
+    );
+    await waitFor(() =>
+      expect(mockRegisterForAuthenticatedSession).toHaveBeenCalledTimes(login),
+    );
+
+    mockAuthState.status = 'unauthenticated';
+    await screen.rerender(
+      <PushRegistrationProvider>
+        <Probe />
+      </PushRegistrationProvider>,
+    );
+  }
+
+  expect(mockRegisterForAuthenticatedSession.mock.calls).toEqual([
+    [false, true],
+    [false, true],
+    [false, true],
+  ]);
 });
 
 test('explicit notification action requests permission after authentication', async () => {
@@ -154,7 +200,12 @@ test('explicit notification action requests permission after authentication', as
       <Probe />
     </PushRegistrationProvider>,
   );
-  await waitFor(() => expect(mockRegister).toHaveBeenCalledWith(false, true));
+  await waitFor(() =>
+    expect(mockRegisterForAuthenticatedSession).toHaveBeenCalledWith(
+      false,
+      true,
+    ),
+  );
   mockRegister.mockClear();
   await act(async () => fireEvent.press(screen.getByRole('button')));
   expect(mockRegister).toHaveBeenCalledWith(true, true);

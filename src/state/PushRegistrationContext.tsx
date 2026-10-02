@@ -133,7 +133,7 @@ export function PushRegistrationProvider({ children }: PropsWithChildren) {
     if (status !== 'authenticated') return;
     let active = true;
     void pushRegistrationCoordinator
-      .register(false, online)
+      .registerForAuthenticatedSession(false, online)
       .then((next) => {
         if (active) applyRegistrationAttempt(next);
       })
