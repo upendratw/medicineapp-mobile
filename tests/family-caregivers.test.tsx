@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { FamilyCaregivers } from '@/components/FamilyCaregivers';
+import { translate } from '@/localization';
 import type { CaregiverRelationshipService } from '@/services/caregiverRelationshipService';
 import { PreferencesProvider } from '@/state/PreferencesContext';
 
@@ -62,7 +63,9 @@ test('patient adds caregiver with bounded permission selection and pending state
     screen.getByRole('button', { name: 'Send invitation' }),
   );
   await waitFor(() =>
-    expect(api.invite).toHaveBeenCalledWith('+919000000007', ['alerts.read']),
+    expect(api.invite).toHaveBeenCalledWith('PHONE', '+919000000007', [
+      'alerts.read',
+    ]),
   );
   await waitFor(() =>
     expect(
@@ -70,6 +73,77 @@ test('patient adds caregiver with bounded permission selection and pending state
         .accessibilityState.busy,
     ).toBe(false),
   );
+});
+
+test('patient selects email and sends a bounded email invitation', async () => {
+  const api = service();
+  const screen = await render(view({ role: 'patient', service: api }));
+  await screen.findByText('Add caregiver');
+
+  const phoneSelector = screen.getByRole('button', { name: 'Phone' });
+  const emailSelector = screen.getByRole('button', { name: 'Email' });
+  expect(phoneSelector.props.accessibilityState.selected).toBe(true);
+  await fireEvent.press(emailSelector);
+  expect(emailSelector.props.accessibilityState.selected).toBe(true);
+  expect(screen.queryByLabelText('Caregiver mobile number')).toBeNull();
+
+  await fireEvent.changeText(
+    screen.getByLabelText('Caregiver email address'),
+    'not-an-email',
+  );
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Send invitation' }),
+  );
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    /Enter a valid caregiver email address\./,
+  );
+  expect(api.invite).not.toHaveBeenCalled();
+
+  await fireEvent.changeText(
+    screen.getByLabelText('Caregiver email address'),
+    '  Caregiver+Family@Example.com  ',
+  );
+  await fireEvent.press(
+    screen.getByRole('checkbox', { name: 'Receive medication alerts: Off' }),
+  );
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Send invitation' }),
+  );
+  await waitFor(() =>
+    expect(api.invite).toHaveBeenCalledWith(
+      'EMAIL',
+      'Caregiver+Family@Example.com',
+      ['alerts.read'],
+    ),
+  );
+});
+
+test('email invitation controls have explicit Hindi translations', () => {
+  expect(translate('hi-IN', 'familyInviteUsing')).toBe('निमंत्रण का माध्यम');
+  expect(translate('hi-IN', 'familyInvitePhone')).toBe('फ़ोन');
+  expect(translate('hi-IN', 'familyInviteEmail')).toBe('ईमेल');
+  expect(translate('hi-IN', 'familyCaregiverEmail')).toBe(
+    'देखभालकर्ता का ईमेल पता',
+  );
+});
+
+test('patient sees only the server-masked email pending destination', async () => {
+  const api = service({
+    listInvitations: jest.fn().mockResolvedValue([
+      {
+        invitationId: 'email-invite',
+        destination: 'c***@example.com',
+        patientDisplayName: 'Patient',
+        permissions: ['alerts.read'],
+        status: 'pending',
+        expiresAt: '2026-10-02T00:00:00Z',
+      },
+    ]),
+  });
+  const screen = await render(view({ role: 'patient', service: api }));
+
+  expect(await screen.findByText('c***@example.com')).toBeTruthy();
+  expect(screen.queryByText('caregiver@example.com')).toBeNull();
 });
 
 test('patient edits sharing and permissions and explicitly confirms revoke', async () => {

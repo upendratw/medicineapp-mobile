@@ -45,6 +45,7 @@ const en = {
   familyActionError:
     'The caregiver access change could not be completed. Please try again.',
   familyPhoneError: 'Enter a valid 10-digit Indian mobile number.',
+  familyEmailError: 'Enter a valid caregiver email address.',
   familyPermissionError: 'Choose at least one permission.',
   familyAuthorizedCaregivers: 'Authorized caregivers',
   familyNoAuthorizedCaregivers: 'No authorized caregivers',
@@ -55,6 +56,10 @@ const en = {
   familySharingExplanation:
     'The caregiver will see only the information you select. You can change or revoke access later.',
   familyCaregiverPhone: 'Caregiver mobile number',
+  familyCaregiverEmail: 'Caregiver email address',
+  familyInviteUsing: 'Invite using',
+  familyInvitePhone: 'Phone',
+  familyInviteEmail: 'Email',
   familySendInvitation: 'Send invitation',
   familyPermissionAlerts: 'Receive medication alerts',
   familyPermissionMedications: 'View medications',
@@ -375,6 +380,7 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   familyActionError:
     'देखभालकर्ता पहुँच में बदलाव पूरा नहीं हुआ। फिर प्रयास करें।',
   familyPhoneError: 'मान्य 10 अंकों का भारतीय मोबाइल नंबर दर्ज करें।',
+  familyEmailError: 'देखभालकर्ता का मान्य ईमेल पता दर्ज करें।',
   familyPermissionError: 'कम से कम एक अनुमति चुनें।',
   familyAuthorizedCaregivers: 'अधिकृत देखभालकर्ता',
   familyNoAuthorizedCaregivers: 'कोई अधिकृत देखभालकर्ता नहीं',
@@ -385,6 +391,10 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   familySharingExplanation:
     'देखभालकर्ता केवल आपकी चुनी जानकारी देखेगा। आप बाद में पहुँच बदल या रद्द कर सकते हैं।',
   familyCaregiverPhone: 'देखभालकर्ता का मोबाइल नंबर',
+  familyCaregiverEmail: 'देखभालकर्ता का ईमेल पता',
+  familyInviteUsing: 'निमंत्रण का माध्यम',
+  familyInvitePhone: 'फ़ोन',
+  familyInviteEmail: 'ईमेल',
   familySendInvitation: 'निमंत्रण भेजें',
   familyPermissionAlerts: 'दवा अलर्ट प्राप्त करें',
   familyPermissionMedications: 'दवाइयाँ देखें',

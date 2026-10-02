@@ -8,6 +8,7 @@ export const caregiverPermissionOptions = [
 
 export type CaregiverPermission =
   (typeof caregiverPermissionOptions)[number]['key'];
+export type CaregiverInvitationChannel = 'PHONE' | 'EMAIL';
 
 export type CaregiverInvitation = Readonly<{
   invitationId: string;
@@ -47,7 +48,8 @@ export interface CaregiverRelationshipService {
   listInvitations(): Promise<readonly CaregiverInvitation[]>;
   listRelationships(): Promise<readonly CaregiverRelationship[]>;
   invite(
-    phone: string,
+    channel: CaregiverInvitationChannel,
+    destination: string,
     permissions: readonly CaregiverPermission[],
   ): Promise<void>;
   accept(invitationId: string): Promise<void>;
@@ -95,7 +97,8 @@ export class BackendCaregiverRelationshipService implements CaregiverRelationshi
   }
 
   async invite(
-    phone: string,
+    channel: CaregiverInvitationChannel,
+    destination: string,
     permissions: readonly CaregiverPermission[],
   ): Promise<void> {
     await this.client.request(
@@ -103,8 +106,8 @@ export class BackendCaregiverRelationshipService implements CaregiverRelationshi
       {
         method: 'POST',
         body: JSON.stringify({
-          channel: 'PHONE',
-          destination: phone,
+          channel,
+          destination,
           role_level: 'SUPPORTER',
           permissions,
         }),

@@ -10,6 +10,7 @@ import { LoadingIndicator } from '@/components/LoadingIndicator';
 import { useTranslation } from '@/localization';
 import {
   caregiverPermissionOptions,
+  type CaregiverInvitationChannel,
   type CaregiverInvitation,
   type CaregiverPermission,
   type CaregiverRelationship,
@@ -42,7 +43,9 @@ export function FamilyCaregivers({
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
+  const [channel, setChannel] = useState<CaregiverInvitationChannel>('PHONE');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [permissions, setPermissions] = useState<CaregiverPermission[]>([]);
   const loadRevision = useRef(0);
   const workingRef = useRef(false);
@@ -117,9 +120,12 @@ export function FamilyCaregivers({
   };
 
   const invite = async () => {
-    const normalized = normalizeIndianPhone(phone);
-    if (!normalized) {
-      setError(t('familyPhoneError'));
+    const destination =
+      channel === 'PHONE' ? normalizeIndianPhone(phone) : normalizeEmail(email);
+    if (!destination) {
+      setError(
+        channel === 'PHONE' ? t('familyPhoneError') : t('familyEmailError'),
+      );
       return;
     }
     if (!permissions.length) {
@@ -127,8 +133,9 @@ export function FamilyCaregivers({
       return;
     }
     await run(async () => {
-      await service.invite(normalized, permissions);
+      await service.invite(channel, destination, permissions);
       setPhone('');
+      setEmail('');
       setPermissions([]);
     });
   };
@@ -209,15 +216,48 @@ export function FamilyCaregivers({
 
       <AppText variant="heading">{t('familyAddCaregiver')}</AppText>
       <AppText>{t('familySharingExplanation')}</AppText>
-      <AppTextInput
-        label={t('familyCaregiverPhone')}
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-        autoComplete="tel"
-        maxLength={14}
-        placeholder="98765 43210"
+      <AppText variant="label">{t('familyInviteUsing')}</AppText>
+      <AppButton
+        label={t('familyInvitePhone')}
+        variant={channel === 'PHONE' ? 'primary' : 'secondary'}
+        accessibilityState={{ selected: channel === 'PHONE' }}
+        onPress={() => {
+          setChannel('PHONE');
+          setError('');
+        }}
       />
+      <AppButton
+        label={t('familyInviteEmail')}
+        variant={channel === 'EMAIL' ? 'primary' : 'secondary'}
+        accessibilityState={{ selected: channel === 'EMAIL' }}
+        onPress={() => {
+          setChannel('EMAIL');
+          setError('');
+        }}
+      />
+      {channel === 'PHONE' ? (
+        <AppTextInput
+          label={t('familyCaregiverPhone')}
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          maxLength={14}
+          placeholder="98765 43210"
+        />
+      ) : (
+        <AppTextInput
+          label={t('familyCaregiverEmail')}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoComplete="email"
+          autoCapitalize="none"
+          autoCorrect={false}
+          maxLength={320}
+          placeholder="caregiver@example.com"
+        />
+      )}
       <PermissionSelector selected={permissions} onChange={setPermissions} />
       <AppButton
         label={t('familySendInvitation')}
@@ -226,6 +266,18 @@ export function FamilyCaregivers({
       />
     </View>
   );
+}
+
+function normalizeEmail(value: string): string | null {
+  const candidate = value.trim();
+  if (
+    candidate.length < 3 ||
+    candidate.length > 320 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidate)
+  ) {
+    return null;
+  }
+  return candidate;
 }
 
 type RelationshipCardProps = {
