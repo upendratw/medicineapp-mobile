@@ -15,11 +15,12 @@ import {
   type NotificationDevicePushToken,
 } from '@/services/notificationCapability';
 import { configureCaregiverNotificationChannel } from '@/services/caregiverNotificationChannel';
+import { enforcePatientNotificationPrivacy } from '@/services/patientNotificationPrivacy';
 
 export const NOTIFICATION_CHANNEL_ID = 'medicineapp-reminders-v4';
 export const DEFAULT_NOTIFICATION_COPY = Object.freeze({
   title: 'Medicine reminder',
-  body: 'Time to take <medicine label>.',
+  body: "It's time for your scheduled medicine.",
 });
 const REGISTRATION_ID_KEY = 'medicineapp.secure.v1.push.registration-id';
 const REGISTRATION_TUPLE_KEY = 'medicineapp.secure.v1.push.registration-tuple';
@@ -132,6 +133,7 @@ export class ExpoPushPermissionGateway implements PushPermissionGateway {
   async configureChannel(): Promise<void> {
     if (Platform.OS === 'android') {
       await this.capability.configureAndroidChannel(NOTIFICATION_CHANNEL_ID);
+      await enforcePatientNotificationPrivacy();
       await configureCaregiverNotificationChannel();
     }
     await this.capability.configureReminderCategory();

@@ -153,7 +153,7 @@ const en = {
   privacyCaregiverDisclosure:
     'Inviting a caregiver shares only the selected categories after acceptance. You can change permissions or revoke access; relationship history may be retained for security and audit.',
   privacyNotificationDisclosure:
-    'Notifications are optional. Generic text may appear on the lock screen; medication, symptom, caregiver, and clinical details are excluded by default.',
+    'Notifications may appear on the lock screen according to your device settings. MedicineApp uses privacy-minimized previews by default; full reminder details are available only in authenticated app screens.',
   logout: 'Log out',
   logoutHint: 'Ends this session and returns to sign in.',
   logoutConfirmTitle: 'Log out?',
@@ -555,7 +555,7 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   privacyCaregiverDisclosure:
     'निमंत्रण स्वीकार होने के बाद केवल चुनी श्रेणियाँ साझा होती हैं। आप अनुमति बदल या पहुँच रद्द कर सकते हैं; सुरक्षा और ऑडिट के लिए संबंध इतिहास रखा जा सकता है।',
   privacyNotificationDisclosure:
-    'सूचनाएँ वैकल्पिक हैं। लॉक स्क्रीन पर सामान्य टेक्स्ट दिख सकता है; दवा, लक्षण, देखभालकर्ता और चिकित्सकीय विवरण डिफ़ॉल्ट रूप से शामिल नहीं होते।',
+    'सूचनाएँ आपकी डिवाइस सेटिंग के अनुसार लॉक स्क्रीन पर दिखाई दे सकती हैं। MedicineApp डिफ़ॉल्ट रूप से गोपनीयता-संक्षिप्त प्रीव्यू दिखाता है; पूरा रिमाइंडर विवरण केवल प्रमाणित ऐप स्क्रीन में मिलता है।',
   logout: 'लॉग आउट करें',
   caregiverEmailTitle: 'सत्यापित ईमेल',
   caregiverEmailHelp:

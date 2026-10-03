@@ -477,10 +477,10 @@ test('supported iOS runtime uses the backend-mediated iOS registration contract'
   expect(backend.platforms).toEqual(['ios']);
   expect(backend.providers).toEqual(['expo']);
 });
-test('bounded notification template contains only the approved medicine label field', () => {
+test('bounded notification template is generic and contains no medicine detail', () => {
   expect(DEFAULT_NOTIFICATION_COPY).toEqual({
     title: 'Medicine reminder',
-    body: 'Time to take <medicine label>.',
+    body: "It's time for your scheduled medicine.",
   });
   expect(JSON.stringify(DEFAULT_NOTIFICATION_COPY)).not.toMatch(
     /metformin|mg|dose|symptom|caregiver|prescription|diagnos|side effect/i,
