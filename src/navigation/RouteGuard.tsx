@@ -13,7 +13,7 @@ import {
 export function RouteGuard() {
   const { status, role } = useAuth();
   const { complete, restoring } = useOnboarding();
-  const segments = useSegments();
+  const segments = useSegments() as readonly string[];
   const router = useRouter();
   const { pending, pendingReminder, pendingCaregiver, clear } =
     useDeepLinkIntent();
