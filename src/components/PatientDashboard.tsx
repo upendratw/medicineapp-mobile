@@ -78,21 +78,21 @@ export function PatientDashboard({
       ) : null}
       <AppText variant="heading">{t('patientDashboardQuickActions')}</AppText>
       <AppButton
-        label="View medicines"
+        label={t('patientDashboardViewMedicines')}
         onPress={() => onNavigate('/medicines')}
       />
       <AppButton
-        label="Add medicine"
+        label={t('patientDashboardAddMedicine')}
         variant="secondary"
         onPress={() => onNavigate('/add-medicine')}
       />
       <AppButton
-        label="View schedule"
+        label={t('patientDashboardViewSchedule')}
         variant="secondary"
         onPress={() => onNavigate('/schedule')}
       />
       <AppButton
-        label="Medication information"
+        label={t('patientDashboardMedicationInformation')}
         variant="secondary"
         onPress={() => onNavigate('/medication-information')}
       />
