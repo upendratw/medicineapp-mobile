@@ -38,3 +38,50 @@ reminder UUIDs produce distinct local notification identifiers, while durable
 replay state suppresses another delivery of the same occurrence. Authentication
 and owner lookup remain backend-mediated; no credential or clinical content is
 added to the push payload or diagnostic output.
+
+## Physical Taken, Snooze, and Skip acceptance
+
+R1 E19 Android notification-action acceptance is complete on a physical Samsung
+Android 15 device. The evidence combines separate controlled runs; the three
+actions were not repeated in one run:
+
+- Taken was proven previously to create exactly one acknowledgement, one Taken
+  intake, and one inventory-consumption event, changing the test inventory from
+  9 to 8 with no duplicate result.
+- Snooze was tapped once on one naturally delivered background notification. It
+  moved the original reminder to `snoozed`, created exactly one scheduled child
+  at +10 minutes, and created no intake or inventory event. The inventory stayed
+  at 8. The temporary schedule was then cancelled through the authenticated
+  application lifecycle, which cancelled the future child without altering the
+  preserved Snooze evidence.
+- Skip was tapped once on a separate naturally delivered background
+  notification. It produced exactly one `SKIPPED` acknowledgement and exactly
+  one skipped intake, with zero Taken results, zero snooze children, and no
+  inventory event. The inventory stayed at 8. The temporary schedule was then
+  cancelled through the authenticated application lifecycle; its future
+  occurrences were cancelled while the fired/Skipped occurrence remained
+  preserved.
+
+Each tested notification was the single visible MedicineApp notification for
+its occurrence, exposed all three Taken/Snooze/Skip actions, used the
+`medicineapp-reminders-v4` alarm channel, produced the bundled alarm sound and
+vibration, and retained a generic `PRIVATE` preview without medicine name, dose,
+or Patient health content. No action-less remote notification or duplicate local
+notification was observed. The deployed backend was
+`1fce8673a0c33791223a17898e4f69af2b9bb9e7`; the tested mobile JavaScript was
+`81c0ebcc80ce206338c4a9900c112dfd580e2569`, loaded by the installed development
+client through the documented Metro 8081/ADB-reverse workflow. Expo Go and a new
+EAS build were not used.
+
+Two separate UX follow-ups remain outside this acceptance:
+
+- Android/Samsung may initially collapse the notification, requiring expansion
+  before its action buttons are visible. The application cannot guarantee an
+  always-expanded notification without a separately reviewed, materially more
+  intrusive full-screen alarm design.
+- Editing a daily schedule to a time already passed on the current day is still
+  rejected instead of scheduling its next occurrence for the following day.
+
+The acceptance used only normal authenticated lifecycle operations for
+temporary schedule cleanup. It made no direct database update, AWS
+configuration change, provider retry, or change to account/device isolation.
