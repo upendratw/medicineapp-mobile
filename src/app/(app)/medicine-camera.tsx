@@ -209,6 +209,7 @@ export default function MedicineCameraScreen() {
           style={styles.preview}
           contentFit="contain"
         />
+        <AppAlert message={t('privacyOcrDisclosure')} />
         <AppButton
           label="Continue to recognition review"
           loading={working}

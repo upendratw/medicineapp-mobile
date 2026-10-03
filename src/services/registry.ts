@@ -32,6 +32,7 @@ import { notificationCapability } from '@/services/notificationCapability';
 import { BackendCaregiverRelationshipService } from '@/services/caregiverRelationshipService';
 import { BackendCaregiverAlertPreferenceService } from '@/services/caregiverAlertPreferenceService';
 import { BackendPatientSymptomService } from '@/services/patientSymptomService';
+import { BackendPrivacyService } from '@/services/privacyService';
 
 const api = new ApiClient(undefined, undefined, secureTokenStore);
 export const patientMedicationService = buildPatientMedicationService(api);
@@ -64,6 +65,7 @@ export const prescriptionScanService = new PendingPrescriptionScanService();
 export const inventoryService = new PendingInventoryService();
 export const symptomAssessmentService = new PendingSymptomAssessmentService();
 export const patientSymptomService = new BackendPatientSymptomService(api);
+export const privacyService = new BackendPrivacyService(api);
 export const emergencyAssistanceService = new EmergencyAssistanceService(api);
 export const deviceCommunicationService =
   new LinkingDeviceCommunicationService();

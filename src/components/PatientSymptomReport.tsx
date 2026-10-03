@@ -46,6 +46,7 @@ export function PatientSymptomReport({ service }: Props) {
   return (
     <View accessibilityRole="summary">
       <AppText>{t('symptomReportHelp')}</AppText>
+      <AppAlert message={t('privacySymptomDisclosure')} />
       {error ? <AppAlert tone="error" message={error} /> : null}
       {success ? (
         <AppAlert tone="success" message={t('symptomReportSaved')} />

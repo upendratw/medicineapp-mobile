@@ -5,10 +5,12 @@ import { AppAlert, AppButton, AppHeader, AppScreen } from '@/components';
 import { CaregiverEmailSettings } from '@/components/CaregiverEmailSettings';
 import { useTranslation } from '@/localization';
 import { useAuth } from '@/state/AuthContext';
+import { useRouter } from 'expo-router';
 
 export default function AccountSettingsScreen() {
   const { t } = useTranslation();
   const { logout, role } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -38,6 +40,12 @@ export default function AccountSettingsScreen() {
         subtitle={t('accountSettingsHelp')}
       />
       {role === 'caregiver' ? <CaregiverEmailSettings /> : null}
+      <AppButton
+        variant="secondary"
+        label={t('privacyCenter')}
+        accessibilityHint={t('privacyCenterHelp')}
+        onPress={() => router.push('/privacy-center' as never)}
+      />
       {failed ? <AppAlert tone="error" message={t('logoutError')} /> : null}
       <AppButton
         variant="danger"

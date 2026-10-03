@@ -216,6 +216,7 @@ export function FamilyCaregivers({
 
       <AppText variant="heading">{t('familyAddCaregiver')}</AppText>
       <AppText>{t('familySharingExplanation')}</AppText>
+      <AppAlert message={t('privacyCaregiverDisclosure')} />
       <AppText variant="label">{t('familyInviteUsing')}</AppText>
       <AppButton
         label={t('familyInvitePhone')}

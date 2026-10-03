@@ -117,6 +117,7 @@ export function CaregiverEmailSettings({
     <View style={{ gap: theme.spacing.md }}>
       <AppText variant="heading">{t('caregiverEmailTitle')}</AppText>
       <AppText>{t('caregiverEmailHelp')}</AppText>
+      <AppAlert message={t('privacyEmailDisclosure')} />
       {error ? <AppAlert tone="error" announce message={error} /> : null}
       {state.state === 'verified' && !editing ? (
         <>

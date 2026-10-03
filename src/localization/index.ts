@@ -102,6 +102,58 @@ const en = {
   notificationSettings: 'Notification settings',
   accountSettings: 'Account and session',
   accountSettingsHelp: 'Manage this signed-in session on this device.',
+  privacyCenter: 'Privacy Center',
+  privacyCenterHelp:
+    'View and control information associated with your account.',
+  privacyLoading: 'Loading privacy controls',
+  privacyLoadFailed: 'Privacy controls could not be loaded. Please try again.',
+  privacyYourData: 'Your data',
+  privacyExportHelp:
+    'Create a bounded, self-scoped JSON copy of available R1 account information. Caregiver exports do not include patient health data.',
+  privacyExport: 'View or share my data export',
+  privacyExportFailed:
+    'Your data export could not be prepared. Please try again.',
+  privacyCorrections: 'Correct information',
+  privacyCorrectionHelp:
+    'Use existing profile and medication controls to correct supported information. Original audit and safety history may be retained.',
+  privacyDisplayName: 'Display name',
+  privacySaveProfile: 'Save profile name',
+  privacyProfileFailed:
+    'Your profile name could not be updated. Please try again.',
+  privacyMedicationCorrection: 'Review my medicines',
+  privacySymptomPending:
+    'Symptom reports preserve the original patient wording. A safe correction or supersession workflow is pending policy approval.',
+  privacySharing: 'Caregiver sharing',
+  privacySharingHelp:
+    'Caregiver access requires an active relationship, sharing, and explicit permissions. You can change permissions or revoke access.',
+  privacySharingAction: 'Manage caregiver access',
+  privacyDeletion: 'Delete account',
+  privacyDeletionHelp:
+    'Deletion immediately deactivates access and starts the existing erasure workflow. Some policy, security, backup, or legal-hold processing may continue after live data is removed.',
+  privacyErasureStatus: 'Current deletion status',
+  privacyPostDeactivation:
+    'After deactivation, phone OTP self-service cannot be used to check status. Contact MedicineApp support for follow-up.',
+  privacyUnknown: 'Unknown',
+  privacyDeleteAction: 'Request account deletion',
+  privacyDeleteConfirmTitle: 'Delete this MedicineApp account?',
+  privacyDeleteConfirmBody:
+    'This signs you out, revokes access, and starts account erasure. This action cannot be undone through the app.',
+  privacyDeleteConfirmAction: 'Delete account',
+  privacyDeleteFailed:
+    'Account deletion could not be requested. Your account remains active.',
+  privacyCancel: 'Cancel',
+  privacyNoticeVersion: 'Notice version',
+  privacyCapabilitySummary: 'Available self-service controls',
+  privacyOcrDisclosure:
+    'If you continue, this medicine image is uploaded to MedicineApp storage and processed by OCR services to suggest review fields. Nothing is added until you review and confirm it.',
+  privacySymptomDisclosure:
+    'Your exact words are stored. They are not diagnosed, classified, translated, or rewritten. Only caregivers with an active relationship, sharing enabled, and symptoms permission can view them.',
+  privacyEmailDisclosure:
+    'MedicineApp sends a time-limited code to this address to verify that you control it. It is used as a secondary identity for caregiver invitations and does not replace phone sign-in.',
+  privacyCaregiverDisclosure:
+    'Inviting a caregiver shares only the selected categories after acceptance. You can change permissions or revoke access; relationship history may be retained for security and audit.',
+  privacyNotificationDisclosure:
+    'Notifications are optional. Generic text may appear on the lock screen; medication, symptom, caregiver, and clinical details are excluded by default.',
   logout: 'Log out',
   logoutHint: 'Ends this session and returns to sign in.',
   logoutConfirmTitle: 'Log out?',
@@ -453,6 +505,57 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   notificationSettings: 'सूचना सेटिंग्स',
   accountSettings: 'खाता और सत्र',
   accountSettingsHelp: 'इस डिवाइस पर साइन-इन सत्र प्रबंधित करें।',
+  privacyCenter: 'गोपनीयता केंद्र',
+  privacyCenterHelp: 'अपने खाते से जुड़ी जानकारी देखें और नियंत्रित करें।',
+  privacyLoading: 'गोपनीयता नियंत्रण लोड हो रहे हैं',
+  privacyLoadFailed: 'गोपनीयता नियंत्रण लोड नहीं हुए। कृपया फिर प्रयास करें।',
+  privacyYourData: 'आपका डेटा',
+  privacyExportHelp:
+    'उपलब्ध R1 खाता जानकारी की सीमित, केवल आपकी JSON प्रति बनाएँ। देखभालकर्ता निर्यात में मरीज़ का स्वास्थ्य डेटा शामिल नहीं होता।',
+  privacyExport: 'मेरा डेटा निर्यात देखें या साझा करें',
+  privacyExportFailed:
+    'आपका डेटा निर्यात तैयार नहीं हुआ। कृपया फिर प्रयास करें।',
+  privacyCorrections: 'जानकारी सुधारें',
+  privacyCorrectionHelp:
+    'समर्थित जानकारी सुधारने के लिए मौजूदा प्रोफ़ाइल और दवा नियंत्रण उपयोग करें। मूल ऑडिट और सुरक्षा इतिहास रखा जा सकता है।',
+  privacyDisplayName: 'दिखाया जाने वाला नाम',
+  privacySaveProfile: 'प्रोफ़ाइल नाम सहेजें',
+  privacyProfileFailed:
+    'आपका प्रोफ़ाइल नाम अपडेट नहीं हुआ। कृपया फिर प्रयास करें।',
+  privacyMedicationCorrection: 'मेरी दवाइयाँ देखें',
+  privacySymptomPending:
+    'लक्षण विवरण में मरीज़ के मूल शब्द सुरक्षित रहते हैं। सुरक्षित सुधार या प्रतिस्थापन प्रक्रिया नीति अनुमोदन की प्रतीक्षा में है।',
+  privacySharing: 'देखभालकर्ता साझाकरण',
+  privacySharingHelp:
+    'देखभालकर्ता पहुँच के लिए सक्रिय संबंध, साझाकरण और स्पष्ट अनुमतियाँ आवश्यक हैं। आप अनुमति बदल या पहुँच रद्द कर सकते हैं।',
+  privacySharingAction: 'देखभालकर्ता पहुँच प्रबंधित करें',
+  privacyDeletion: 'खाता हटाएँ',
+  privacyDeletionHelp:
+    'हटाने से पहुँच तुरंत निष्क्रिय होती है और मौजूदा मिटाने की प्रक्रिया शुरू होती है। लाइव डेटा हटने के बाद भी कुछ नीति, सुरक्षा, बैकअप या कानूनी रोक प्रक्रिया जारी रह सकती है।',
+  privacyErasureStatus: 'वर्तमान हटाने की स्थिति',
+  privacyPostDeactivation:
+    'निष्क्रिय होने के बाद स्थिति देखने के लिए फ़ोन OTP स्व-सेवा उपलब्ध नहीं है। सहायता के लिए MedicineApp सपोर्ट से संपर्क करें।',
+  privacyUnknown: 'अज्ञात',
+  privacyDeleteAction: 'खाता हटाने का अनुरोध करें',
+  privacyDeleteConfirmTitle: 'यह MedicineApp खाता हटाएँ?',
+  privacyDeleteConfirmBody:
+    'यह आपको लॉग आउट करता है, पहुँच रद्द करता है और खाता मिटाना शुरू करता है। इसे ऐप से वापस नहीं किया जा सकता।',
+  privacyDeleteConfirmAction: 'खाता हटाएँ',
+  privacyDeleteFailed:
+    'खाता हटाने का अनुरोध पूरा नहीं हुआ। आपका खाता सक्रिय है।',
+  privacyCancel: 'रद्द करें',
+  privacyNoticeVersion: 'सूचना संस्करण',
+  privacyCapabilitySummary: 'उपलब्ध स्व-सेवा नियंत्रण',
+  privacyOcrDisclosure:
+    'आगे बढ़ने पर दवा की तस्वीर MedicineApp स्टोरेज में अपलोड होकर OCR सेवा से समीक्षा सुझाव बनाती है। आपकी समीक्षा और पुष्टि से पहले कुछ भी दवा के रूप में नहीं जुड़ता।',
+  privacySymptomDisclosure:
+    'आपके शब्द ठीक वैसे ही सहेजे जाते हैं। उनका निदान, वर्गीकरण, अनुवाद या पुनर्लेखन नहीं होता। केवल सक्रिय संबंध, साझाकरण और लक्षण अनुमति वाले देखभालकर्ता उन्हें देख सकते हैं।',
+  privacyEmailDisclosure:
+    'MedicineApp इस पते पर सीमित समय का कोड भेजकर आपके नियंत्रण की पुष्टि करता है। यह देखभालकर्ता निमंत्रण की सहायक पहचान है और फ़ोन साइन-इन को नहीं बदलता।',
+  privacyCaregiverDisclosure:
+    'निमंत्रण स्वीकार होने के बाद केवल चुनी श्रेणियाँ साझा होती हैं। आप अनुमति बदल या पहुँच रद्द कर सकते हैं; सुरक्षा और ऑडिट के लिए संबंध इतिहास रखा जा सकता है।',
+  privacyNotificationDisclosure:
+    'सूचनाएँ वैकल्पिक हैं। लॉक स्क्रीन पर सामान्य टेक्स्ट दिख सकता है; दवा, लक्षण, देखभालकर्ता और चिकित्सकीय विवरण डिफ़ॉल्ट रूप से शामिल नहीं होते।',
   logout: 'लॉग आउट करें',
   caregiverEmailTitle: 'सत्यापित ईमेल',
   caregiverEmailHelp:

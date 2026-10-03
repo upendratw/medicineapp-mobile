@@ -50,7 +50,7 @@ export function PushRegistrationSettings() {
           accessibilityHint={t('permissionDenied')}
         />
       ) : null}
-      <AppAlert message="Lock-screen notifications use generic wording and never include medication names, dosage, symptoms, caregiver identity, prescriptions, or clinical evidence by default." />
+      <AppAlert message={t('privacyNotificationDisclosure')} />
     </>
   );
 }
