@@ -7,6 +7,7 @@ import {
   LoadingIndicator,
 } from '@/components/primitives';
 import { StatusCard } from '@/components/StatusCard';
+import { useTranslation } from '@/localization';
 import type { PatientDashboardData } from '@/types/dashboard';
 
 type Props = {
@@ -26,6 +27,7 @@ export function PatientDashboard({
   onNavigate,
   onRetry,
 }: Props) {
+  const { t } = useTranslation();
   if (loading) return <LoadingIndicator label="Loading your dashboard" />;
   if (error || !data)
     return (
@@ -74,7 +76,7 @@ export function PatientDashboard({
       {data.integrationPending ? (
         <AppAlert message="Patient medication-list synchronization awaits backend support." />
       ) : null}
-      <AppText variant="heading">Quick actions</AppText>
+      <AppText variant="heading">{t('patientDashboardQuickActions')}</AppText>
       <AppButton
         label="View medicines"
         onPress={() => onNavigate('/medicines')}

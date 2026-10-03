@@ -43,9 +43,11 @@ export function CaregiverDashboard({
     <AppButton label={t('caregiverAlertsTitle')} onPress={onAlerts} />
   ) : null;
   if (loading)
-    return <LoadingIndicator label="Loading authorized caregiver view" />;
+    return <LoadingIndicator label={t('caregiverDashboardLoading')} />;
   if (error === 'authentication')
-    return <LoadingIndicator label="Returning to sign in" />;
+    return (
+      <LoadingIndicator label={t('caregiverDashboardReturningToSignIn')} />
+    );
   if (error === 'forbidden')
     return (
       <>
@@ -70,14 +72,14 @@ export function CaregiverDashboard({
   if (!patients.length)
     return (
       <EmptyState
-        title="No authorized family members"
-        message="An active, consent-based caregiver relationship is required."
+        title={t('caregiverDashboardNoAuthorizedFamily')}
+        message={t('caregiverDashboardActiveRelationshipRequired')}
       />
     );
   return (
     <>
       {alertsEntry}
-      <AppText variant="heading">Family member</AppText>
+      <AppText variant="heading">{t('caregiverDashboardFamilyMember')}</AppText>
       {patients.map((patient) => (
         <React.Fragment key={patient.patientUserId}>
           <AppButton
@@ -101,8 +103,8 @@ export function CaregiverDashboard({
       ))}
       {!data ? (
         <EmptyState
-          title="Choose a family member"
-          message="Only authorized information will be requested from the backend."
+          title={t('caregiverDashboardChooseFamilyMember')}
+          message={t('caregiverDashboardAuthorizedOnly')}
         />
       ) : (
         <>

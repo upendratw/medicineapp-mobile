@@ -32,6 +32,7 @@ const en = {
   offline: 'Offline data — may be out of date',
   dashboardTitle: 'Your dashboard',
   dashboardSubtitle: 'Medication routines at a glance.',
+  patientDashboardQuickActions: 'Quick actions',
   interactions: 'Interaction information',
   scanPrescription: 'Scan prescription',
   inventoryRefill: 'Inventory and refill',
@@ -91,6 +92,18 @@ const en = {
   caregiverReportedSymptomsEmpty: 'No reported symptoms available.',
   caregiverPatientReported: 'Patient reported',
   caregiverReportedAt: 'Reported',
+  caregiverDashboardTitle: 'Caregiver dashboard',
+  caregiverDashboardSubtitle:
+    'Only information authorized by an active caregiver relationship is requested.',
+  caregiverDashboardLoading: 'Loading authorized caregiver view',
+  caregiverDashboardReturningToSignIn: 'Returning to sign in',
+  caregiverDashboardNoAuthorizedFamily: 'No authorized family members',
+  caregiverDashboardActiveRelationshipRequired:
+    'An active, consent-based caregiver relationship is required.',
+  caregiverDashboardFamilyMember: 'Family member',
+  caregiverDashboardChooseFamilyMember: 'Choose a family member',
+  caregiverDashboardAuthorizedOnly:
+    'Only authorized information will be requested from the backend.',
   signIn: 'Sign in',
   mobileNumber: 'Mobile number',
   requestCode: 'Request verification code',
@@ -438,6 +451,7 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   offline: 'ऑफ़लाइन डेटा — पुराना हो सकता है',
   dashboardTitle: 'आपका डैशबोर्ड',
   dashboardSubtitle: 'दवा की दिनचर्या एक नज़र में।',
+  patientDashboardQuickActions: 'त्वरित कार्य',
   interactions: 'दवा परस्पर क्रिया जानकारी',
   scanPrescription: 'पर्चा स्कैन करें',
   inventoryRefill: 'स्टॉक और रीफिल',
@@ -494,6 +508,18 @@ const hi: Partial<Record<keyof typeof en, string>> = {
   caregiverReportedSymptomsEmpty: 'कोई बताया गया लक्षण उपलब्ध नहीं है।',
   caregiverPatientReported: 'मरीज़ ने बताया',
   caregiverReportedAt: 'बताने का समय',
+  caregiverDashboardTitle: 'देखभालकर्ता डैशबोर्ड',
+  caregiverDashboardSubtitle:
+    'केवल सक्रिय देखभालकर्ता संबंध से अधिकृत जानकारी का अनुरोध किया जाता है।',
+  caregiverDashboardLoading: 'अधिकृत देखभालकर्ता दृश्य लोड हो रहा है',
+  caregiverDashboardReturningToSignIn: 'साइन इन पर लौट रहे हैं',
+  caregiverDashboardNoAuthorizedFamily: 'कोई अधिकृत परिवार सदस्य नहीं',
+  caregiverDashboardActiveRelationshipRequired:
+    'सक्रिय, सहमति-आधारित देखभालकर्ता संबंध आवश्यक है।',
+  caregiverDashboardFamilyMember: 'परिवार सदस्य',
+  caregiverDashboardChooseFamilyMember: 'परिवार सदस्य चुनें',
+  caregiverDashboardAuthorizedOnly:
+    'बैकएंड से केवल अधिकृत जानकारी का अनुरोध किया जाएगा।',
   signIn: 'साइन इन करें',
   mobileNumber: 'मोबाइल नंबर',
   requestCode: 'सत्यापन कोड माँगें',

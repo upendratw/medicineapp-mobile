@@ -38,8 +38,8 @@ export default function CaregiverDashboardScreen() {
   return (
     <AppScreen>
       <AppHeader
-        title="Caregiver dashboard"
-        subtitle="Only information authorized by an active caregiver relationship is requested."
+        title={t('caregiverDashboardTitle')}
+        subtitle={t('caregiverDashboardSubtitle')}
       />
       <CaregiverDashboard
         patients={patients.data ?? []}
